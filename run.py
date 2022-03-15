@@ -43,7 +43,7 @@ def main():
     parser.add_argument("--num_train_epochs", default=10.0, type=float)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--alpha", type=float, default=2.0)
-    parser.add_argument("--loss", type=str, choices=['margin-contrastive', 'similarity-contrastive'])
+    parser.add_argument("--loss", type=str, choices=['margin-contrastive', 'similarity-contrastive', 'default'], default='default')
     args = parser.parse_args()
 
     wandb.init(project=args.project_name, name=args.model_ID + '-' + str(args.alpha) + "_" + args.loss)

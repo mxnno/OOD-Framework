@@ -1,7 +1,4 @@
-import torch
 import numpy as np
-from torch.utils.data import DataLoader
-from utils import collate_fn
 from sklearn.metrics import roc_auc_score
 from datasets import load_metric
 from tqdm import tqdm

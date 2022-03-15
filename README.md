@@ -1,6 +1,8 @@
-# Contra-OOD
+# OOD-Framework
 
-Code for EMNLP 2021 paper [Contrastive Out-of-Distribution Detection for Pretrained Transformers](https://arxiv.org/abs/2104.08812).
+## Included OOD-Detection methods
+* [Contrastive Out-of-Distribution Detection for Pretrained Transformers](https://arxiv.org/abs/2104.08812)
+* ...
 
 ## Requirements
 * [PyTorch](http://pytorch.org/)
@@ -11,14 +13,18 @@ Code for EMNLP 2021 paper [Contrastive Out-of-Distribution Detection for Pretrai
 * scikit-learn
 
 ## Dataset
-Most datasets used in paper are automatically downloaded by the datasets package. Instructions on downloading sst2 and multi30k are provided in ``readme.txt`` under the ``data`` folder.
+[clinc150](https://github.com/clinc/oos-eval): The 'few-shot' parameter can be used to reduce the training data.
 
 ## Training and Evaluation
 
-Finetune the PLM with the following command:
+Finetune the model with the following command:
 
 ```bash
->> python run.py --model_ID task
+python run.py --task finetune --model_name_or_path roberta-base --model_ID 0 --ood_data zero --id_data full --few_shot 10
 ```
 
-The ``model_ID`` parameter can take ``sst2``, ``imdb``, ``trec``, or ``20ng``. The training loss and evaluation results on the test set are synced to the wandb dashboard.
+Evaluate the model OOD-Detection with the following command:
+
+```bash
+python run.py --task ood_detection --model_name_or_path roberta-base --model_ID 0 --ood_data zero --id_data full --few_shot 10
+```

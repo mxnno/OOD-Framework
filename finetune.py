@@ -39,7 +39,8 @@ def finetune(args, model, train_dataloader, dev_dataloader):
             scheduler.step()
             model.zero_grad()
             wandb.log({'loss': loss.item()}, step=num_steps)
-            wandb.log({'cos_loss': cos_loss.item()}, step=num_steps)
+            if cos_loss:
+                wandb.log({'cos_loss': cos_loss.item()}, step=num_steps)
 
         results = evaluate(args, model, dev_dataloader, tag="dev")
         wandb.log(results, step=num_steps)

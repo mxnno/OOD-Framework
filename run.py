@@ -7,7 +7,7 @@ from transformers import RobertaConfig, RobertaTokenizer, AutoConfig, AutoTokeni
 from model import RobertaForSequenceClassification
 from finetune import finetune
 from ood_detection import detect_ood
-from data import load_dataset
+from data import preprocess_data
 import wandb
 import warnings
 from utils import set_seed
@@ -72,7 +72,7 @@ def main():
         model = AutoModelForSequenceClassification.from_pretrained(args.model_name_or_path, num_labels=2)
         model.to(device)
 
-    train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = load_dataset(args.dataset, args.few_shot, num_labels, args.ood_data, tokenizer)
+    train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args.few_shot, num_labels, args.ood_data, tokenizer)
 
     if args.task == "finetune":
         finetune(args, model, train_dataset, dev_dataset)

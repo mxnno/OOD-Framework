@@ -6,7 +6,7 @@ from transformers import DataCollatorWithPadding
 datasets.logging.set_verbosity(datasets.logging.ERROR)
 
 
-def load_dataset(dataset_name, few_shot, num_labels, ood_data, tokenizer):
+def preprocess_data(dataset_name, few_shot, num_labels, ood_data, tokenizer):
 
     print("Loading {}".format(dataset_name))
     if dataset_name == 'clinc150':

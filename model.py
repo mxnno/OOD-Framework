@@ -88,10 +88,12 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
                 output = output + (pooled,)
                 return ((loss, cos_loss) + output) if loss is not None else output
             else:
-                output = (logits,) + outputs[2:]
-                output = output + (pooled,)
-                return ((loss, None) + output) if loss is not None else output
-                #return (loss, None/cos_loss, logits, outputs[2:], pooled,)
+                pass
+                
+        output = (logits,) + outputs[2:]
+        output = output + (pooled,)
+        return ((loss, None) + output) if loss is not None else output
+        #return (loss, None/cos_loss, logits, outputs[2:], pooled,)
         
 
     def compute_ood(self, input_ids=None, attention_mask=None, labels=None):

@@ -6,12 +6,12 @@ from tqdm import tqdm
 
 def evaluate(args, model, eval_dataset, tag="train"):
  
-    metric = load_metric("glue", "mrpc")
+    metric = load_metric("accuracy")
     #Todo: Metriken
 
     def compute_metrics(preds, labels):
         preds = np.argmax(preds, axis=1)
-        result = metric.compute(predictions=preds, references=labels)
+        result = metric.compute(predictions=preds, references=labels, )
         if len(result) > 1:
             result["score"] = np.mean(list(result.values())).item()
         return result

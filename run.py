@@ -10,7 +10,7 @@ from ood_detection import detect_ood
 from data import preprocess_data
 import wandb
 import warnings
-from utils import set_seed
+from utils.utils import set_seed
 
 warnings.filterwarnings("ignore")
 
@@ -54,7 +54,7 @@ def main():
     args.device = device
     set_seed(args)
     #Todo: set seeds?
-
+    print("#############")
     print("Load model...")
     num_labels = task_to_labels[args.id_data]
     if args.model_name_or_path == ('roberta-base'):
@@ -81,21 +81,34 @@ def main():
         model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
         model.to(device)
 
-    
-
+    print("##################")
+    print(args.model_ID)
+    print("Preprocess Data...")
     train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args.few_shot, num_labels, args.ood_data, tokenizer)
 
     if args.task == "finetune":
+        print("###################")
         print("Start finetuning...")
         if args.model_ID == 1:
-            finetune(args, model, train_dataset, dev_dataset)
+            ft_model = finetune(args, model, train_dataset, dev_dataset)
+            ft_model.to(device)
+            print("#######################")
             print("Start finetuning ADB...")
-            finetune_ADB(args, model, train_dataset, dev_dataset)
+            ft_model = finetune_ADB(args, ft_model, train_dataset, dev_dataset)
         else:
-            finetune(args, model, train_dataset, dev_dataset)
+            ft_model = finetune(args, model, train_dataset, dev_dataset)
+
+
+        if args.save_path:
+            ft_model.save_pretrained(args.save_path)
+            print("Model saved at: " + args.save_path)
+
     elif args.task == "ood_detection":
+        print("######################")
         print("Start OOD-Detection...")
         detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset)
+
+
 
 
 if __name__ == "__main__":

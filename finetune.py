@@ -45,6 +45,8 @@ def finetune(args, model, train_dataloader, dev_dataloader):
         model.save_pretrained(args.save_path)
         print("Model saved at: " + args.save_path)
 
+    return model
+
 
 def finetune_ADB(args, model, train_dataloader, dev_dataloader):
     

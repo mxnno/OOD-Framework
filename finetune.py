@@ -59,20 +59,19 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
     optimizer = torch.optim.Adam(criterion_boundary.parameters(), lr = 0.05)
 
     def centroids_cal(args, train_dataloader):
-        centroids = torch.zeros(model.num_labels, args.feat_dim).cuda()
+        centroids = torch.zeros(model.num_labels-1, args.feat_dim).cuda()
         total_labels = torch.empty(0, dtype=torch.long).to(args.device)
 
         with torch.set_grad_enabled(False):
             for batch in train_dataloader:
-                #batch = {key: value.to(args.device) for key, value in batch.items()}
-                batch = tuple(t.to(args.device) for t in batch)
-                input_ids, attention_mask, labels_ids = batch
-                features = model(input_ids, attention_mask, labels_ids, onlyPooled=True)
+                batch = {key: value.to(args.device) for key, value in batch.items()}
+                label_ids = batch['labels']
+                features = model(**batch, onlyPooled=True)
                 total_labels = torch.cat((total_labels, label_ids))
                 for i in range(len(label_ids)):
                     label = label_ids[i]
                     centroids[label] += features[i]
-                
+
         total_labels = total_labels.cpu().numpy()
 
         def class_count(labels):
@@ -81,11 +80,10 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
                 num = len(labels[labels == l])
                 class_data_num.append(num)
             return class_data_num
-
-
-        centroids /= torch.tensor(class_count(total_labels)).float().unsqueeze(1).cuda()
+        helpT = torch.tensor(class_count(total_labels))
+        centroids /= helpT.float().unsqueeze(1).cuda()
         
-        return centroids
+        return centroids, delta
 
 
     centroids = centroids_cal(args, train_dataloader)
@@ -95,16 +93,18 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
 
     num_steps = 0
 
-    for epoch in int(args.num_train_epochs):
+    for epoch in range(int(args.num_train_epochs)):
         model.train()
         tr_loss = 0
         nb_tr_examples, nb_tr_steps = 0, 0
         
         for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration")):
-            batch = tuple(t.to(args.device) for t in batch)
-            input_ids, input_mask, label_ids = batch
+            #batch = tuple(t.to(args.device) for t in batch)
+            batch = {key: value.to(args.device) for key, value in batch.items()}
+            input_ids = batch["input_ids"]
+            label_ids = batch["labels"]
             with torch.set_grad_enabled(True):
-                features = model(input_ids, input_mask, onlyPooled=True)
+                features = model(**batch, onlyPooled=True)
                 loss, delta = criterion_boundary(features, centroids, label_ids)
 
                 optimizer.zero_grad()
@@ -147,10 +147,4 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
     #ToDo: bestes Model speichern
     wandb.log(results, step=num_steps)
 
-    if args.save_path:
-        model.save_pretrained(args.save_path)
-        print("Model saved at: " + args.save_path)
-
-
-
-
+    return model, centroids, delta

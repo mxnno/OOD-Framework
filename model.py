@@ -5,6 +5,7 @@ import numpy as np
 from torch.nn import CrossEntropyLoss, MSELoss
 from transformers import RobertaPreTrainedModel, RobertaModel, AutoModelForSequenceClassification
 from sklearn.covariance import EmpiricalCovariance
+from utils.utils_ADB import euclidean_metric
 
 class RobertaClassificationHead(nn.Module):
     #https://github.com/pytorch/fairseq/blob/a54021305d6b3c4c5959ac9395135f63202db8f1/fairseq/models/roberta/model.py#L394-L429
@@ -99,7 +100,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         #return (loss, None/cos_loss, logits, outputs[2:], pooled,)
         
 
-    def compute_ood(self, input_ids=None, attention_mask=None, labels=None):
+    def compute_ood(self, input_ids=None, attention_mask=None, labels=None, centroids=None, delta=None):
 
         outputs = self.roberta(input_ids, attention_mask=attention_mask)
         sequence_output = outputs[0]
@@ -123,11 +124,24 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
 
         energy_score = torch.logsumexp(logits, dim=-1)
 
+        adb_score = []
+        if centroids:
+            logits_adb = euclidean_metric(pooled, centroids)
+            probs, preds = F.softmax(logits_adb.detach(), dim = 1).max(dim = 1)
+            euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)
+            adb_score = euc_dis
+            #data.unseen_token_id = num_labels -> bei 5 labels -> 0-4: ID -> 5: OOD 
+            preds[euc_dis >= delta[preds]] = self.num_labels
+            print("preds")
+            print(preds)
+
+
         ood_keys = {
             'softmax': softmax_score.tolist(),
             'maha': maha_score.tolist(),
             'cosine': cosine_score.tolist(),
             'energy': energy_score.tolist(),
+            'adb': adb_score.tolist(),
         }
         return ood_keys
 

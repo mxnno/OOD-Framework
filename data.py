@@ -60,6 +60,14 @@ def load_clinc(few_shot, num_labels, ood_data):
     shuffled_train = id.shuffle(seed=42)
     sorted_train = shuffled_train.sort('intent')
     sharded_train = sorted_train.shard(num_shards=num_shards, index=0)
+
+    #Da label_id 42 entfernt wurde -> label > 42 = label -1
+    def change_label(example):
+        if example['intent'] > 42:
+            example['intent'] = example['intent'] - 1
+        return example
+    sharded_train = sharded_train.map(change_label)
+    
     if ood_data == 'zero':
         train_dataset = sharded_train
     else:
@@ -76,7 +84,7 @@ def load_clinc(few_shot, num_labels, ood_data):
     test_id_dataset = test_dataset.filter(lambda example: example['intent'] != 42)
 
     #Falls 2 Klassen 
-    def change_label(example):
+    def change_label_binary(example):
         if example['intent'] == 42:
             example['intent'] = 0
         else:
@@ -84,10 +92,10 @@ def load_clinc(few_shot, num_labels, ood_data):
             return example
 
     if num_labels == 2:
-        train_dataset = train_dataset.map(change_label)
-        val_dataset = val_dataset.map(change_label)
-        test_ood_dataset = test_ood_dataset.map(change_label)
-        test_id_dataset = test_id_dataset.map(change_label)
+        train_dataset = train_dataset.map(change_label_binary)
+        val_dataset = val_dataset.map(change_label_binary)
+        test_ood_dataset = test_ood_dataset.map(change_label_binary)
+        test_id_dataset = test_id_dataset.map(change_label_binary)
 
     return DatasetDict({'train': train_dataset, 'validation': val_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
 

@@ -26,7 +26,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", type=str, choices=['finetune','ood_detection'])
     parser.add_argument("--model_name_or_path", default="roberta-base", type=str)
-    parser.add_argument("--model_ID", type=str)
+    parser.add_argument("--model_ID", type=int)
     parser.add_argument("--dataset", type=str, default="clinc150")
     parser.add_argument("--max_seq_length", default=256, type=int)
     parser.add_argument("--ood_data", default="full", type=str, choices=['full','zero'])
@@ -47,7 +47,7 @@ def main():
     parser.add_argument("--loss", type=str, choices=['margin-contrastive', 'similarity-contrastive', 'default'], default='default')
     args = parser.parse_args()
 
-    wandb.init(project=args.project_name, name=args.model_ID + '-' + str(args.alpha) + "_" + args.loss)
+    wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     args.n_gpu = torch.cuda.device_count()
@@ -82,22 +82,23 @@ def main():
         model.to(device)
 
     print("##################")
-    print(args.model_ID)
     print("Preprocess Data...")
     train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args.few_shot, num_labels, args.ood_data, tokenizer)
 
     if args.task == "finetune":
         print("###################")
         print("Start finetuning...")
+        ft_model = finetune(args, model, train_dataset, dev_dataset)
+        
         if args.model_ID == 1:
-            ft_model = finetune(args, model, train_dataset, dev_dataset)
             ft_model.to(device)
             print("#######################")
             print("Start finetuning ADB...")
-            ft_model = finetune_ADB(args, ft_model, train_dataset, dev_dataset)
-        else:
-            ft_model = finetune(args, model, train_dataset, dev_dataset)
-
+            ft_model, centroids = finetune_ADB(args, ft_model, train_dataset, dev_dataset)
+            
+            print("######################")
+            print("Start OOD-Detection...")
+            detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset, centroids)
 
         if args.save_path:
             ft_model.save_pretrained(args.save_path)

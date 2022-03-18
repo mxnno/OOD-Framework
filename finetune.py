@@ -46,5 +46,6 @@ def finetune(args, model, train_dataloader, dev_dataloader):
         wandb.log(results, step=num_steps)
 
     if args.save_path:
-        #Model abspeichern
-        pass
+        model.save_pretrained(args.save_path)
+
+    print("Model saved at: " + args.save_path)

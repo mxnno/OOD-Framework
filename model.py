@@ -37,13 +37,16 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         self.init_weights()
         #self.post_init()
 
-    def forward(self, input_ids=None, attention_mask=None, labels=None):
+    def forward(self, input_ids=None, attention_mask=None, labels=None, onlyPooled=None):
         #input_ids, attention_mask, labels kommt von tokenized_datasets ins model:
         
         outputs = self.roberta(input_ids, attention_mask=attention_mask)
         sequence_output = outputs[0]
         logits, pooled = self.classifier(sequence_output)
 
+        if onlyPooled:
+            return pooled 
+        
         loss = None
         if labels is not None:
 

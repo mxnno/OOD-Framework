@@ -5,7 +5,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 from transformers import RobertaConfig, RobertaTokenizer, AutoConfig, AutoTokenizer, AutoModelForSequenceClassification
 from model import RobertaForSequenceClassification
-from finetune import finetune
+from finetune import finetune, finetune_ADB
 from ood_detection import detect_ood
 from data import preprocess_data
 import wandb
@@ -35,6 +35,7 @@ def main():
     parser.add_argument("--project_name", type=str, default="ood")
     parser.add_argument("--save_path", type=str)
 
+    parser.add_argument("--feat_dim", default=768, type=int, help="The feature dimension.")
     parser.add_argument("--batch_size", default=32, type=int)
     parser.add_argument("--learning_rate", default=1e-5, type=float)
     parser.add_argument("--adam_epsilon", default=1e-6, type=float)
@@ -54,6 +55,7 @@ def main():
     set_seed(args)
     #Todo: set seeds?
 
+    print("Load model...")
     num_labels = task_to_labels[args.id_data]
     if args.model_name_or_path == ('roberta-base'):
         config = RobertaConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
@@ -64,19 +66,35 @@ def main():
         model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
         model.to(device)
     else:
-        config = AutoConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
+        # config = AutoConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
+        # config.gradient_checkpointing = True
+        # config.alpha = args.alpha
+        # config.loss = args.loss
+        # tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+        # model = AutoModelForSequenceClassification.from_pretrained(args.model_name_or_path, num_labels=2)
+        # model.to(device)
+        config = RobertaConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
         config.gradient_checkpointing = True
         config.alpha = args.alpha
         config.loss = args.loss
-        tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
-        model = AutoModelForSequenceClassification.from_pretrained(args.model_name_or_path, num_labels=2)
+        tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
+        model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
         model.to(device)
+
+    
 
     train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args.few_shot, num_labels, args.ood_data, tokenizer)
 
     if args.task == "finetune":
-        finetune(args, model, train_dataset, dev_dataset)
+        print("Start finetuning...")
+        if args.model_ID == 1:
+            finetune(args, model, train_dataset, dev_dataset)
+            print("Start finetuning ADB...")
+            finetune_ADB(args, model, train_dataset, dev_dataset)
+        else:
+            finetune(args, model, train_dataset, dev_dataset)
     elif args.task == "ood_detection":
+        print("Start OOD-Detection...")
         detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset)
 
 

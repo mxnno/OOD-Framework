@@ -83,7 +83,7 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
         helpT = torch.tensor(class_count(total_labels))
         centroids /= helpT.float().unsqueeze(1).cuda()
         
-        return centroids, delta
+        return centroids
 
 
     centroids = centroids_cal(args, train_dataloader)

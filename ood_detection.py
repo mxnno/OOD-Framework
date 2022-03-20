@@ -23,7 +23,7 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         with torch.no_grad():
-            ood_keys = model.compute_ood(**batch, centroids)
+            ood_keys = model.compute_ood(**batch, centroids=centroids, delta=delta)
             in_scores.append(ood_keys)
     in_scores = merge_keys(in_scores, keys)
     print(in_scores)

@@ -94,11 +94,11 @@ def main():
             ft_model.to(device)
             print("#######################")
             print("Start finetuning ADB...")
-            ft_model, centroids = finetune_ADB(args, ft_model, train_dataset, dev_dataset)
+            ft_model, centroids, delta = finetune_ADB(args, ft_model, train_dataset, dev_dataset)
             
             print("######################")
             print("Start OOD-Detection...")
-            detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset, centroids)
+            detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
 
         if args.save_path:
             ft_model.save_pretrained(args.save_path)

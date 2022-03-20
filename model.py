@@ -102,6 +102,8 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
 
     def compute_ood(self, input_ids=None, attention_mask=None, labels=None, centroids=None, delta=None):
 
+        print("compute ood ...")
+
         outputs = self.roberta(input_ids, attention_mask=attention_mask)
         sequence_output = outputs[0]
         logits, pooled = self.classifier(sequence_output)
@@ -125,10 +127,11 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         energy_score = torch.logsumexp(logits, dim=-1)
 
         adb_score = []
-        if centroids:
+        if centroids is not None:
             logits_adb = euclidean_metric(pooled, centroids)
             probs, preds = F.softmax(logits_adb.detach(), dim = 1).max(dim = 1)
             euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)
+            print(euc_dis)
             adb_score = euc_dis
             #data.unseen_token_id = num_labels -> bei 5 labels -> 0-4: ID -> 5: OOD 
             preds[euc_dis >= delta[preds]] = self.num_labels
@@ -141,7 +144,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
             'maha': maha_score.tolist(),
             'cosine': cosine_score.tolist(),
             'energy': energy_score.tolist(),
-            'adb': adb_score.tolist(),
+            'adb': adb_score,
         }
         return ood_keys
 

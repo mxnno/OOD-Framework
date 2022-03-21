@@ -9,7 +9,7 @@ from sklearn.covariance import EmpiricalCovariance
 from utils.utils_ADB import euclidean_metric
 
 
-def set_model(args, num_labels, secondRun):
+def set_model(args, num_labels):
 
     if args.model_ID == 1:
 
@@ -24,7 +24,7 @@ def set_model(args, num_labels, secondRun):
         else:
             #damm BCAD Finetuning mit dem IMLM-finegetuned model, das extra abgespeichert wird
             model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
-            tokenizer = RobertaTokenizer.from_pretrained(args.model_name_or_path)
+            tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
         model.to(args.device)
 
         
@@ -34,7 +34,7 @@ def set_model(args, num_labels, secondRun):
         config.alpha = args.alpha
         config.loss = args.loss
         tokenizer = RobertaTokenizer.from_pretrained(args.model_name_or_path)
-        model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
+        model = RobertaForSequenceClassification.from_pretrained('roberta-base', config=config)
         model.to(args.device)
 
     return model, config, tokenizer
@@ -190,7 +190,9 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         for batch in dataloader:
             self.eval()
             batch = {key: value.cuda() for key, value in batch.items()}
+            print({k: v.shape for k, v in batch.items()})
             labels = batch['labels']
+            print(labels)
             #forward ohne labels
             outputs = self.roberta(input_ids=batch['input_ids'],attention_mask=batch['attention_mask'])
             sequence_output = outputs[0]
@@ -198,10 +200,15 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
             if self.bank is None:
                 self.bank = pooled.clone().detach()
                 self.label_bank = labels.clone().detach()
+                print(self.label_bank.size())
+                print("________")
             else:
                 bank = pooled.clone().detach()
                 label_bank = labels.clone().detach()
                 self.bank = torch.cat([bank, self.bank], dim=0)
+                print(label_bank.size())
+                print(self.label_bank.size())
+                print("-------")
                 self.label_bank = torch.cat([label_bank, self.label_bank], dim=0)
 
         self.norm_bank = F.normalize(self.bank, dim=-1)

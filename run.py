@@ -54,7 +54,7 @@ def main():
     print("#############")
     print("Load model...")
     num_labels = get_num_labels(args)
-    model, config, tokenizer = set_model(args, num_labels, False)
+    model, config, tokenizer = set_model(args, num_labels)
 
     print("##################")
     print("Preprocess Data...")
@@ -77,7 +77,7 @@ def main():
             args.batch_size = 8
             train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data("clinc150_AUG", args, num_labels, tokenizer)
             ft_model = finetune_std(args, model, train_dataset, dev_dataset)
-            args.model_name_or_path = args.save_path + "IMLM_BCAD/"
+            args.save_path = args.save_path + "IMLM_BCAD/"
 
         elif args.model_ID == 2:
             ft_model =  finetune_std(args, model, train_dataset, dev_dataset)

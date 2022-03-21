@@ -34,7 +34,7 @@ def preprocess_data(dataset_name, args, num_labels, tokenizer, no_Dataloader=Fal
     if args.model_ID == 1 and dataset_name == 'clinc150':
         data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer,  mlm_probability=0.15)
     else:
-        data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+        data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding='longest')
 
     #Columns anpassen
     tokenized_datasets = tokenized_datasets.remove_columns(["text"])
@@ -58,6 +58,9 @@ def preprocess_data(dataset_name, args, num_labels, tokenizer, no_Dataloader=Fal
     test_id_dataloader = DataLoader(
         tokenized_datasets["test_id"], batch_size=args.batch_size, collate_fn=data_collator
     )
+
+    for batch in eval_dataloader:
+        print({k: v.shape for k, v in batch.items()})
 
     return train_dataloader, eval_dataloader, test_id_dataloader, test__ood_dataloader
 

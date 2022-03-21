@@ -19,7 +19,7 @@ def set_model(args, num_labels, secondRun):
         config.loss = args.loss
         if args.model_name_or_path.startswith("roberta"):
             #erst IMLM Finetuning mit Roberta + MaskedLM
-            model = RobertaForMaskedLM.from_pretrained(args.model_name_or_path, config=config, num_labels = num_labels)
+            model = RobertaForMaskedLM.from_pretrained(args.model_name_or_path, config=config)
             tokenizer = RobertaTokenizerFast.from_pretrained(args.model_name_or_path)
         else:
             #damm BCAD Finetuning mit dem IMLM-finegetuned model, das extra abgespeichert wird

@@ -174,3 +174,6 @@ def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, 
     )
 
     trainer.train()
+
+    args.model_name_or_path = args.save_path + "IMLM/"
+    trainer.save_model(args.model_name_or_path)

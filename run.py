@@ -69,13 +69,13 @@ def main():
         if args.model_ID == 0:
             ft_model = finetune_std(args, model, train_dataset, dev_dataset)
         elif args.model_ID == 1:
-            ft_model = finetune_std(args, model, train_dataset, dev_dataset)
+            ft_model = finetune_imlm(args, model, train_dataset, dev_dataset)
             #Model abspeichern, damit es wieder geladen werden kann
             args.model_name_or_path = args.save_path + "IMLM/"
             save_model(ft_model, args.save_path + "IMLM/")
             model, config, tokenizer = set_model(args, num_labels)
             args.batch_size = 8
-            train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data("clinc150", args, num_labels, tokenizer)
+            train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data("clinc150_AUG", args, num_labels, tokenizer)
             ft_model = finetune_std(args, model, train_dataset, dev_dataset)
             args.model_name_or_path = args.save_path + "IMLM_BCAD/"
 

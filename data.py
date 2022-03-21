@@ -28,6 +28,8 @@ def preprocess_data(dataset_name, args, num_labels, tokenizer):
     #Columns anpassen
     tokenized_datasets = tokenized_datasets.remove_columns(["text"])
     tokenized_datasets = tokenized_datasets.rename_column("intent", "labels")
+    if args.model_ID == 1 and dataset_name == 'clinc150':
+        tokenized_datasets = tokenized_datasets.remove_columns(["labels"])
     tokenized_datasets.set_format("torch")
 
     train_dataloader = DataLoader(

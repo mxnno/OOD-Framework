@@ -7,11 +7,15 @@ import warnings
 import numpy as np
 from evaluation import evaluate
 from optimizer import get_optimizer_2
+from utils.utils import get_num_labels
 from utils.utils_ADB import BoundaryLoss
 warnings.filterwarnings("ignore")
 
 
-def finetune(args, model, train_dataloader, dev_dataloader):
+def finetune_std(args, model, train_dataloader, dev_dataloader):
+
+    print("######################")
+    print("Start Finetuning...")
 
     total_steps = int(len(train_dataloader) * args.num_train_epochs)
     warmup_steps = int(total_steps * args.warmup_ratio)
@@ -50,6 +54,9 @@ def finetune(args, model, train_dataloader, dev_dataloader):
 
 def finetune_ADB(args, model, train_dataloader, dev_dataloader):
     
+    print("######################")
+    print("Start Finetuning ADB...")
+
     #args überarbeiten
 
     criterion_boundary = BoundaryLoss(num_labels = model.num_labels, feat_dim = args.feat_dim)
@@ -59,7 +66,7 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
     optimizer = torch.optim.Adam(criterion_boundary.parameters(), lr = 0.05)
 
     def centroids_cal(args, train_dataloader):
-        centroids = torch.zeros(model.num_labels-1, args.feat_dim).cuda()
+        centroids = torch.zeros(model.num_labels, args.feat_dim).cuda()
         total_labels = torch.empty(0, dtype=torch.long).to(args.device)
 
         with torch.set_grad_enabled(False):
@@ -70,7 +77,10 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
                 total_labels = torch.cat((total_labels, label_ids))
                 for i in range(len(label_ids)):
                     label = label_ids[i]
-                    centroids[label] += features[i]
+                    if args.ood_data == 'zero':
+                        centroids[label-1] += features[i]
+                    else:
+                        centroids[label] += features[i]
 
         total_labels = total_labels.cpu().numpy()
 
@@ -148,3 +158,8 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
     wandb.log(results, step=num_steps)
 
     return model, centroids, delta
+
+def finetune_imlm():
+    print("######################")
+    print("Start Finetuning IMLM...")
+    pass

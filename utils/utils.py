@@ -10,6 +10,17 @@ def set_seed(args):
     if args.n_gpu > 0 and torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
 
+task_to_labels = {
+    'full': 151,
+    'unlabeled': 2,
+    'zero': 2
+}
+def get_num_labels(args):
+    if args.ood_data == 'zero':
+        return task_to_labels[args.id_data]
+    else:
+        return task_to_labels[args.id_data] - 1
+
 
 # def collate_fn(batch):
 #     max_len = max([len(f["input_ids"]) for f in batch])

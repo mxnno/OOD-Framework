@@ -1,32 +1,25 @@
 import argparse
+from re import T
 import torch
 
 import numpy as np
 from torch.utils.data import DataLoader
 from transformers import RobertaConfig, RobertaTokenizer, AutoConfig, AutoTokenizer, AutoModelForSequenceClassification
-from model import RobertaForSequenceClassification
-from finetune import finetune, finetune_ADB
+from model import RobertaForSequenceClassification, set_model
+from finetune import finetune_ADB, finetune_imlm, finetune_std
 from ood_detection import detect_ood
 from data import preprocess_data
 import wandb
 import warnings
-from utils.utils import set_seed
+from utils.utils import set_seed, get_num_labels
 
 warnings.filterwarnings("ignore")
 
-
-task_to_labels = {
-    'full': 151,
-    'unlabeled': 2,
-    'zero': 2
-}
-
-
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--model_ID", type=int)
     parser.add_argument("--task", type=str, choices=['finetune','ood_detection'])
     parser.add_argument("--model_name_or_path", default="roberta-base", type=str)
-    parser.add_argument("--model_ID", type=int)
     parser.add_argument("--dataset", type=str, default="clinc150")
     parser.add_argument("--max_seq_length", default=256, type=int)
     parser.add_argument("--ood_data", default="full", type=str, choices=['full','zero'])
@@ -56,57 +49,42 @@ def main():
     #Todo: set seeds?
     print("#############")
     print("Load model...")
-    num_labels = task_to_labels[args.id_data]
-    if args.model_name_or_path == ('roberta-base'):
-        config = RobertaConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
-        config.gradient_checkpointing = True
-        config.alpha = args.alpha
-        config.loss = args.loss
-        tokenizer = RobertaTokenizer.from_pretrained(args.model_name_or_path)
-        model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
-        model.to(device)
-    else:
-        # config = AutoConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
-        # config.gradient_checkpointing = True
-        # config.alpha = args.alpha
-        # config.loss = args.loss
-        # tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
-        # model = AutoModelForSequenceClassification.from_pretrained(args.model_name_or_path, num_labels=2)
-        # model.to(device)
-        config = RobertaConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
-        config.gradient_checkpointing = True
-        config.alpha = args.alpha
-        config.loss = args.loss
-        tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-        model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
-        model.to(device)
+    num_labels = get_num_labels(args)
+
+
+    model, config, tokenizer = set_model(args.model_ID, False)
 
     print("##################")
     print("Preprocess Data...")
     train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args.few_shot, num_labels, args.ood_data, tokenizer)
 
-    if args.task == "finetune":
-        print("###################")
-        print("Start finetuning...")
-        ft_model = finetune(args, model, train_dataset, dev_dataset)
-        
-        if args.model_ID == 1:
-            ft_model.to(device)
-            print("#######################")
-            print("Start finetuning ADB...")
-            ft_model, centroids, delta = finetune_ADB(args, ft_model, train_dataset, dev_dataset)
-            
-            print("######################")
-            print("Start OOD-Detection...")
-            detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
 
+    #nach Model ID (= Methode/Ansatz) unterscheiden
+
+
+    if args.task == "finetune":
+       
+        if args.model_ID == 0:
+            ft_model = finetune_std(args, model, train_dataset, dev_dataset)
+        elif args.model_ID == 1:
+            ft_model = finetune_imlm(ft_model)
+            model, config, tokenizer = set_model(args.model_ID, True)
+            ft_model = finetune_std(args, model, train_dataset, dev_dataset)
+
+        elif args.model_ID == 2:
+            ft_model =  finetune_std(args, model, train_dataset, dev_dataset)
+        elif args.model_ID == 14:
+            ft_model = finetune_std(args, model, train_dataset, dev_dataset)
+            ft_model, centroids, delta = finetune_ADB(args, ft_model, train_dataset, dev_dataset)
+            detect_ood(args, ft_model, dev_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
+
+        #Model speichern
         if args.save_path:
-            ft_model.save_pretrained(args.save_path)
-            print("Model saved at: " + args.save_path)
+                ft_model.save_pretrained(args.save_path)
+                print("Model saved at: " + args.save_path)
+        
 
     elif args.task == "ood_detection":
-        print("######################")
-        print("Start OOD-Detection...")
         detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset)
 
 

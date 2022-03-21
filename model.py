@@ -1,11 +1,41 @@
+from lib2to3.pgen2 import token
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torch.nn import CrossEntropyLoss, MSELoss
-from transformers import RobertaPreTrainedModel, RobertaModel, AutoModelForSequenceClassification
+from transformers import RobertaPreTrainedModel, RobertaForMaskedLM,  RobertaModel, RobertaConfig, RobertaTokenizer
 from sklearn.covariance import EmpiricalCovariance
 from utils.utils_ADB import euclidean_metric
+
+
+def set_model(args, num_labels, secondRun):
+
+    if args.model_ID == 1:
+
+        config = RobertaConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
+        config.gradient_checkpointing = True
+        config.alpha = args.alpha
+        config.loss = args.loss
+        tokenizer = RobertaTokenizer.from_pretrained(args.model_name_or_path)
+        if args.model_name_or_path.startswith("roberta"):
+            model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
+        else:
+            model = RobertaForMaskedLM.from_pretrained(args.model_name_or_path, confif = config)
+        model.to(args.device)
+
+        
+    else:
+        config = RobertaConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
+        config.gradient_checkpointing = True
+        config.alpha = args.alpha
+        config.loss = args.loss
+        tokenizer = RobertaTokenizer.from_pretrained(args.model_name_or_path)
+        model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
+        model.to(args.device)
+
+    return model, config, tokenizer
+#####################################################################################################################################################
 
 class RobertaClassificationHead(nn.Module):
     #https://github.com/pytorch/fairseq/blob/a54021305d6b3c4c5959ac9395135f63202db8f1/fairseq/models/roberta/model.py#L394-L429
@@ -109,8 +139,10 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         logits, pooled = self.classifier(sequence_output)
 
         ood_keys = None
+        #Softmax
         softmax_score = F.softmax(logits, dim=-1).max(-1)[0]
-
+        
+        #Maha
         maha_score = []
         for c in self.all_classes:
             centered_pooled = pooled - self.class_mean[c].unsqueeze(0)
@@ -120,19 +152,20 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         maha_score = maha_score.min(-1)[0]
         maha_score = -maha_score
 
+        #Cosin
         norm_pooled = F.normalize(pooled, dim=-1)
         cosine_score = norm_pooled @ self.norm_bank.t()
         cosine_score = cosine_score.max(-1)[0]
 
+        #Energy
         energy_score = torch.logsumexp(logits, dim=-1)
 
+        #ADB
         adb_score = []
         if centroids is not None:
             logits_adb = euclidean_metric(pooled, centroids)
             probs, preds = F.softmax(logits_adb.detach(), dim = 1).max(dim = 1)
             euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)
-            print(euc_dis)
-            adb_score = euc_dis
             #data.unseen_token_id = num_labels -> bei 5 labels -> 0-4: ID -> 5: OOD 
             preds[euc_dis >= delta[preds]] = self.num_labels
             print("preds")
@@ -144,7 +177,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
             'maha': maha_score.tolist(),
             'cosine': cosine_score.tolist(),
             'energy': energy_score.tolist(),
-            'adb': adb_score,
+            'adb': euc_dis.tolist(),
         }
         return ood_keys
 

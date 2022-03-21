@@ -89,7 +89,7 @@ def load_clinc(few_shot, num_labels, ood_data):
             example['intent'] = 0
         else:
             example['intent'] = 1
-            return example
+        return example
 
     if num_labels == 2:
         train_dataset = train_dataset.map(change_label_binary)

@@ -13,6 +13,8 @@ def merge_keys(l, keys):
 
 def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None):
     
+    print("######################")
+    print("Start OOD-Detection...")
     #Varianz für Distanzen bestimmen
     model.prepare_ood(prepare_dataset)
 

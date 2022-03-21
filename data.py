@@ -7,15 +7,16 @@ import re
 datasets.logging.set_verbosity(datasets.logging.ERROR)
 
 
-def preprocess_data(dataset_name, few_shot, num_labels, ood_data, tokenizer):
+def preprocess_data(dataset_name, args, num_labels, tokenizer):
 
     print("Loading {}".format(dataset_name))
     if dataset_name == 'clinc150':
-        raw_datasets = load_clinc(few_shot, num_labels, ood_data)
-    if dataset_name == 'clinc150_AUG':
-        raw_datasets = load_clinc_with_Augmentation(few_shot, num_labels, ood_data)
+        raw_datasets = load_clinc(args.few_shot, num_labels, args.ood_data)
+    elif dataset_name == 'clinc150_AUG':
+        raw_datasets = load_clinc_with_Augmentation(args.few_shot, num_labels, args.ood_data)
     else:
-       raise NotImplementedError
+        print (dataset_name)
+        raise NotImplementedError
 
 
     def tokenize_function(example):
@@ -30,16 +31,16 @@ def preprocess_data(dataset_name, few_shot, num_labels, ood_data, tokenizer):
     tokenized_datasets.set_format("torch")
 
     train_dataloader = DataLoader(
-        tokenized_datasets["train"], shuffle=True, batch_size=8, collate_fn=data_collator
+        tokenized_datasets["train"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
     )
     eval_dataloader = DataLoader(
-        tokenized_datasets["validation"], batch_size=8, collate_fn=data_collator
+        tokenized_datasets["validation"], batch_size=args.batch_size, collate_fn=data_collator
     )
     test__ood_dataloader = DataLoader(
-        tokenized_datasets["test_ood"], batch_size=8, collate_fn=data_collator
+        tokenized_datasets["test_ood"], batch_size=args.batch_size, collate_fn=data_collator
     )
     test_id_dataloader = DataLoader(
-        tokenized_datasets["test_id"], batch_size=8, collate_fn=data_collator
+        tokenized_datasets["test_id"], batch_size=args.batch_size, collate_fn=data_collator
     )
 
     return train_dataloader, eval_dataloader, test_id_dataloader, test__ood_dataloader

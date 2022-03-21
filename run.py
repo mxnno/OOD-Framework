@@ -29,7 +29,7 @@ def main():
     parser.add_argument("--save_path", default="/Model", type=str)
 
     parser.add_argument("--feat_dim", default=768, type=int, help="The feature dimension.")
-    parser.add_argument("--batch_size", default=32, type=int)
+    parser.add_argument("--batch_size", default=8, type=int)
     parser.add_argument("--learning_rate", default=1e-5, type=float)
     parser.add_argument("--adam_epsilon", default=1e-6, type=float)
     parser.add_argument("--warmup_ratio", default=0.06, type=float)
@@ -58,7 +58,7 @@ def main():
 
     print("##################")
     print("Preprocess Data...")
-    train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args.few_shot, num_labels, args.ood_data, tokenizer)
+    train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
 
 
     #nach Model ID (= Methode/Ansatz) unterscheiden
@@ -74,7 +74,8 @@ def main():
             args.model_name_or_path = args.save_path + "IMLM/"
             save_model(ft_model, args.save_path + "IMLM/")
             model, config, tokenizer = set_model(args, num_labels)
-            train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data("clinc150", args.few_shot, num_labels, args.ood_data, tokenizer)
+            args.batch_size = 8
+            train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data("clinc150", args, num_labels, tokenizer)
             ft_model = finetune_std(args, model, train_dataset, dev_dataset)
             args.model_name_or_path = args.save_path + "IMLM_BCAD/"
 

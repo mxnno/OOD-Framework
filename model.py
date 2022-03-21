@@ -19,9 +19,11 @@ def set_model(args, num_labels, secondRun):
         config.loss = args.loss
         tokenizer = RobertaTokenizer.from_pretrained(args.model_name_or_path)
         if args.model_name_or_path.startswith("roberta"):
-            model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
+            #erst IMLM Finetuning mit Roberta + MaskedLM
+            model = RobertaForMaskedLM.from_pretrained(args.model_name_or_path, config=config)
         else:
-            model = RobertaForMaskedLM.from_pretrained(args.model_name_or_path, confif = config)
+            #damm BCAD Finetuning mit dem IMLM-finegetuned model, das extra abgespeichert wird
+            model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
         model.to(args.device)
 
         

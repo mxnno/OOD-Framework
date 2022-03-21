@@ -26,7 +26,7 @@ def main():
     parser.add_argument("--id_data", default="full", type=str, choices=['full', 'unlabeled','zero'])
     parser.add_argument("--few_shot", default="100", type=int)
     parser.add_argument("--project_name", type=str, default="ood")
-    parser.add_argument("--save_path", type=str)
+    parser.add_argument("--save_path", default="/Model", type=str)
 
     parser.add_argument("--feat_dim", default=768, type=int, help="The feature dimension.")
     parser.add_argument("--batch_size", default=32, type=int)
@@ -39,6 +39,9 @@ def main():
     parser.add_argument("--alpha", type=float, default=2.0)
     parser.add_argument("--loss", type=str, choices=['margin-contrastive', 'similarity-contrastive', 'default'], default='default')
     args = parser.parse_args()
+
+    if args.save_path:
+        args.save_path = args.save_path + str(args.model_ID) + "/"
 
     wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
 
@@ -66,13 +69,14 @@ def main():
         if args.model_ID == 0:
             ft_model = finetune_std(args, model, train_dataset, dev_dataset)
         elif args.model_ID == 1:
-            ft_model = finetune_std(ft_model)
-            #Model abspeichern, damit es wieder geladen werden kann
-            args.model_name_or_path = args.save_path
-            ft_model.save_pretrained(args.save_path + "/IMLM/")
-            model, config, tokenizer = set_model(args, num_labels)
             ft_model = finetune_std(args, model, train_dataset, dev_dataset)
-            args.model_name_or_path = args.save_path + "/IMLM_BCAD/"
+            #Model abspeichern, damit es wieder geladen werden kann
+            args.model_name_or_path = args.save_path + "IMLM/"
+            save_model(ft_model, args.save_path + "IMLM/")
+            model, config, tokenizer = set_model(args, num_labels)
+            train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data("clinc150", args.few_shot, num_labels, args.ood_data, tokenizer)
+            ft_model = finetune_std(args, model, train_dataset, dev_dataset)
+            args.model_name_or_path = args.save_path + "IMLM_BCAD/"
 
         elif args.model_ID == 2:
             ft_model =  finetune_std(args, model, train_dataset, dev_dataset)
@@ -83,12 +87,21 @@ def main():
 
         #Model speichern
         if args.save_path:
-            ft_model.save_pretrained(args.save_path)
-            print("Model saved at: " + args.save_path)
+            save_model(model, args.save_path)
+
         
 
     elif args.task == "ood_detection":
         detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset)
+
+
+
+def save_model(model, path):
+
+    #todo: schauen ob path vorhanden
+
+    model.save_pretrained(path)
+    print("Model saved at: " + path)
 
 
 

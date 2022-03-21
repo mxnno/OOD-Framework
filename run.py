@@ -69,7 +69,8 @@ def main():
         if args.model_ID == 0:
             ft_model = finetune_std(args, model, train_dataset, dev_dataset)
         elif args.model_ID == 1:
-            ft_model = finetune_imlm(args, model, train_dataset, dev_dataset)
+            train_dataset, dev_dataset, datacollector = preprocess_data(args.dataset, args, num_labels, tokenizer, no_Dataloader=True)
+            ft_model = finetune_imlm(args, model, train_dataset, dev_dataset, datacollector, tokenizer)
             #Model abspeichern, damit es wieder geladen werden kann
             args.model_name_or_path = args.save_path + "IMLM/"
             save_model(ft_model, args.save_path + "IMLM/")

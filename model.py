@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torch.nn import CrossEntropyLoss, MSELoss
-from transformers import RobertaPreTrainedModel, RobertaForMaskedLM,  RobertaModel, RobertaConfig, RobertaTokenizer
+from transformers import RobertaPreTrainedModel, RobertaForMaskedLM,  RobertaModel, RobertaConfig, RobertaTokenizer, RobertaTokenizerFast
 from sklearn.covariance import EmpiricalCovariance
 from utils.utils_ADB import euclidean_metric
 
@@ -17,13 +17,14 @@ def set_model(args, num_labels, secondRun):
         config.gradient_checkpointing = True
         config.alpha = args.alpha
         config.loss = args.loss
-        tokenizer = RobertaTokenizer.from_pretrained(args.model_name_or_path)
         if args.model_name_or_path.startswith("roberta"):
             #erst IMLM Finetuning mit Roberta + MaskedLM
-            model = RobertaForMaskedLM.from_pretrained(args.model_name_or_path, config=config)
+            model = RobertaForMaskedLM.from_pretrained(args.model_name_or_path, config=config, num_labels = num_labels)
+            tokenizer = RobertaTokenizerFast.from_pretrained(args.model_name_or_path)
         else:
             #damm BCAD Finetuning mit dem IMLM-finegetuned model, das extra abgespeichert wird
             model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
+            tokenizer = RobertaTokenizer.from_pretrained(args.model_name_or_path)
         model.to(args.device)
 
         

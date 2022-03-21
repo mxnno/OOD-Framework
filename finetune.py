@@ -1,5 +1,6 @@
 from tqdm import tqdm
 from transformers.optimization import get_scheduler
+from transformers import Trainer, TrainingArguments
 import torch.nn.functional as F
 import torch
 import wandb
@@ -159,38 +160,17 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
 
     return model, centroids, delta
 
-def finetune_imlm(args, model, train_dataloader, dev_dataloader):
-    print("######################")
-    print("Start Finetuning IMLM...")
+def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, tokenizer ):
+    
+    training_args = TrainingArguments("test-trainer")
+    
+    trainer = Trainer(
+        model,
+        training_args,
+        train_dataset=train_dataloader,
+        eval_dataset=dev_dataloader,
+        data_collator=data_collator,
+        tokenizer=tokenizer
+    )
 
-    total_steps = int(len(train_dataloader) * args.num_train_epochs)
-    warmup_steps = int(total_steps * args.warmup_ratio)
-
-    optimizer = get_optimizer_2(args, model)
-    scheduler = get_scheduler("linear", optimizer=optimizer,num_warmup_steps=warmup_steps, num_training_steps=total_steps)
-
-    num_steps = 0
-    model.train()
-    for epoch in range(int(args.num_train_epochs)):
-        print("Epoche: " + str(epoch))
-        #model.zero_grad()
-        for batch in tqdm(train_dataloader):
-            batch = {key: value.to(args.device) for key, value in batch.items()}
-            outputs = model(**batch)
-            loss = outputs[0]
-            loss.backward()
-            num_steps += 1
-            optimizer.step()
-            scheduler.step()
-            model.zero_grad()
-            wandb.log({'loss': loss.item()}, step=num_steps)
-
-        results = evaluate(args, model, dev_dataloader, tag="dev")
-        #ToDo: bestes Model speichern
-        wandb.log(results, step=num_steps)
-
-    if args.save_path:
-        model.save_pretrained(args.save_path)
-        print("Model saved at: " + args.save_path)
-
-    return model
+    trainer.train()

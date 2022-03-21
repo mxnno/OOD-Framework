@@ -1,13 +1,13 @@
 import datasets
 from datasets import load_dataset, concatenate_datasets, DatasetDict, ClassLabel
 from torch.utils.data import DataLoader
-from transformers import DataCollatorWithPadding
+from transformers import DataCollatorWithPadding, DataCollatorForLanguageModeling
 import re
 
 datasets.logging.set_verbosity(datasets.logging.ERROR)
 
 
-def preprocess_data(dataset_name, args, num_labels, tokenizer):
+def preprocess_data(dataset_name, args, num_labels, tokenizer, no_Dataloader=False):
 
     print("Loading {}".format(dataset_name))
     if dataset_name == 'clinc150':
@@ -20,10 +20,21 @@ def preprocess_data(dataset_name, args, num_labels, tokenizer):
 
 
     def tokenize_function(example):
-        return tokenizer(example["text"], truncation=True)
+        if args.model_ID == 1 and dataset_name == 'clinc150':
+
+            result = tokenizer(example["text"])
+            if tokenizer.is_fast:
+                result["word_ids"] = [result.word_ids(i) for i in range(len(result["input_ids"]))]
+            return result
+
+        else:
+            return tokenizer(example["text"], truncation=True)
 
     tokenized_datasets = raw_datasets.map(tokenize_function, batched=True)
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+    if args.model_ID == 1 and dataset_name == 'clinc150':
+        data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer,  mlm_probability=0.15)
+    else:
+        data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     #Columns anpassen
     tokenized_datasets = tokenized_datasets.remove_columns(["text"])
@@ -31,6 +42,9 @@ def preprocess_data(dataset_name, args, num_labels, tokenizer):
     if args.model_ID == 1 and dataset_name == 'clinc150':
         tokenized_datasets = tokenized_datasets.remove_columns(["labels"])
     tokenized_datasets.set_format("torch")
+
+    if no_Dataloader:
+        return tokenized_datasets["train"], tokenized_datasets["validation"], data_collator
 
     train_dataloader = DataLoader(
         tokenized_datasets["train"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator

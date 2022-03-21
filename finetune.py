@@ -161,6 +161,9 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
     return model, centroids, delta
 
 def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, tokenizer ):
+
+    print("######################")
+    print("Start Finetuning IMLM...")
     
     training_args = TrainingArguments("test-trainer")
     

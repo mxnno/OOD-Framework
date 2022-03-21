@@ -58,7 +58,7 @@ def main():
 
     print("##################")
     print("Preprocess Data...")
-    train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
+    #train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
 
 
     #nach Model ID (= Methode/Ansatz) unterscheiden

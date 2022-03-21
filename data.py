@@ -2,6 +2,7 @@ import datasets
 from datasets import load_dataset, concatenate_datasets, DatasetDict
 from torch.utils.data import DataLoader
 from transformers import DataCollatorWithPadding
+import re
 
 datasets.logging.set_verbosity(datasets.logging.ERROR)
 
@@ -11,6 +12,8 @@ def preprocess_data(dataset_name, few_shot, num_labels, ood_data, tokenizer):
     print("Loading {}".format(dataset_name))
     if dataset_name == 'clinc150':
         raw_datasets = load_clinc(few_shot, num_labels, ood_data)
+    if dataset_name == 'clinc150_AUG':
+        raw_datasets = load_clinc_with_Augmentation(few_shot, num_labels, ood_data)
     else:
        raise NotImplementedError
 
@@ -99,3 +102,22 @@ def load_clinc(few_shot, num_labels, ood_data):
 
     return DatasetDict({'train': train_dataset, 'validation': val_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
 
+def load_clinc_with_Augmentation(few_shot, num_labels, ood_data):
+    
+    clinc_DatasetDict = load_clinc(few_shot, num_labels, ood_data)
+
+    data_dict = load_dataset('text', data_files={'train': ''})
+    train_dataset = data_dict['train']
+    train_dataset = train_dataset.map(prepare_txt)
+
+    def prepare_txt(example):
+
+        #index und /t vor dem Satz entfernen
+        example['text'] = re.sub(r'^.*?/t', '', example['text'])
+        
+        # label hinzufügen
+        example['labels'] = 0
+        
+        return example
+    
+    

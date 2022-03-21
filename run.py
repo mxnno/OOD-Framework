@@ -47,12 +47,11 @@ def main():
     args.device = device
     set_seed(args)
     #Todo: set seeds?
+
     print("#############")
     print("Load model...")
     num_labels = get_num_labels(args)
-
-
-    model, config, tokenizer = set_model(args.model_ID, False)
+    model, config, tokenizer = set_model(args, num_labels, False)
 
     print("##################")
     print("Preprocess Data...")
@@ -67,9 +66,13 @@ def main():
         if args.model_ID == 0:
             ft_model = finetune_std(args, model, train_dataset, dev_dataset)
         elif args.model_ID == 1:
-            ft_model = finetune_imlm(ft_model)
-            model, config, tokenizer = set_model(args.model_ID, True)
+            ft_model = finetune_std(ft_model)
+            #Model abspeichern, damit es wieder geladen werden kann
+            args.model_name_or_path = args.save_path
+            ft_model.save_pretrained(args.save_path + "/IMLM/")
+            model, config, tokenizer = set_model(args, num_labels)
             ft_model = finetune_std(args, model, train_dataset, dev_dataset)
+            args.model_name_or_path = args.save_path + "/IMLM_BCAD/"
 
         elif args.model_ID == 2:
             ft_model =  finetune_std(args, model, train_dataset, dev_dataset)
@@ -80,8 +83,8 @@ def main():
 
         #Model speichern
         if args.save_path:
-                ft_model.save_pretrained(args.save_path)
-                print("Model saved at: " + args.save_path)
+            ft_model.save_pretrained(args.save_path)
+            print("Model saved at: " + args.save_path)
         
 
     elif args.task == "ood_detection":

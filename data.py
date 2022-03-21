@@ -54,22 +54,24 @@ def load_clinc(few_shot, num_labels, ood_data):
 
     datasets_dict = load_dataset("clinc_oos", "small")
 
+    def change_ood_label(example):
+        #OOD = label 0
+        if example['intent'] == 42:
+            example['intent'] = 0
+        elif example['intent'] > 42:
+            example['intent'] = example['intent'] - 1
+        return example
+
     #Trainingsdaten ID/OOD aufteilen + verkleinern
     dataset = datasets_dict['train']
-    ood = dataset.filter(lambda example: example['intent'] == 42)
-    id = dataset.filter(lambda example: example['intent'] != 42)
+    dataset = dataset.map(change_ood_label)
+    ood = dataset.filter(lambda example: example['intent'] == 0)
+    id = dataset.filter(lambda example: example['intent'] != 0)
 
     #Train Dataset zufällig shuffeln und reduzieren
     shuffled_train = id.shuffle(seed=42)
     sorted_train = shuffled_train.sort('intent')
     sharded_train = sorted_train.shard(num_shards=num_shards, index=0)
-
-    #Da label_id 42 entfernt wurde -> label > 42 = label -1
-    def change_label(example):
-        if example['intent'] > 42:
-            example['intent'] = example['intent'] - 1
-        return example
-    sharded_train = sharded_train.map(change_label)
     
     if ood_data == 'zero':
         train_dataset = sharded_train
@@ -78,19 +80,19 @@ def load_clinc(few_shot, num_labels, ood_data):
 
     #Validation Daten ID/OOD aufteilen
     val_dataset = datasets_dict['validation']
+    val_dataset = val_dataset.map(change_ood_label)
     if ood_data == 'zero':
-        val_dataset = val_dataset.filter(lambda example: example['intent'] != 42)
+        val_dataset = val_dataset.filter(lambda example: example['intent'] != 0)
     
     #Testdaten ID/OOD aufteilen
     test_dataset = datasets_dict['test']
-    test_ood_dataset = test_dataset.filter(lambda example: example['intent'] == 42)
-    test_id_dataset = test_dataset.filter(lambda example: example['intent'] != 42)
+    test_dataset = test_dataset.map(change_ood_label)
+    test_ood_dataset = test_dataset.filter(lambda example: example['intent'] == 0)
+    test_id_dataset = test_dataset.filter(lambda example: example['intent'] != 0)
 
     #Falls 2 Klassen 
     def change_label_binary(example):
-        if example['intent'] == 42:
-            example['intent'] = 0
-        else:
+        if example['intent'] != 0:
             example['intent'] = 1
         return example
 
@@ -106,18 +108,29 @@ def load_clinc_with_Augmentation(few_shot, num_labels, ood_data):
     
     clinc_DatasetDict = load_clinc(few_shot, num_labels, ood_data)
 
-    data_dict = load_dataset('text', data_files={'train': ''})
-    train_dataset = data_dict['train']
-    train_dataset = train_dataset.map(prepare_txt)
-
     def prepare_txt(example):
 
         #index und /t vor dem Satz entfernen
         example['text'] = re.sub(r'^.*?/t', '', example['text'])
+        #. und ? als Satzzeichen entfernen
+        example['text'] = example['text'].strip(".?")
         
-        # label hinzufügen
-        example['labels'] = 0
-        
+        # label hinzufügen (sind alle OOD)
+        example['intent'] = 0
+
         return example
+
+    for datafile in ['/content/OOD-Framework/data/Augmentation/wiki.txt', '/content/OOD-Framework/data/Augmentation/subset_books.txt']:
+
+        data_dict = load_dataset('text', data_files={'train': datafile})
+        train_dataset = data_dict['train']
+        train_dataset = train_dataset.shuffle(seed=42)
+        train_dataset = train_dataset.shard(num_shards=70, index=0)
+        train_dataset = train_dataset.map(prepare_txt)
+        train_dataset = train_dataset.rename_column("text", "intent")
+
+        clinc_DatasetDict['train'] = concatenate_datasets([clinc_DatasetDict['train'], train_dataset])
+
+    return clinc_DatasetDict
     
     

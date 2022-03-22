@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from evaluation import get_auroc, get_fpr_95
 import wandb
+from tqdm import tqdm
 
 def merge_keys(l, keys):
     new_dict = {}
@@ -13,15 +14,16 @@ def merge_keys(l, keys):
 
 def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None):
     
-    print("######################")
-    print("Start OOD-Detection...")
     #Varianz für Distanzen bestimmen
     model.prepare_ood(prepare_dataset)
 
-    keys = ['softmax', 'maha', 'cosine', 'energy', 'adb']
+    if centroids:
+        keys = ['softmax', 'maha', 'cosine', 'energy', 'adb']
+    else:
+        keys = ['softmax', 'maha', 'cosine', 'energy']
 
     in_scores = []
-    for batch in test_id_dataset:
+    for batch in tqdm(test_id_dataset):
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         with torch.no_grad():
@@ -31,7 +33,7 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
     print(in_scores)
 
     out_scores = []
-    for batch in test_ood_dataset:
+    for batch in tqdm(test_ood_dataset):
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         with torch.no_grad():
@@ -53,4 +55,4 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
         outputs[tag + "_" + key + "_auroc"] = auroc
         outputs[tag + "_" + key + "_fpr95"] = fpr_95
 
-    wandb.log(outputs)
+    wandb.log(outputs) if args.wandb == "log" else print("outputs: " + outputs)

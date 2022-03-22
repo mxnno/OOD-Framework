@@ -81,10 +81,6 @@ def main():
 
         elif args.model_ID == 2:
             ft_model =  finetune_std(args, model, train_dataset, dev_dataset)
-        elif args.model_ID == 14:
-            ft_model = finetune_std(args, model, train_dataset, dev_dataset)
-            ft_model, centroids, delta = finetune_ADB(args, ft_model, train_dataset, dev_dataset)
-            detect_ood(args, ft_model, dev_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
 
         #Model speichern
         if args.save_path:

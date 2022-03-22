@@ -21,6 +21,15 @@ def get_num_labels(args):
     else:
         return task_to_labels[args.id_data] - 1
 
+def save_model(model, path):
+    model.save_pretrained(path)
+    print("Model saved at: " + path)
+
+def save_tensor(tensor, path, tesnor_name="Tensor"):
+    torch.save(tensor, path)
+    print(tesnor_name + " saved at: " + path)
+
+
 
 # def collate_fn(batch):
 #     max_len = max([len(f["input_ids"]) for f in batch])

@@ -13,16 +13,21 @@ def set_model(args, num_labels):
 
     if args.model_ID == 1:
 
-        config = RobertaConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
-        config.gradient_checkpointing = True
-        config.alpha = args.alpha
-        config.loss = args.loss
+        
         if args.model_name_or_path.startswith("roberta"):
             #erst IMLM Finetuning mit Roberta + MaskedLM
+            config = RobertaConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
+            config.gradient_checkpointing = True
+            config.alpha = args.alpha
+            config.loss = args.loss
             model = RobertaForMaskedLM.from_pretrained(args.model_name_or_path, config=config)
             tokenizer = RobertaTokenizerFast.from_pretrained(args.model_name_or_path)
         else:
             #damm BCAD Finetuning mit dem IMLM-finegetuned model, das extra abgespeichert wird
+            config = RobertaConfig.from_pretrained("roberta-base", num_labels=num_labels)
+            config.gradient_checkpointing = True
+            config.alpha = args.alpha
+            config.loss = args.loss
             model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
             tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
         model.to(args.device)
@@ -135,8 +140,6 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
 
     def compute_ood(self, input_ids=None, attention_mask=None, labels=None, centroids=None, delta=None):
 
-        print("compute ood ...")
-
         outputs = self.roberta(input_ids, attention_mask=attention_mask)
         sequence_output = outputs[0]
         logits, pooled = self.classifier(sequence_output)
@@ -163,25 +166,24 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         #Energy
         energy_score = torch.logsumexp(logits, dim=-1)
 
+        ood_keys = {
+            'softmax': softmax_score.tolist(),
+            'maha': maha_score.tolist(),
+            'cosine': cosine_score.tolist(),
+            'energy': energy_score.tolist(),
+        }
+
         #ADB
-        adb_score = []
+        euc_dis = []
         if centroids is not None:
             logits_adb = euclidean_metric(pooled, centroids)
             probs, preds = F.softmax(logits_adb.detach(), dim = 1).max(dim = 1)
             euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)
             #data.unseen_token_id = num_labels -> bei 5 labels -> 0-4: ID -> 5: OOD 
             preds[euc_dis >= delta[preds]] = self.num_labels
-            print("preds")
-            print(preds)
+            ood_keys['adb'] = euc_dis.tolist()
 
-
-        ood_keys = {
-            'softmax': softmax_score.tolist(),
-            'maha': maha_score.tolist(),
-            'cosine': cosine_score.tolist(),
-            'energy': energy_score.tolist(),
-            'adb': euc_dis.tolist(),
-        }
+        
         return ood_keys
 
     def prepare_ood(self, dataloader=None):
@@ -190,9 +192,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         for batch in dataloader:
             self.eval()
             batch = {key: value.cuda() for key, value in batch.items()}
-            print({k: v.shape for k, v in batch.items()})
             labels = batch['labels']
-            print(labels)
             #forward ohne labels
             outputs = self.roberta(input_ids=batch['input_ids'],attention_mask=batch['attention_mask'])
             sequence_output = outputs[0]
@@ -200,15 +200,12 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
             if self.bank is None:
                 self.bank = pooled.clone().detach()
                 self.label_bank = labels.clone().detach()
-                print(self.label_bank.size())
-                print("________")
+
             else:
                 bank = pooled.clone().detach()
                 label_bank = labels.clone().detach()
                 self.bank = torch.cat([bank, self.bank], dim=0)
-                print(label_bank.size())
-                print(self.label_bank.size())
-                print("-------")
+
                 self.label_bank = torch.cat([label_bank, self.label_bank], dim=0)
 
         self.norm_bank = F.normalize(self.bank, dim=-1)

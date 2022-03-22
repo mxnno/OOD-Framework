@@ -7,39 +7,42 @@ import re
 datasets.logging.set_verbosity(datasets.logging.ERROR)
 
 
-def preprocess_data(dataset_name, args, num_labels, tokenizer, no_Dataloader=False):
+def preprocess_data(dataset_name, args, num_labels, tokenizer, no_Dataloader=False, model_type="SequenceClassification"):
 
-    print("Loading {}".format(dataset_name))
+    print("Dataset: " + dataset_name)
     if dataset_name == 'clinc150':
         raw_datasets = load_clinc(args.few_shot, num_labels, args.ood_data)
     elif dataset_name == 'clinc150_AUG':
         raw_datasets = load_clinc_with_Augmentation(args.few_shot, num_labels, args.ood_data)
     else:
-        print (dataset_name)
+        print ("Nicht gefunden: " + dataset_name)
         raise NotImplementedError
 
 
     def tokenize_function(example):
-        if args.model_ID == 1 and dataset_name == 'clinc150':
-
+        if model_type == 'LanguageModeling':
             result = tokenizer(example["text"])
             if tokenizer.is_fast:
                 result["word_ids"] = [result.word_ids(i) for i in range(len(result["input_ids"]))]
             return result
-
         else:
             return tokenizer(example["text"], truncation=True)
 
     tokenized_datasets = raw_datasets.map(tokenize_function, batched=True)
-    if args.model_ID == 1 and dataset_name == 'clinc150':
+    
+
+    if model_type == 'LanguageModeling':
         data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer,  mlm_probability=0.15)
-    else:
+    elif model_type == 'SequenceClassification':
         data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding="max_length")
+    else:
+        raise NotImplementedError
+        
 
     #Columns anpassen
     tokenized_datasets = tokenized_datasets.remove_columns(["text"])
     tokenized_datasets = tokenized_datasets.rename_column("intent", "labels")
-    if args.model_ID == 1 and dataset_name == 'clinc150':
+    if model_type == 'LanguageModeling':
         tokenized_datasets = tokenized_datasets.remove_columns(["labels"])
     tokenized_datasets.set_format("torch")
 
@@ -128,8 +131,6 @@ def load_clinc_with_Augmentation(few_shot, num_labels, ood_data):
     
     clinc_DatasetDict = load_clinc(few_shot, num_labels, ood_data)
 
-    print(clinc_DatasetDict['train'])
-
     def prepare_txt(example):
 
         #index und /t vor dem Satz entfernen
@@ -151,8 +152,6 @@ def load_clinc_with_Augmentation(few_shot, num_labels, ood_data):
         classlabel = ClassLabel(num_classes = 151, names=['restaurant_reviews', 'nutrition_info', 'account_blocked', 'oil_change_how', 'time', 'weather', 'redeem_rewards', 'interest_rate', 'gas_type', 'accept_reservations', 'smart_home', 'user_name', 'report_lost_card', 'repeat', 'whisper_mode', 'what_are_your_hobbies', 'order', 'jump_start', 'schedule_meeting', 'meeting_schedule', 'freeze_account', 'what_song', 'meaning_of_life', 'restaurant_reservation', 'traffic', 'make_call', 'text', 'bill_balance', 'improve_credit_score', 'change_language', 'no', 'measurement_conversion', 'timer', 'flip_coin', 'do_you_have_pets', 'balance', 'tell_joke', 'last_maintenance', 'exchange_rate', 'uber', 'car_rental', 'credit_limit', 'oos', 'shopping_list', 'expiration_date', 'routing', 'meal_suggestion', 'tire_change', 'todo_list', 'card_declined', 'rewards_balance', 'change_accent', 'vaccines', 'reminder_update', 'food_last', 'change_ai_name', 'bill_due', 'who_do_you_work_for', 'share_location', 'international_visa', 'calendar', 'translate', 'carry_on', 'book_flight', 'insurance_change', 'todo_list_update', 'timezone', 'cancel_reservation', 'transactions', 'credit_score', 'report_fraud', 'spending_history', 'directions', 'spelling', 'insurance', 'what_is_your_name', 'reminder', 'where_are_you_from', 'distance', 'payday', 'flight_status', 'find_phone', 'greeting', 'alarm', 'order_status', 'confirm_reservation', 'cook_time', 'damaged_card', 'reset_settings', 'pin_change', 'replacement_card_duration', 'new_card', 'roll_dice', 'income', 'taxes', 'date', 'who_made_you', 'pto_request', 'tire_pressure', 'how_old_are_you', 'rollover_401k', 'pto_request_status', 'how_busy', 'application_status', 'recipe', 'calendar_update', 'play_music', 'yes', 'direct_deposit', 'credit_limit_change', 'gas', 'pay_bill', 'ingredients_list', 'lost_luggage', 'goodbye', 'what_can_i_ask_you', 'book_hotel', 'are_you_a_bot', 'next_song', 'change_speed', 'plug_type', 'maybe', 'w2', 'oil_change_when', 'thank_you', 'shopping_list_update', 'pto_balance', 'order_checks', 'travel_alert', 'fun_fact', 'sync_device', 'schedule_maintenance', 'apr', 'transfer', 'ingredient_substitution', 'calories', 'current_location', 'international_fees', 'calculator', 'definition', 'next_holiday', 'update_playlist', 'mpg', 'min_payment', 'change_user_name', 'restaurant_suggestion', 'travel_notification', 'cancel', 'pto_used', 'travel_suggestion', 'change_volume'])
         train_dataset = train_dataset.map(prepare_txt)
         train_dataset = train_dataset.cast_column("intent", classlabel)
-
-        print(train_dataset)
 
         clinc_DatasetDict['train'] = concatenate_datasets([clinc_DatasetDict['train'], train_dataset])
 

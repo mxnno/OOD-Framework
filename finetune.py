@@ -15,9 +15,6 @@ warnings.filterwarnings("ignore")
 
 def finetune_std(args, model, train_dataloader, dev_dataloader):
 
-    print("######################")
-    print("Start Finetuning...")
-
     total_steps = int(len(train_dataloader) * args.num_train_epochs)
     warmup_steps = int(total_steps * args.warmup_ratio)
 
@@ -38,27 +35,21 @@ def finetune_std(args, model, train_dataloader, dev_dataloader):
             optimizer.step()
             scheduler.step()
             model.zero_grad()
-            wandb.log({'loss': loss.item()}, step=num_steps)
+            wandb.log({'loss': loss.item()}, step=num_steps) if args.wandb == "log" else print("Loss: " + str(loss.item()))
+
+            #cos_loss kann ggfs raus ???
             if cos_loss:
-                wandb.log({'cos_loss': cos_loss.item()}, step=num_steps)
+                wandb.log({'cos_loss': cos_loss.item()}, step=num_steps) if args.wandb == "log" else print("Cos-Loss: " + str(loss.item()))
 
         results = evaluate(args, model, dev_dataloader, tag="dev")
-        #ToDo: bestes Model speichern
-        wandb.log(results, step=num_steps)
-
-    if args.save_path:
-        model.save_pretrained(args.save_path)
-        print("Model saved at: " + args.save_path)
+        wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
+        
+    #ToDo: return best Model speichern
 
     return model
 
 
 def finetune_ADB(args, model, train_dataloader, dev_dataloader):
-    
-    print("######################")
-    print("Start Finetuning ADB...")
-
-    #args überarbeiten
 
     criterion_boundary = BoundaryLoss(num_labels = model.num_labels, feat_dim = args.feat_dim)
     delta = F.softplus(criterion_boundary.delta)
@@ -156,14 +147,11 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
 
     results = evaluate(args, model, dev_dataloader, tag="dev")
     #ToDo: bestes Model speichern
-    wandb.log(results, step=num_steps)
+    wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
 
     return model, centroids, delta
 
 def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, tokenizer ):
-
-    print("######################")
-    print("Start Finetuning IMLM...")
     
     training_args = TrainingArguments("test-trainer")
     
@@ -178,5 +166,6 @@ def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, 
 
     trainer.train()
 
-    args.model_name_or_path = args.save_path + "IMLM/"
-    trainer.save_model(args.model_name_or_path)
+    return trainer
+
+    

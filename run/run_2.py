@@ -61,6 +61,10 @@ def main():
             print("Bitte einen Pfad angeben, der ein Model enthält!")
             return False
 
+        #Load Model
+        print("Load model...")
+        model, config, tokenizer = set_model(args, num_labels)
+
         #Preprocess Data
         train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
 

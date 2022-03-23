@@ -15,20 +15,30 @@ def merge_keys(l, keys):
 def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None):
     
     #Varianz für Distanzen bestimmen
+
+    #idee: über  cm = confusion_matrix(y_true, y_pred)
+    #binär tn, fp, fn, tp = confusion_matrix([0, 1, 0, 1], [1, 1, 1, 0]).ravel()
+    # und dann classification_report
+
     model.prepare_ood(prepare_dataset)
 
-    if centroids:
+    if centroids is not None:
         keys = ['softmax', 'maha', 'cosine', 'energy', 'adb']
     else:
         keys = ['softmax', 'maha', 'cosine', 'energy']
 
     in_scores = []
     for batch in tqdm(test_id_dataset):
+
+        print("batch: ")
+        print(batch)
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         with torch.no_grad():
             ood_keys = model.compute_ood(**batch, centroids=centroids, delta=delta)
             in_scores.append(ood_keys)
+            print("ood_keys")
+            print(ood_keys)
     in_scores = merge_keys(in_scores, keys)
     print(in_scores)
 
@@ -37,12 +47,14 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         with torch.no_grad():
-            ood_keys = model.compute_ood(**batch)
+            ood_keys = model.compute_ood(**batch, centroids=centroids, delta=delta)
             out_scores.append(ood_keys)
     out_scores = merge_keys(out_scores, keys)
 
     outputs = {}
     for key in keys:
+
+        print("key: " + key)
         ins = np.array(in_scores[key], dtype=np.float64)
         outs = np.array(out_scores[key], dtype=np.float64)
         inl = np.ones_like(ins).astype(np.int64)
@@ -50,6 +62,10 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
         scores = np.concatenate([ins, outs], axis=0)
         labels = np.concatenate([inl, outl], axis=0)
 
+        print("scores:")
+        print(scores)
+        print("labels:")
+        print(labels)
         auroc, fpr_95 = get_auroc(labels, scores), get_fpr_95(labels, scores)
 
         outputs[tag + "_" + key + "_auroc"] = auroc

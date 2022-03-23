@@ -34,7 +34,7 @@ def set_model(args, num_labels):
 
         
     else:
-        config = RobertaConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
+        config = RobertaConfig.from_pretrained('roberta-base', num_labels=num_labels)
         config.gradient_checkpointing = True
         config.alpha = args.alpha
         config.loss = args.loss
@@ -158,7 +158,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         maha_score = maha_score.min(-1)[0]
         maha_score = -maha_score
 
-        #Cosin
+        #Cosine
         norm_pooled = F.normalize(pooled, dim=-1)
         cosine_score = norm_pooled @ self.norm_bank.t()
         cosine_score = cosine_score.max(-1)[0]
@@ -182,7 +182,6 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
             #data.unseen_token_id = num_labels -> bei 5 labels -> 0-4: ID -> 5: OOD 
             preds[euc_dis >= delta[preds]] = self.num_labels
             ood_keys['adb'] = euc_dis.tolist()
-
         
         return ood_keys
 

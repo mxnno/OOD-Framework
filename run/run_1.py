@@ -48,7 +48,7 @@ def main():
 
         #Preprocess Data
         print("Preprocess Data for IMLM...")
-        train_dataset, dev_dataset, datacollector = preprocess_data(args.dataset, args, num_labels, tokenizer, no_Dataloader=True)
+        train_dataset, dev_dataset, datacollector = preprocess_data(args.dataset, args, num_labels, tokenizer, no_Dataloader=True, model_type='LanguageModeling')
 
         #Finetune IMLM + abspeichern
         print("Finetune IMLM...")
@@ -77,13 +77,18 @@ def main():
 
 
     elif args.task == "ood_detection":
-        
-        #Preprocess Data
-        train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
 
         if not args.save_path:
             print("Bitte einen Pfad angeben, der ein Model, centroids-file und delta-file enthält!")
             return False
+
+        #Load Model
+        print("Load model...")
+        model, config, tokenizer = set_model(args, num_labels)
+        
+        #Preprocess Data
+        train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
+
         
         #OOD-Detection
         print("Start OOD-Detection...")

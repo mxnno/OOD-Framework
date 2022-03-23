@@ -75,17 +75,21 @@ def main():
             print("Bitte einen Pfad angeben, der ein Model, centroids-file und delta-file enthält!")
             return False
 
+        #Load Model
+        print("Load model...")
+        model, config, tokenizer = set_model(args, num_labels)
+
         #centroids holen
-        centroids = torch.load(args.save_path + "/" + "FT_adb/centroids.pt")
+        centroids = torch.load(args.model_name_or_path + "/centroids.pt")
         #delta holen
-        delta = torch.load(args.save_path + "/" + "FT_adb/delta.pt")
+        delta = torch.load(args.model_name_or_path + "/delta.pt")
 
         #Preprocess Data
         train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
 
         #OOD-Detection
         print("Start OOD-Detection...")
-        detect_ood(args, ft_model, dev_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
+        detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
 
 if __name__ == "__main__":
     main()

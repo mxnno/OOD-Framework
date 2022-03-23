@@ -42,8 +42,8 @@ def finetune_std(args, model, train_dataloader, dev_dataloader):
                 wandb.log({'cos_loss': cos_loss.item()}, step=num_steps) if args.wandb == "log" else print("Cos-Loss: " + str(loss.item()))
 
         results = evaluate(args, model, dev_dataloader, tag="dev")
-        wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
-        
+        #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
+        wandb.log(results, step=num_steps) if args.wandb == "log" else None
     #ToDo: return best Model speichern
 
     return model

@@ -72,3 +72,46 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
         outputs[tag + "_" + key + "_fpr95"] = fpr_95
 
     wandb.log(outputs) if args.wandb == "log" else print("outputs: " + outputs)
+
+
+def test_detect_ood(args, model, prepare_dataset, test_id_dataset, centroids=None, delta=None):
+    
+    #Varianz für Distanzen bestimmen
+
+    #idee: über  cm = confusion_matrix(y_true, y_pred)
+    #binär tn, fp, fn, tp = confusion_matrix([0, 1, 0, 1], [1, 1, 1, 0]).ravel()
+    # und dann classification_report
+
+    model.prepare_ood(prepare_dataset)
+
+    if centroids is not None:
+        keys = ['softmax', 'maha', 'cosine', 'energy', 'adb']
+    else:
+        keys = ['softmax', 'maha', 'cosine', 'energy']
+
+    in_scores = []
+    total_labels = torch.empty(0,dtype=torch.long).to(args.device)
+    total_preds = torch.empty(0,dtype=torch.long).to(args.device)
+    for batch in tqdm(test_id_dataset):
+
+        print("batch: ")
+        print(batch)
+        model.eval()
+        batch = {key: value.to(args.device) for key, value in batch.items()}
+        label_ids = batch["labels"]
+        with torch.no_grad():
+            ood_keys, logits = model.compute_ood(**batch, centroids=centroids, delta=delta, test=True)
+            #in_scores.append(ood_keys)
+
+            #total_labels = torch.cat((total_labels,label_ids))
+            #total_preds = torch.cat((total_preds, preds))
+            print("ood_keys")
+            print(ood_keys)
+    #in_scores = merge_keys(in_scores, keys)
+    #print(in_scores)
+
+
+    #y_pred = total_preds.cpu().numpy()
+    #y_true = total_labels.cpu().numpy()
+
+    #cm = confusion_matrix(y_true, y_pred)

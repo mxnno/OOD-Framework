@@ -138,11 +138,20 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         #return (loss, None/cos_loss, logits, outputs[2:], pooled,)
         
 
-    def compute_ood(self, input_ids=None, attention_mask=None, labels=None, centroids=None, delta=None):
+    def compute_ood(self, input_ids=None, attention_mask=None, labels=None, centroids=None, delta=None, test=None):
 
         outputs = self.roberta(input_ids, attention_mask=attention_mask)
+        print("outputs:")
+        print(outputs)
         sequence_output = outputs[0]
+        print("sequence_output:")
+        print(sequence_output)
         logits, pooled = self.classifier(sequence_output)
+        print("logits:")
+        print(logits)
+        print("pooled:")
+        print(pooled)
+        
 
         ood_keys = None
         #Softmax
@@ -183,6 +192,8 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
             preds[euc_dis >= delta[preds]] = self.num_labels
             ood_keys['adb'] = euc_dis.tolist()
         
+        if test is not None:
+            return ood_keys, logits
         return ood_keys
 
     def prepare_ood(self, dataloader=None):

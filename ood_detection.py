@@ -3,6 +3,7 @@ import numpy as np
 from evaluation import get_auroc, get_fpr_95
 import wandb
 from tqdm import tqdm
+from sklearn.metrics import confusion_matrix, classification_report
 
 def merge_keys(l, keys):
     new_dict = {}
@@ -93,25 +94,29 @@ def test_detect_ood(args, model, prepare_dataset, test_id_dataset, centroids=Non
     total_labels = torch.empty(0,dtype=torch.long).to(args.device)
     total_preds = torch.empty(0,dtype=torch.long).to(args.device)
     for batch in tqdm(test_id_dataset):
-
-        print("batch: ")
-        print(batch)
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         label_ids = batch["labels"]
         with torch.no_grad():
-            ood_keys, logits = model.compute_ood(**batch, centroids=centroids, delta=delta, test=True)
-            #in_scores.append(ood_keys)
+            ood_keys, logits, preds = model.compute_ood(**batch, centroids=centroids, delta=delta, test=True)
+            
+            softmax_score = ood_keys['softmax']
+            print(logits)
+            print(logits.size())
+            print(softmax_score)
 
-            #total_labels = torch.cat((total_labels,label_ids))
-            #total_preds = torch.cat((total_preds, preds))
-            print("ood_keys")
-            print(ood_keys)
-    #in_scores = merge_keys(in_scores, keys)
-    #print(in_scores)
+            total_labels = torch.cat((total_labels,label_ids))
+            total_preds = torch.cat((total_preds, preds))
+
+    y_pred = total_preds.cpu().numpy()
+    y_true = total_labels.cpu().numpy()
+
+    print(y_pred)
+    print(y_true)
 
 
-    #y_pred = total_preds.cpu().numpy()
-    #y_true = total_labels.cpu().numpy()
+    labels = list(range(0, 2))
+    print(labels)    
 
-    #cm = confusion_matrix(y_true, y_pred)
+    cm = confusion_matrix(y_true, y_pred)
+    print(classification_report(y_true, y_pred, labels=labels))

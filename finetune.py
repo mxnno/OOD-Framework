@@ -1,5 +1,6 @@
 from tqdm import tqdm
 from transformers.optimization import get_scheduler
+from accelerate import Accelerator
 from transformers import Trainer, TrainingArguments
 import torch.nn.functional as F
 import torch
@@ -13,7 +14,7 @@ from utils.utils_ADB import BoundaryLoss
 warnings.filterwarnings("ignore")
 
 
-def finetune_std(args, model, train_dataloader, dev_dataloader):
+def finetune_std(args, model, train_dataloader, dev_dataloader, accelerator):
 
     total_steps = int(len(train_dataloader) * args.num_train_epochs)
     warmup_steps = int(total_steps * args.warmup_ratio)
@@ -21,16 +22,23 @@ def finetune_std(args, model, train_dataloader, dev_dataloader):
     optimizer = get_optimizer_2(args, model)
     scheduler = get_scheduler("linear", optimizer=optimizer,num_warmup_steps=warmup_steps, num_training_steps=total_steps)
 
+    if accelerator is not None:
+        model, optimizer, train_dataloader = accelerator.prepare(model, optimizer, train_dataloader)
+
     num_steps = 0
     model.train()
     for epoch in range(int(args.num_train_epochs)):
         print("Epoche: " + str(epoch))
-        #model.zero_grad()
+        model.zero_grad()
         for batch in tqdm(train_dataloader):
+            model.train()
             batch = {key: value.to(args.device) for key, value in batch.items()}
             outputs = model(**batch)
             loss, cos_loss = outputs[0], outputs[1]
-            loss.backward()
+            if accelerator is not None:
+                loss.backward()
+            else:
+                accelerator.backward(loss)
             num_steps += 1
             optimizer.step()
             scheduler.step()

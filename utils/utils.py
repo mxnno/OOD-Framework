@@ -19,7 +19,7 @@ def get_num_labels(args):
     if args.ood_data == 'zero':
         return task_to_labels[args.id_data]
     else:
-        return task_to_labels[args.id_data] - 1
+        return task_to_labels[args.id_data]
 
 def save_model(model, path):
     model.save_pretrained(path)

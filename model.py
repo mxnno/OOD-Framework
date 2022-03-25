@@ -38,8 +38,8 @@ def set_model(args, num_labels):
         config.gradient_checkpointing = True
         config.alpha = args.alpha
         config.loss = args.loss
-        tokenizer = RobertaTokenizer.from_pretrained(args.model_name_or_path)
-        model = RobertaForSequenceClassification.from_pretrained('roberta-base', config=config)
+        tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
+        model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
         model.to(args.device)
 
     return model, config, tokenizer
@@ -55,8 +55,12 @@ class RobertaClassificationHead(nn.Module):
         self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
     def forward(self, features):
+        #feature  -> sequence_output/last_hidden_state = (batch_size, sequence_length, hidden_size)
         x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
         x = self.dropout(x)
+        #Roberta does not have a pooler layer (like Bert for instance) since the pretraining objective does not contain a classification task
+        #BertPooler (which is just dense + tanh)
+        # We "pool" the model by simply taking the hidden state corresponding to the first token.
         x = self.dense(x)
         x = pooled = torch.tanh(x)
         x = self.dropout(x)
@@ -77,16 +81,23 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         #self.post_init()
 
     def forward(self, input_ids=None, attention_mask=None, labels=None, onlyPooled=None):
+
         #input_ids, attention_mask, labels kommt von tokenized_datasets ins model:
         
+        #output type: BaseModelOutputWithPoolingAndCrossAttentions (aber ohen Pooling, da oben add_pooling_layer=False)
+        #(last_hidden_state=tensor([...]), pooler_output=None, hidden_states=None, past_key_values=None, attentions=None, cross_attentions=None)
         outputs = self.roberta(input_ids, attention_mask=attention_mask)
+        #sequence_output = last_hidden_state embeddings =  (batch_size, sequence_length, hidden_size) [8, 512, 768]
         sequence_output = outputs[0]
+        #pooled output: embeddings of [CLS] Token
+        #logits: [batch_size, num_labels] -> [-4.22, 4.354], [-2.22, 3.4]... 
         logits, pooled = self.classifier(sequence_output)
 
         if onlyPooled:
             return pooled 
         
         loss = None
+        #loss nur wenn label
         if labels is not None:
 
             #Standard loss
@@ -146,16 +157,19 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         sequence_output = outputs[0]
         print("sequence_output:")
         print(sequence_output)
+        print(sequence_output.size())
         logits, pooled = self.classifier(sequence_output)
         print("logits:")
-        print(logits)
+        print(logits.size())
         print("pooled:")
-        print(pooled)
+        print(pooled.size())
         
 
         ood_keys = None
         #Softmax
-        softmax_score = F.softmax(logits, dim=-1).max(-1)[0]
+        #max: Returns the maximum value of all elements in the input tensor (max, max_indices)
+        #max_indices = Klasse
+        softmax_score, softmax_idx= F.softmax(logits, dim=-1).max(-1)
         
         #Maha
         maha_score = []
@@ -193,7 +207,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
             ood_keys['adb'] = euc_dis.tolist()
         
         if test is not None:
-            return ood_keys, logits
+            return ood_keys, logits, softmax_idx
         return ood_keys
 
     def prepare_ood(self, dataloader=None):
@@ -228,3 +242,27 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         precision = EmpiricalCovariance().fit(centered_bank).precision_.astype(np.float32)
         self.class_var = torch.from_numpy(precision).float().cuda()
 
+
+
+
+
+
+
+# Grundlagen KI
+# Single Node: output = activation((x MatMul W) + B)
+# Dense Layer: Fully-Connected Layer
+# Activation Function: wandelt die Aktivierung der einzelnen Neuronen um bzw. grenzt die Aktivierung ein. z.B. von (0,1) in (0.1 .. 0.9) oder relu max(0,x) -> output = activation(Sum(W))
+# Bsp. Softmax: Für Output Layer:  for multi-class classification problems where class membership is required on more than two class labels
+# Logits: Output NN (unnormalized predictions ) and Inputs to Softmax
+
+
+#NLP: 
+
+#Sequence/Text Classifcation: task of classifying sequences according to a given number of classes -> pooled output = cls Token (siehe classifier)
+#Token Classification: task in which a label is assigned to some tokens in a text z.B. Named Entity Recognition (NER) -> last layer Output (batch_size, sequence_length, config.vocab_size)
+#Embeddings = Tokenizer.input_ids = Dictonary/Lookup Table für Wörter in Zahlen. Bei Bert z.B. auf 30k beschränkt -> "embeddings" = 'em', '##bed', '##ding' -> em = 1023, bed = 2152
+
+#NLI: In NLI the model determines the relationship between two given texts. Concretely, the model takes a premise and a hypothesis and returns a class that can either be:
+#   entailment, which means the hypothesis is true. 
+#   contraction, which means the hypothesis is false.
+#   neutral, which means there's no relation between the hypothesis and the premise.

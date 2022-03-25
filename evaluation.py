@@ -5,9 +5,9 @@ from tqdm import tqdm
 
 
 def evaluate(args, model, eval_dataset, tag="train"):
- 
-    metric = load_metric("accuracy")
-    #Todo: Metriken
+    
+    #Accuracy + F1
+    metric = load_metric("mrpc")
 
     def compute_metrics(preds, labels):
         preds = np.argmax(preds, axis=1)
@@ -28,8 +28,11 @@ def evaluate(args, model, eval_dataset, tag="train"):
         label_list.append(labels)
         logit_list.append(logits)
     preds = np.concatenate(logit_list, axis=0)
+    print(preds)
     labels = np.concatenate(label_list, axis=0)
+    print(labels)
     results = compute_metrics(preds, labels)
+    print(results)
     results = {"{}_{}".format(tag, key): value for key, value in results.items()}
     return results
 

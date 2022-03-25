@@ -11,20 +11,19 @@ from evaluation import evaluate
 from optimizer import get_optimizer_2
 from utils.utils import get_num_labels
 from utils.utils_ADB import BoundaryLoss
-from finetune_TPU import finetune_std_TPU
 warnings.filterwarnings("ignore")
 
 
-def finetune_std(args, model, train_dataloader, dev_dataloader, accelerator):
-
-    if accelerator is not None:
-        return finetune_std_TPU(args, model, train_dataloader, dev_dataloader, accelerator)
+def finetune_std_TPU(args, model, train_dataloader, dev_dataloader, accelerator):
 
     total_steps = int(len(train_dataloader) * args.num_train_epochs)
     warmup_steps = int(total_steps * args.warmup_ratio)
 
     optimizer = get_optimizer_2(args, model)
     scheduler = get_scheduler("linear", optimizer=optimizer,num_warmup_steps=warmup_steps, num_training_steps=total_steps)
+
+    
+    model, optimizer, train_dataloader = accelerator.prepare(model, optimizer, train_dataloader)
 
     num_steps = 0
     model.train()
@@ -33,10 +32,9 @@ def finetune_std(args, model, train_dataloader, dev_dataloader, accelerator):
         model.zero_grad()
         for batch in tqdm(train_dataloader):
             model.train()
-            batch = {key: value.to(args.device) for key, value in batch.items()}
             outputs = model(**batch)
             loss, cos_loss = outputs[0], outputs[1]
-            loss.backward()
+            accelerator.backward(loss)
             num_steps += 1
             optimizer.step()
             scheduler.step()

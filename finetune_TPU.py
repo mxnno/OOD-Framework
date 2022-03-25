@@ -27,6 +27,8 @@ def finetune_std_TPU(args, model, train_dataloader, dev_dataloader, accelerator)
 
     num_steps = 0
     model.train()
+    best_model = model
+    best_eval_score = 0
     for epoch in range(int(args.num_train_epochs)):
         print("Epoche: " + str(epoch))
         model.zero_grad()
@@ -46,11 +48,17 @@ def finetune_std_TPU(args, model, train_dataloader, dev_dataloader, accelerator)
                 wandb.log({'cos_loss': cos_loss.item()}, step=num_steps) if args.wandb == "log" else print("Cos-Loss: " + str(loss.item()))
 
         results = evaluate(args, model, dev_dataloader, tag="dev")
-        #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
+        #results, eval_score = evaluate(args, model, dev_dataloader, tag="dev")
         wandb.log(results, step=num_steps) if args.wandb == "log" else None
+
+
     #ToDo: return best Model speichern
 
-    return model
+    # if eval_score > best_eval_score:
+    #     best_eval_score = eval_score
+    #     best_model = model
+
+    return best_model
 
 
 def finetune_ADB(args, model, train_dataloader, dev_dataloader):

@@ -114,11 +114,12 @@ def load_clinc(few_shot, num_labels, ood_data):
 
     train_dataset = train_dataset.cast_column("intent", classlabel)
 
-    #Validation Daten ID/OOD aufteilen
+    #Validation Daten ID/OOD aufteilen + reudzieren
     val_dataset = datasets_dict['validation']
     val_dataset = val_dataset.map(change_ood_label)
     if ood_data == 'zero':
         val_dataset = val_dataset.filter(lambda example: example['intent'] != 0)
+    val_dataset = val_dataset.shard(num_shards=num_shards, index=0)
     val_dataset = val_dataset.cast_column("intent", classlabel)
     
     #Testdaten ID/OOD aufteilen

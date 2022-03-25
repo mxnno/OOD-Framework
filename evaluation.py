@@ -1,13 +1,15 @@
 import numpy as np
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, f1_score
 from datasets import load_metric
 from tqdm import tqdm
+import torch.nn.functional as F
+
 
 
 def evaluate(args, model, eval_dataset, tag="train"):
     
     #Accuracy + F1
-    metric = load_metric("mrpc")
+    metric = load_metric("accuracy")
 
     def compute_metrics(preds, labels):
         preds = np.argmax(preds, axis=1)
@@ -18,24 +20,56 @@ def evaluate(args, model, eval_dataset, tag="train"):
 
 
     label_list, logit_list = [], []
+    preds2_list = []
     for batch in tqdm(eval_dataset):
         model.eval()
         labels = batch["labels"].detach().cpu().numpy()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         batch["labels"] = None
         outputs = model(**batch)
-        logits = outputs[0].detach().cpu().numpy()
+
+        logits_2 = outputs[0]
+        logits = logits_2.detach().cpu().numpy()
         label_list.append(labels)
         logit_list.append(logits)
+        softmax_label = F.softmax(logits_2, dim=-1).max(-1)[1]
+        preds2_list.append(softmax_label.detach().cpu().numpy())
+        print("______________________________")
+        print(".")
+        print(labels)
+        print(softmax_label.detach().cpu().numpy())
+        print(np.argmax(logits, axis=1))
+        print(".")
+
+
     preds = np.concatenate(logit_list, axis=0)
-    print(preds)
+    preds2 = np.concatenate(preds2_list, axis=0)
+
     labels = np.concatenate(label_list, axis=0)
-    print(labels)
     results = compute_metrics(preds, labels)
-    print(results)
+    print("Accuracy: " + str(results))
+
+    #index of max
+    #bei multiclass evtl noch ein softmax?
+    preds1 = np.argmax(preds, axis=1)
+    acc, f1 = get_acc_and_f1(preds1, labels)
+    print("acc " + str(acc))
+    print("f1 " + str(f1))
+
+    acc2, f2 = get_acc_and_f1(preds2, labels)
+    print("acc2 " + str(acc2))
+    print("f12 " + str(f2))
     results = {"{}_{}".format(tag, key): value for key, value in results.items()}
     return results
 
+
+def get_accuracy(preds, labels):
+    return (preds == labels).mean().item()
+
+def get_acc_and_f1(preds, labels):
+    acc = get_accuracy(preds, labels)
+    f1 = f1_score(y_true=labels, y_pred=preds).item()
+    return acc, f1
 
 def get_auroc(key, prediction):
     new_key = np.copy(key)

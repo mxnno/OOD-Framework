@@ -37,9 +37,8 @@ def main():
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         args.n_gpu = torch.cuda.device_count()
         args.device = device
-    
-    set_seed(args)
-    #Todo: set seeds?
+        set_seed(args)
+        #Todo: set seeds?
 
     #get num_labels
     num_labels = get_num_labels(args)

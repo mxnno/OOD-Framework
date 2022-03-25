@@ -36,7 +36,7 @@ def preprocess_data(dataset_name, args, num_labels, tokenizer, no_Dataloader=Fal
     if model_type == 'LanguageModeling':
         data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer,  mlm_probability=0.15)
     elif model_type == 'SequenceClassification':
-        data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding="max_length")
+        data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
     else:
         raise NotImplementedError
         

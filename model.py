@@ -34,7 +34,7 @@ def set_model(args, num_labels):
 
         
     else:
-        config = RobertaConfig.from_pretrained('roberta-base', num_labels=num_labels)
+        config = RobertaConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
         config.gradient_checkpointing = True
         config.alpha = args.alpha
         config.loss = args.loss

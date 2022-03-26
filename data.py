@@ -36,7 +36,7 @@ def preprocess_data(dataset_name, args, num_labels, tokenizer, no_Dataloader=Fal
     if model_type == 'LanguageModeling':
         data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer,  mlm_probability=0.15)
     elif model_type == 'SequenceClassification':
-        data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+        data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding="max_length")
     else:
         raise NotImplementedError
         
@@ -114,12 +114,20 @@ def load_clinc(few_shot, num_labels, ood_data):
 
     train_dataset = train_dataset.cast_column("intent", classlabel)
 
-    #Validation Daten ID/OOD aufteilen + reudzieren
+    #Validation Daten
+    # - ID Daten reduzieren
+    # - OOD Daten bleiben
     val_dataset = datasets_dict['validation']
     val_dataset = val_dataset.map(change_ood_label)
     if ood_data == 'zero':
         val_dataset = val_dataset.filter(lambda example: example['intent'] != 0)
-    val_dataset = val_dataset.shard(num_shards=num_shards, index=0)
+    val_ood = val_dataset.filter(lambda example: example['intent'] == 0)
+    val_id = val_dataset.filter(lambda example: example['intent'] != 0)
+    val_id = val_id.shuffle(seed=42)
+    val_id = val_id.sort('intent')
+    val_id = val_id.shard(num_shards=num_shards, index=0)
+    val_dataset = concatenate_datasets([val_ood, val_id])
+    val_dataset = val_dataset.shuffle(seed=42)
     val_dataset = val_dataset.cast_column("intent", classlabel)
     
     #Testdaten ID/OOD aufteilen
@@ -141,6 +149,8 @@ def load_clinc(few_shot, num_labels, ood_data):
         val_dataset = val_dataset.map(change_label_binary)
         test_ood_dataset = test_ood_dataset.map(change_label_binary)
         test_id_dataset = test_id_dataset.map(change_label_binary)
+
+    val_dataset.to_csv('/content/drive/MyDrive/trainas.csv')  
 
     return DatasetDict({'train': train_dataset, 'validation': val_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
 

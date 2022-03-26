@@ -18,6 +18,7 @@ warnings.filterwarnings("ignore")
 def finetune_std(args, model, train_dataloader, dev_dataloader, accelerator):
 
     if accelerator is not None:
+        print("finetune_std_TPU")
         return finetune_std_TPU(args, model, train_dataloader, dev_dataloader, accelerator)
 
     total_steps = int(len(train_dataloader) * args.num_train_epochs)

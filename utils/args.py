@@ -14,7 +14,7 @@ def get_args():
     parser.add_argument("--project_name", type=str, default="ood")
     parser.add_argument("--save_path", default="/Model", type=str)
     parser.add_argument("--wandb", type=str, default="log")
-    parser.add_argument("--accelerator", type=bool, default=True)
+    parser.add_argument("--tpu", type=str, default="gpu")
 
     parser.add_argument("--feat_dim", default=768, type=int, help="The feature dimension.")
     parser.add_argument("--batch_size", default=8, type=int)

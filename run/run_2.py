@@ -28,7 +28,7 @@ def main():
         wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
 
     #Accelerator
-    if args.accelerator is True:
+    if args.tpu == "tpu":
         accelerator = Accelerator()
         args.device = accelerator.device
     else:
@@ -45,9 +45,6 @@ def main():
 
     if args.task == "finetune":
 
-        if not args.save_path:
-            print("KEIN SAVE_PATH ANGEGEBEN!")
-
         #Load Model
         print("Load model...")
         model, config, tokenizer = set_model(args, num_labels)
@@ -59,8 +56,8 @@ def main():
         #Finetune Std + abspeichern
         print("Finetune...")
         ft_model =  finetune_std(args, model, train_dataset, dev_dataset, accelerator)
-        if args.save_path:
-            save_model(ft_model, args.save_path + "FT_std")
+        if args.save_path != "debug":
+            save_model(ft_model, args)
 
     elif args.task == "ood_detection":
         

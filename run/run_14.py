@@ -7,7 +7,7 @@ from finetune import finetune_std, finetune_ADB
 from ood_detection import detect_ood
 from utils.args import get_args
 from data import preprocess_data
-from utils.utils import set_seed, get_num_labels, save_model, save_tensor
+from utils.utils import set_seed, get_num_labels, save_model, save_tensor, get_save_path
 
 warnings.filterwarnings("ignore")
 
@@ -20,10 +20,6 @@ def main():
 
     #get args
     args = get_args()
-
-    #save_path like Model/1/...
-    if args.save_path:
-        args.save_path = args.save_path + str(args.model_ID) + "/"
 
     #init WandB
     if args.wandb == "log":
@@ -41,9 +37,6 @@ def main():
 
     if args.task == "finetune":
 
-        if not args.save_path:
-            print("KEIN SAVE_PATH ANGEGEBEN!")
-
         #Load Model
         print("Load model...")
         model, config, tokenizer = set_model(args, num_labels)
@@ -53,18 +46,20 @@ def main():
         train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
 
         #Finetune Std + abspeichern
+
         print("Finetune...")
         ft_model =  finetune_std(args, model, train_dataset, dev_dataset)
-        if args.save_path:
-            save_model(ft_model, args.save_path + "FT_std")
+        if args.save_path != "debug":
+            save_model(ft_model, args)
 
         #Finetune ADB + abspeichern
         print("Finetune ADB...")
         ft_model, centroids, delta = finetune_ADB(args, ft_model, train_dataset, dev_dataset)
-        if args.save_path:
-            save_model(ft_model, args.save_path + "FT_adb")
-            save_tensor(centroids, args.save_path + "FT_adb/centroids.pt", "Centroids")
-            save_tensor(delta, args.save_path + "FT_adb/delta.pt", "Delta")
+        if args.save_path != "debug":
+            args.save_path = get_save_path(args).replace("/14/", "/14/ADB")
+            save_model(ft_model, args)
+            save_tensor(centroids, args.save_path)
+            save_tensor(delta, args.save_path)
         else:
             detect_ood(args, ft_model, dev_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
 

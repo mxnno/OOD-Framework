@@ -52,11 +52,11 @@ def evaluate(args, model, eval_dataset, tag="train"):
     #index of max
     #bei multiclass evtl noch ein softmax?
     preds1 = np.argmax(preds, axis=1)
-    acc, f1 = get_acc_and_f1(preds1, labels)
+    acc, f1 = get_acc_and_f1(preds1, labels, model.num_labels)
     print("acc " + str(acc))
     print("f1 " + str(f1))
 
-    acc2, f2 = get_acc_and_f1(preds2, labels)
+    acc2, f2 = get_acc_and_f1(preds2, labels, model.num_labels)
     print("acc2 " + str(acc2))
     print("f12 " + str(f2))
     results = {"{}_{}".format(tag, key): value for key, value in results.items()}
@@ -66,9 +66,13 @@ def evaluate(args, model, eval_dataset, tag="train"):
 def get_accuracy(preds, labels):
     return (preds == labels).mean().item()
 
-def get_acc_and_f1(preds, labels):
+def get_acc_and_f1(preds, labels, num_labels):
     acc = get_accuracy(preds, labels)
-    f1 = f1_score(y_true=labels, y_pred=preds).item()
+
+    average = 'binary'
+    if num_labels > 2:
+        average = 'macro'
+    f1 = f1_score(y_true=labels, y_pred=preds, average=average).item()
     return acc, f1
 
 def get_auroc(key, prediction):

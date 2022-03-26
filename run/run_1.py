@@ -7,7 +7,7 @@ from finetune import finetune_imlm, finetune_std
 from ood_detection import detect_ood
 from utils.args import get_args
 from data import preprocess_data
-from utils.utils import set_seed, get_num_labels, save_model
+from utils.utils import set_seed, get_num_labels, save_model, get_save_path
 
 warnings.filterwarnings("ignore")
 
@@ -20,10 +20,6 @@ def main():
 
     #get args
     args = get_args()
-
-    #save_path like Model/1/...
-    if args.save_path:
-        args.save_path = args.save_path + str(args.model_ID) + "/"
 
     #init WandB
     if args.wandb == "log":
@@ -53,8 +49,9 @@ def main():
         #Finetune IMLM + abspeichern
         print("Finetune IMLM...")
         trainer = finetune_imlm(args, model, train_dataset, dev_dataset, datacollector, tokenizer)
-        args.model_name_or_path = args.save_path + "IMLM/"
-        trainer.save_model(args.model_name_or_path)
+        args.save_path = get_save_path(args).replace("/1/", "/1/IMLM")
+        args.model_name_or_path = args.save_path
+        trainer.save_model(args.save_path)
 
         ##################### BCAD ###############################
         #Load Model for BCAD (args.model_name_or_path wurde geändert)
@@ -68,12 +65,13 @@ def main():
         #Finetune BCAD + abspeichern
         print("Finetune BCAD...")
         ft_model = finetune_std(args, model, train_dataset, dev_dataset)
-        args.save_path = args.save_path + "IMLM_BCAD/"
+        args.save_path = get_save_path(args).replace("/1/", "/1/IMLM_BCAD")
 
         #save finetuned model
         #Model speichern
-        if args.save_path:
-            save_model(model, args.save_path)
+        if args.save_path != "debug":
+            save_model(ft_model, args)
+
 
 
     elif args.task == "ood_detection":

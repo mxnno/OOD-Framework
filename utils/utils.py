@@ -21,9 +21,17 @@ def get_num_labels(args):
     else:
         return task_to_labels[args.id_data]
 
-def save_model(model, path):
+def save_model(model, args):
+
+    if args.save_path == "drive":
+        path = get_save_path(args)
+    else:
+        path = args.save_path
     model.save_pretrained(path)
     print("Model saved at: " + path)
+
+def get_save_path(args):
+    return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot, args.num_epochs, args.tpu)
 
 def save_tensor(tensor, path, tesnor_name="Tensor"):
     torch.save(tensor, path)

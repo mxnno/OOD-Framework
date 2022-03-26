@@ -4,3 +4,4 @@ datasets
 wandb
 tqdm
 scikit-learn
+accelerate

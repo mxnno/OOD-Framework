@@ -34,19 +34,13 @@ def evaluate(args, model, eval_dataset, tag="train"):
         logit_list.append(logits)
         softmax_label = F.softmax(logits_2, dim=-1).max(-1)[1]
         preds2_list.append(softmax_label.detach().cpu().numpy())
-        print("______________________________")
-        print(".")
-        print(labels)
-        print(softmax_label.detach().cpu().numpy())
-        print(np.argmax(logits, axis=1))
-        print(".")
 
 
     preds = np.concatenate(logit_list, axis=0)
     preds2 = np.concatenate(preds2_list, axis=0)
 
     labels = np.concatenate(label_list, axis=0)
-    results = compute_metrics(preds, labels)
+    #results = compute_metrics(preds, labels)
     print("Accuracy: " + str(results))
 
     #index of max
@@ -59,7 +53,7 @@ def evaluate(args, model, eval_dataset, tag="train"):
     acc2, f2 = get_acc_and_f1(preds2, labels, model.num_labels)
     print("acc2 " + str(acc2))
     print("f12 " + str(f2))
-    results = {"{}_{}".format(tag, key): value for key, value in results.items()}
+    results = {"accuracy": acc, "f1": f1}
     return results
 
 

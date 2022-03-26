@@ -31,7 +31,7 @@ def save_model(model, args):
     print("Model saved at: " + path)
 
 def get_save_path(args):
-    return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot, args.num_epochs, args.tpu)
+    return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.tpu)
 
 def save_tensor(tensor, path, tesnor_name="Tensor"):
     torch.save(tensor, path)

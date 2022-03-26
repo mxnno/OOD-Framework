@@ -19,9 +19,6 @@ def main():
     #get args
     args = get_args()
 
-    #save_path like Model/1/...
-    if args.save_path:
-        args.save_path = args.save_path + str(args.model_ID) + "/"
 
     #init WandB
     if args.wandb == "log":

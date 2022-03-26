@@ -12,7 +12,7 @@ def get_args():
     parser.add_argument("--id_data", default="full", type=str, choices=['full', 'unlabeled','zero'])
     parser.add_argument("--few_shot", default="100", type=int)
     parser.add_argument("--project_name", type=str, default="ood")
-    parser.add_argument("--save_path", default="/Model", type=str)
+    parser.add_argument("--save_path", default="drive", type=str)
     parser.add_argument("--wandb", type=str, default="log")
     parser.add_argument("--tpu", type=str, default="gpu")
 

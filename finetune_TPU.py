@@ -28,7 +28,8 @@ def finetune_std_TPU(args, model, train_dataloader, dev_dataloader, accelerator)
     num_steps = 0
     model.train()
     best_model = model
-    best_eval_score = 0
+    loss_list = []
+    
     for epoch in range(int(args.num_train_epochs)):
         print("Epoche: " + str(epoch))
         model.zero_grad()

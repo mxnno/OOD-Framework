@@ -57,7 +57,10 @@ def preprocess_data(dataset_name, args, num_labels, tokenizer, no_Dataloader=Fal
     eval_dataloader = DataLoader(
         tokenized_datasets["validation"], batch_size=args.batch_size, collate_fn=data_collator
     )
-    test__ood_dataloader = DataLoader(
+    test_dataloader = DataLoader(
+        tokenized_datasets["test"], batch_size=args.batch_size, collate_fn=data_collator
+    )
+    test_ood_dataloader = DataLoader(
         tokenized_datasets["test_ood"], batch_size=args.batch_size, collate_fn=data_collator
     )
     test_id_dataloader = DataLoader(
@@ -67,7 +70,7 @@ def preprocess_data(dataset_name, args, num_labels, tokenizer, no_Dataloader=Fal
     #for batch in eval_dataloader:
         #print({k: v.shape for k, v in batch.items()})
 
-    return train_dataloader, eval_dataloader, test_id_dataloader, test__ood_dataloader
+    return train_dataloader, eval_dataloader, test_dataloader, test_id_dataloader, test_ood_dataloader
 
 
 def load_clinc(few_shot, num_labels, ood_data):
@@ -137,6 +140,7 @@ def load_clinc(few_shot, num_labels, ood_data):
     test_id_dataset = test_dataset.filter(lambda example: example['intent'] != 0)
     test_ood_dataset = test_ood_dataset.cast_column("intent", classlabel)
     test_id_dataset = test_id_dataset.cast_column("intent", classlabel)
+    test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
 
     #Falls 2 Klassen 
     def change_label_binary(example):
@@ -152,7 +156,7 @@ def load_clinc(few_shot, num_labels, ood_data):
 
     val_dataset.to_csv('/content/drive/MyDrive/trainas.csv')  
 
-    return DatasetDict({'train': train_dataset, 'validation': val_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
+    return DatasetDict({'train': train_dataset, 'validation': val_dataset, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
 
 def load_clinc_with_Augmentation(few_shot, num_labels, ood_data):
     

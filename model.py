@@ -152,17 +152,9 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
     def compute_ood(self, input_ids=None, attention_mask=None, labels=None, centroids=None, delta=None, test=None):
 
         outputs = self.roberta(input_ids, attention_mask=attention_mask)
-        print("outputs:")
-        print(outputs)
         sequence_output = outputs[0]
-        print("sequence_output:")
-        print(sequence_output)
-        print(sequence_output.size())
         logits, pooled = self.classifier(sequence_output)
-        print("logits:")
-        print(logits.size())
-        print("pooled:")
-        print(pooled.size())
+ 
         
 
         ood_keys = None

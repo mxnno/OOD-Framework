@@ -4,7 +4,7 @@ import warnings
 
 from model import  set_model
 from finetune import finetune_std, finetune_ADB
-from ood_detection import detect_ood
+from ood_detection import detect_ood, test_detect_ood
 from utils.args import get_args
 from data import preprocess_data
 from utils.utils import set_seed, get_num_labels, save_model, save_tensor
@@ -57,6 +57,8 @@ def main():
             save_model(ft_model, args)
 
     elif args.task == "ood_detection":
+
+        print("hi")
         
         if not args.save_path:
             print("Bitte einen Pfad angeben, der ein Model enthält!")
@@ -67,11 +69,12 @@ def main():
         model, config, tokenizer = set_model(args, num_labels)
 
         #Preprocess Data
-        train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
+        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
 
         #OOD-Detection
         print("Start OOD-Detection...")
-        detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset)
+        #detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset)
+        test_detect_ood(args, model, dev_dataset, test_dataset)
 
 if __name__ == "__main__":
     main()

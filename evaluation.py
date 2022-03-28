@@ -40,7 +40,7 @@ def evaluate(args, model, eval_dataset, tag="train"):
     preds2 = np.concatenate(preds2_list, axis=0)
 
     labels = np.concatenate(label_list, axis=0)
-    #results = compute_metrics(preds, labels)
+    results = compute_metrics(preds, labels)
     print("Accuracy: " + str(results))
 
     #index of max

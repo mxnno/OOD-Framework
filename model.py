@@ -7,9 +7,12 @@ from torch.nn import CrossEntropyLoss, MSELoss
 from transformers import RobertaPreTrainedModel, RobertaForMaskedLM,  RobertaModel, RobertaConfig, RobertaTokenizer, RobertaTokenizerFast
 from sklearn.covariance import EmpiricalCovariance
 from utils.utils_ADB import euclidean_metric
+from utils.utils import get_num_labels
 
 
-def set_model(args, num_labels):
+def set_model(args):
+
+    num_labels = get_num_labels(args)
 
     if args.model_ID == 1:
 

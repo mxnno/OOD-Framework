@@ -3,11 +3,11 @@ import wandb
 import warnings
 
 from model import  set_model
-from finetune import finetune_std, finetune_ADB
+from finetune import finetune_std
 from ood_detection import detect_ood, test_detect_ood
 from utils.args import get_args
 from data import preprocess_data
-from utils.utils import set_seed, get_num_labels, save_model, save_tensor
+from utils.utils import set_seed, save_model
 from accelerate import Accelerator
 
 warnings.filterwarnings("ignore")
@@ -37,18 +37,16 @@ def main():
         set_seed(args)
         #Todo: set seeds?
 
-    #get num_labels
-    num_labels = get_num_labels(args)
 
     if args.task == "finetune":
 
         #Load Model
         print("Load model...")
-        model, config, tokenizer = set_model(args, num_labels)
+        model, config, tokenizer = set_model(args)
 
         #Preprocess Data
         print("Preprocess Data...")
-        train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
+        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
 
         #Finetune Std + abspeichern
         print("Finetune...")
@@ -66,10 +64,10 @@ def main():
 
         #Load Model
         print("Load model...")
-        model, config, tokenizer = set_model(args, num_labels)
+        model, config, tokenizer = set_model(args)
 
         #Preprocess Data
-        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
+        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
 
         #OOD-Detection
         print("Start OOD-Detection...")

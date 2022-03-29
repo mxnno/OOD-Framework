@@ -74,13 +74,14 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     return train_dataloader, eval_dataloader, test_dataloader, test_id_dataloader, test_ood_dataloader
 
 
-def load_clinc(args, num_labels, ood_data):
+def load_clinc(args):
     #few_shot: Anteil vom ursprünglichen Datensatz
     #num_labels: Anzahl label -> 2 oder 151
     #ood_data: 'zero' -> nur ID, sonst ID + OOD
     ood_data = args.ood_data
     num_shards = int(100/args.few_shot)
-    label_names, label_ids = get_labels(args.id_data)
+    label_names, label_ids = get_labels(args)
+    ic = label_ids[1] #Das muss noch überarbeitet werdne ???
     num_labels = get_num_labels(args)
     
     classlabel = ClassLabel(num_classes = num_labels, names=label_names)
@@ -98,21 +99,25 @@ def load_clinc(args, num_labels, ood_data):
         return example
 
     #Trainingsdaten ID/OOD aufteilen + verkleinern
-    dataset = datasets_dict['train']
-    dataset = dataset.map(change_ood_label)
-    ood = dataset.filter(lambda example: example['intent'] not in label_ids[1:])
-    id = dataset.filter(lambda example: example['intent'] in label_ids[1:])
+    train_dataset = datasets_dict['train']
+    train_dataset = train_dataset.map(change_ood_label)
+
 
     #Train Dataset zufällig shuffeln und reduzieren
-    shuffled_train = id.shuffle(seed=42)
+    shuffled_train = train_dataset.shuffle(seed=42)
     sorted_train = shuffled_train.sort('intent')
     sharded_train = sorted_train.shard(num_shards=num_shards, index=0)
+
+    ood = sharded_train.filter(lambda example: example['intent'] not in label_ids[1:])
+    id = sharded_train.filter(lambda example: example['intent'] in label_ids[1:])
+
     
     if ood_data == 'zero':
-        train_dataset = sharded_train
+        train_dataset = id
     else:
-        train_dataset = concatenate_datasets([sharded_train, ood])
+        train_dataset = concatenate_datasets([id, ood])
 
+    #train_dataset = train_dataset.shuffle(seed=42)
     train_dataset = train_dataset.cast_column("intent", classlabel)
 
     #Validation Daten
@@ -122,12 +127,12 @@ def load_clinc(args, num_labels, ood_data):
     val_dataset = val_dataset.map(change_ood_label)
     if ood_data == 'zero':
         val_dataset = val_dataset.filter(lambda example: example['intent'] != 0)
-    val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids[1:])
-    val_id = val_dataset.filter(lambda example: example['intent'] in label_ids[1:])
-    val_id = val_id.shuffle(seed=42)
-    val_id = val_id.sort('intent')
-    val_id = val_id.shard(num_shards=num_shards, index=0)
-    val_dataset = concatenate_datasets([val_ood, val_id])
+    # val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids[1:])
+    # val_id = val_dataset.filter(lambda example: example['intent'] in label_ids[1:])
+    # val_id = val_id.shuffle(seed=42)
+    # val_id = val_id.sort('intent')
+    # val_id = val_id.shard(num_shards=num_shards, index=0)
+    # val_dataset = concatenate_datasets([val_ood, val_id])
     val_dataset = val_dataset.shuffle(seed=42)
     val_dataset = val_dataset.cast_column("intent", classlabel)
     
@@ -142,13 +147,24 @@ def load_clinc(args, num_labels, ood_data):
 
     #Falls 2 Klassen 
     def change_label_binary(example):
-        if example['intent'] not in label_ids[1:]:
-            example['intent'] = 0
+        if num_labels == 2:
+            if example['intent'] not in label_ids[1:]:
+                example['intent'] = 0
+            else:
+                example['intent'] = 1
         else:
-            example['intent'] = 1
+            #falls 3 Klassen (OOD/OOC/IC) mit 0/1/2
+            #0 bleibt 0, OOC -> 1
+            #0 ist in label:ids
+            if example['intent'] not in label_ids[1:]:
+                example['intent'] = 0
+            elif example['intent'] in label_ids[1:] and example['intent'] != ic:
+                example['intent'] = 1
+            else:
+                example['intent'] = 2
         return example
 
-    if num_labels == 2:
+    if num_labels == 2 or num_labels == 3:
         train_dataset = train_dataset.map(change_label_binary)
         val_dataset = val_dataset.map(change_label_binary)
         test_ood_dataset = test_ood_dataset.map(change_label_binary)

@@ -44,11 +44,11 @@ def main():
 
         #Load Model
         print("Load model...")
-        model, config, tokenizer = set_model(args, num_labels)
+        model, config, tokenizer = set_model(args)
 
         #Preprocess Data
         print("Preprocess Data...")
-        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
+        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
 
 
 if __name__ == "__main__":

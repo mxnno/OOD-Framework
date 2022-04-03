@@ -9,7 +9,7 @@ def get_args():
     parser.add_argument("--dataset", type=str, default="clinc150")
     parser.add_argument("--max_seq_length", default=128, type=int)
     parser.add_argument("--ood_data", default="full", type=str, choices=['full','zero'])
-    parser.add_argument("--id_data", default="full", type=str, choices=['full', 'unlabeled','zero', 'travel', 'banking', 'banking_unlabeled', 'travel_unlabeled'])
+    parser.add_argument("--id_data", default="full", type=str)
     parser.add_argument("--few_shot", default="100", type=int)
     parser.add_argument("--project_name", type=str, default="ood")
     parser.add_argument("--save_path", default="drive", type=str)

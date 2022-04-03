@@ -103,6 +103,11 @@ def load_clinc(args):
         return example
 
     def set_label_to_ID(example):
+
+        if args.model_ID == 8:
+            #nichts machen
+            return example 
+
         if num_labels == 2 or num_labels == 1:
             example['intent'] = 1
         else:

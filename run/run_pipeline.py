@@ -61,7 +61,5 @@ def main():
         
         print(np.argmax(logits, axis=1)[0])
 
-
-
 if __name__ == "__main__":
     main()

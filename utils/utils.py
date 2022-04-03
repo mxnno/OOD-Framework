@@ -18,7 +18,8 @@ task_to_labels = {
     'travel': 16,
     'banking_unlabeled': 2,
     'travel_unlabeled': 2,
-    'nli': 2
+    'banking_nli': 2,
+    'travel_nli:': 2
 }
 def get_num_labels(args):
     return task_to_labels[args.id_data]
@@ -43,10 +44,12 @@ def get_labels(args):
     elif args.id_data == 'banking_unlabeled':
         labels_name = ['ood', 'id']
         labels_id = [0, 2, 7, 20, 27, 35, 45, 56, 68, 70, 71, 89, 111, 127, 133, 143]
-    elif args.id_data == 'nli':
-        labels_name = ['entailment', 'non_entailment']
-        labels_id = [0, 1]
-        
+    elif args.id_data == 'banking_nli':
+        labels_name = ['ood', 'account_blocked', 'interest_rate', 'freeze_account',  'bill_balance', 'balance', 'routing', 'bill_due', 'transactions', 'report_fraud', 'spending_history', 'pin_change', 'pay_bill', 'order_checks', 'transfer', 'min_payment']
+        labels_id = [0, 2, 7, 20, 27, 35, 45, 56, 68, 70, 71, 89, 111, 127, 133, 143]
+    elif args.id_data == 'travel_nli':
+        labels_name = ['ood', 'exchange_rate', 'car_rental', 'vaccines', 'international_visa', 'translate', 'carry_on', 'book_flight', 'timezone', 'flight_status', 'lost_luggage', 'book_hotel', 'plug_type', 'travel_alert', 'travel_notification', 'travel_suggestion']
+        labels_id = [0, 38, 40, 52, 59, 61, 62, 63, 66, 80, 113, 116, 120, 128, 146, 149]
     return labels_name, labels_id
 
 

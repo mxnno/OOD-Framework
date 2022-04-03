@@ -3,6 +3,8 @@ from sklearn.metrics import roc_auc_score, f1_score
 from datasets import load_metric
 from tqdm import tqdm
 import torch.nn.functional as F
+from utils.utils_DNNC import convert_examples_to_features, get_eval_dataloader
+import torch
 
 
 
@@ -56,9 +58,45 @@ def evaluate(args, model, eval_dataset, tag="train"):
     results = {"accuracy": acc, "f1": f1}
     return results
 
+def evaluate_DNNC(args, model, eval_dataset):
+
+    if len(eval_dataset) == 0:
+            return None
+
+    eval_features = convert_examples_to_features(eval_dataset, train = False)
+    eval_dataloader = get_eval_dataloader(eval_features, args.batch_size)
+    
+    model.eval()
+    eval_accuracy = 0
+    nb_eval_examples = 0
+
+    for input_ids, input_mask, segment_ids, label_ids in tqdm(eval_dataloader, desc="Evaluating"):
+        input_ids = input_ids.to(args.device)
+        input_mask = input_mask.to(args.device)
+        segment_ids = segment_ids.to(args.device)
+
+        with torch.no_grad():
+            outputs = model(input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids)
+            logits = outputs[0]
+
+        logits = logits.detach().cpu().numpy()
+        label_ids = label_ids.numpy()
+        tmp_eval_accuracy = get_accuracy_DNNC(logits, label_ids)
+
+        eval_accuracy += tmp_eval_accuracy
+        nb_eval_examples += input_ids.size(0)
+
+    eval_accuracy = eval_accuracy / nb_eval_examples
+    return eval_accuracy
+    
+
 
 def get_accuracy(preds, labels):
     return (preds == labels).mean().item()
+
+def get_accuracy_DNNC(out, labels):
+    outputs = np.argmax(out, axis=1)
+    return np.sum(outputs == labels)
 
 def get_acc_and_f1(preds, labels, num_labels):
     acc = get_accuracy(preds, labels)

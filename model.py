@@ -83,13 +83,17 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         self.init_weights()
         #self.post_init()
 
-    def forward(self, input_ids=None, attention_mask=None, labels=None, onlyPooled=None):
+    def forward(self, input_ids=None, attention_mask=None, token_type_ids=None, labels=None, onlyPooled=None):
 
         #input_ids, attention_mask, labels kommt von tokenized_datasets ins model:
         
         #output type: BaseModelOutputWithPoolingAndCrossAttentions (aber ohen Pooling, da oben add_pooling_layer=False)
         #(last_hidden_state=tensor([...]), pooler_output=None, hidden_states=None, past_key_values=None, attentions=None, cross_attentions=None)
-        outputs = self.roberta(input_ids, attention_mask=attention_mask)
+        if token_type_ids is not None:
+            #für DNNC brauchen wir token_type_ids (Satz1 vs Satz2)
+            outputs = self.roberta(input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+        else:
+            outputs = self.roberta(input_ids, attention_mask=attention_mask)
         #sequence_output = last_hidden_state embeddings =  (batch_size, sequence_length, hidden_size) [8, 512, 768]
         sequence_output = outputs[0]
         #pooled output: embeddings of [CLS] Token

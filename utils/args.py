@@ -7,7 +7,7 @@ def get_args():
     parser.add_argument("--task", type=str, choices=['finetune','ood_detection'])
     parser.add_argument("--model_name_or_path", default="roberta-base", type=str)
     parser.add_argument("--dataset", type=str, default="clinc150")
-    parser.add_argument("--max_seq_length", default=256, type=int)
+    parser.add_argument("--max_seq_length", default=128, type=int)
     parser.add_argument("--ood_data", default="full", type=str, choices=['full','zero'])
     parser.add_argument("--id_data", default="full", type=str, choices=['full', 'unlabeled','zero', 'travel', 'banking', 'banking_unlabeled', 'travel_unlabeled'])
     parser.add_argument("--few_shot", default="100", type=int)
@@ -26,5 +26,9 @@ def get_args():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--alpha", type=float, default=2.0)
     parser.add_argument("--loss", type=str, choices=['margin-contrastive', 'similarity-contrastive', 'default'], default='default')
+    #für ID 8:
+    parser.add_argument("--gradient_accumulation_steps", type=int, default=4)
+    parser.add_argument('--label_smoothing',type = float, default = 0.1, help = 'Coefficient for label smoothing (default: 0.1, if 0.0, no label smoothing)')
+    parser.add_argument('--max_grad_norm', help='gradient clipping for Max gradient norm.', required=False, default=1.0,type=float)
     
     return parser.parse_args()

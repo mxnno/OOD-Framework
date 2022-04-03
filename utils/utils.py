@@ -17,13 +17,11 @@ task_to_labels = {
     'banking': 16,
     'travel': 16,
     'banking_unlabeled': 2,
-    'travel_unlabeled': 2
+    'travel_unlabeled': 2,
+    'nli': 2
 }
 def get_num_labels(args):
-    if args.ood_data == 'zero':
-        return task_to_labels[args.id_data] - 1 
-    else:
-        return task_to_labels[args.id_data]
+    return task_to_labels[args.id_data]
 
 def get_labels(args):
 
@@ -45,11 +43,11 @@ def get_labels(args):
     elif args.id_data == 'banking_unlabeled':
         labels_name = ['ood', 'id']
         labels_id = [0, 2, 7, 20, 27, 35, 45, 56, 68, 70, 71, 89, 111, 127, 133, 143]
+    elif args.id_data == 'nli':
+        labels_name = ['entailment', 'non_entailment']
+        labels_id = [0, 1]
         
-    if args.ood_data == 'zero':
-        return labels_name[1:], labels_id
-    else:
-        return labels_name, labels_id
+    return labels_name, labels_id
 
 
 def save_model(model, args):

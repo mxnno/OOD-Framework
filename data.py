@@ -87,6 +87,7 @@ def load_clinc(args):
     num_labels = get_num_labels(args)
     print(num_labels)
     label_names, label_ids = get_labels(args)
+    print(label_names)
     classlabel = ClassLabel(num_classes=num_labels, names=label_names)
 
     def set_OOD_as_0(example):
@@ -100,6 +101,24 @@ def load_clinc(args):
     def set_label_to_OOD(example):
         example['intent'] = 0
         return example
+
+    def set_label_to_ID(example):
+        if num_labels == 2 or num_labels == 1:
+            example['intent'] = 1
+        else:
+            example['intent'] = label_ids.index(example['intent'])
+        return example
+
+        # #falls 3 Klassen (OOD/OOC/IC) mit 0/1/2
+        # #0 bleibt 0, OOC -> 1
+        # #0 ist in label:ids
+        # if example['intent'] not in label_ids[1:]:
+        #     example['intent'] = 0
+        # elif example['intent'] in label_ids[1:] and example['intent'] != ic:
+        #     example['intent'] = 1
+        # else:
+        #     example['intent'] = 2
+
 
     #Datensatz laden
     datasets_dict = load_dataset("clinc_oos", "small")
@@ -115,22 +134,16 @@ def load_clinc(args):
     id = id.shuffle(seed=42)
     id = id.sort('intent')
     id = id.shard(num_shards=num_shards, index=0)
-    print("Len:")
-    print(len(id))
+    id = id.map(set_label_to_ID)
 
     #Falls OOD:
     if ood_data != 'zero':
         #OOD Daten zufällig shuffeln und reduzieren auf 10*n Few-Shot
         ood = train_dataset.filter(lambda example: example['intent'] not in label_ids[1:])
-        print("Len ood:")
-        print(len(ood))
         ood = ood.shuffle(seed=42)
         ood = ood.sort('intent')
         ood = ood.shard(num_shards=num_shards*10, index=0)
         ood = ood.map(set_label_to_OOD)
-        
-        print("Len ood:")
-        print(len(ood))
 
         train_dataset = concatenate_datasets([id, ood])
 
@@ -139,6 +152,7 @@ def load_clinc(args):
     
     #train_dataset = train_dataset.shuffle(seed=42)
     train_dataset = train_dataset.cast_column("intent", classlabel)
+    train_dataset.to_csv('training.csv')
 
 
     ########################################################### Validation ###############################################################
@@ -154,8 +168,8 @@ def load_clinc(args):
     val_id = val_id.shuffle(seed=42)
     val_id = val_id.sort('intent')
     val_id = val_id.shard(num_shards=num_shards, index=0)
-    print("Len val_id:")
-    print(len(val_id))
+    val_id = val_id.map(set_label_to_ID)
+
 
     if ood_data != 'zero':
         #OOD Daten zufällig shuffeln und reduzieren auf 3*n Few-Shot
@@ -164,9 +178,6 @@ def load_clinc(args):
         val_ood = val_ood.sort('intent')
         val_ood = val_ood.shard(num_shards=num_shards*3, index=0)
         val_ood = val_ood.map(set_label_to_OOD)
-
-        print("Len val ood:")
-        print(len(val_ood))
 
         val_dataset = concatenate_datasets([val_ood, val_id])
     else:
@@ -189,42 +200,13 @@ def load_clinc(args):
 
     #Test ID
     test_id_dataset = test_dataset.filter(lambda example: example['intent'] in label_ids[1:])
+    test_id_dataset = test_id_dataset.map(set_label_to_ID)
     test_id_dataset = test_id_dataset.cast_column("intent", classlabel)
 
     #Test ganz
     test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
 
 
-
-
-    ########################################################### Binary/Multiclass ###############################################################
-
-
-    #Falls 2 Klassen 
-    def change_label_binary(example):
-        if num_labels == 2:
-            if example['intent'] not in label_ids[1:]:
-                example['intent'] = 0
-            else:
-                example['intent'] = 1
-        else:
-            pass
-            # #falls 3 Klassen (OOD/OOC/IC) mit 0/1/2
-            # #0 bleibt 0, OOC -> 1
-            # #0 ist in label:ids
-            # if example['intent'] not in label_ids[1:]:
-            #     example['intent'] = 0
-            # elif example['intent'] in label_ids[1:] and example['intent'] != ic:
-            #     example['intent'] = 1
-            # else:
-            #     example['intent'] = 2
-        return example
-
-    if num_labels == 2 or num_labels == 3:
-        train_dataset = train_dataset.map(change_label_binary)
-        val_dataset = val_dataset.map(change_label_binary)
-        test_ood_dataset = test_ood_dataset.map(change_label_binary)
-        test_id_dataset = test_id_dataset.map(change_label_binary)
 
     #train_dataset.to_csv('/content/drive/MyDrive/trainas.csv')  
 

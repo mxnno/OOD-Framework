@@ -1,4 +1,4 @@
-from tqdm import tqdm
+from tqdm import tqdm, trange
 from transformers.optimization import get_scheduler
 from accelerate import Accelerator
 from transformers import Trainer, TrainingArguments
@@ -7,10 +7,11 @@ import torch
 import wandb
 import warnings
 import numpy as np
-from evaluation import evaluate
+from evaluation import evaluate, evaluate_DNNC
 from optimizer import get_optimizer_2
 from utils.utils import get_num_labels
 from utils.utils_ADB import BoundaryLoss
+from utils.utils_DNNC import *
 from finetune_TPU import finetune_std_TPU
 warnings.filterwarnings("ignore")
 
@@ -190,5 +191,61 @@ def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, 
     trainer.train()
 
     return trainer
+    
+def finetune_DNNC(args, model, tokenizer, train_examples, dev_examples):
+
+    train_batch_size = int(args.batch_size / args.gradient_accumulation_steps)
+
+    num_train_steps = int(len(train_examples) / train_batch_size / args.gradient_accumulation_steps * args.num_train_epochs)
+
+
+    train_features, label_distribution = convert_examples_to_features(args, train_examples, tokenizer, train = True)
+    train_dataloader = get_train_dataloader(train_features, train_batch_size)
+
+
+    optimizer = get_optimizer_2(args, model)
+    scheduler = get_scheduler("linear", optimizer=optimizer,num_warmup_steps=int(num_train_steps * args.warmup_ratio), num_training_steps=num_train_steps)
+
+    best_dev_accuracy = -1.0
+
+    model.zero_grad()
+    model.train()
+
+    best_model = model
+    num_steps = 0
+
+    for _ in trange(int(args.num_train_epochs), desc="Epoch"):
+        
+        for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration")):
+
+            input_ids, input_mask, segment_ids, label_ids = process_train_batch(batch, args.device)
+            outputs = model(input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids)
+            logits = outputs[0]
+            loss = loss_with_label_smoothing(label_ids, logits, label_distribution, args.label_smoothing, args.device)
+
+            if args.gradient_accumulation_steps > 1:
+                loss = loss / args.gradient_accumulation_steps
+
+            loss.backward()
+            num_steps += 1
+
+            if (step + 1) % args.gradient_accumulation_steps == 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+
+                optimizer.step()
+                scheduler.step()
+                model.zero_grad()
+
+        acc = evaluate_DNNC(args, model, dev_examples)
+        #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
+        wandb.log(acc, step=num_steps) if args.wandb == "log" else None
+
+        if acc > best_dev_accuracy :
+            best_model = model
+        
+        model.train()
+
+    return best_model
+
 
     

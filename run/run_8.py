@@ -5,7 +5,7 @@ import time
 
 from model import  set_model
 from finetune import finetune_std, finetune_ADB, finetune_DNNC
-from ood_detection import detect_ood
+from ood_detection import detect_ood, detect_ood_DNNC
 from utils.args import get_args
 from data import preprocess_data, load_clinc
 from utils.utils import set_seed, get_num_labels, save_model, save_tensor, get_save_path
@@ -34,14 +34,12 @@ def main():
     set_seed(args)
     #Todo: set seeds?
 
-    #get num_labels
-    num_labels = get_num_labels(args)
 
     if args.task == "finetune":
 
         #Load Model
         print("Load model...")
-        model, config, tokenizer = set_model(args, num_labels)
+        model, config, tokenizer = set_model(args)
 
         # #Preprocess NLI Data -> load 
         # print("Preprocess NLI Data...")
@@ -60,6 +58,7 @@ def main():
         do_lower_case = True
         time.sleep(2)
 
+        #load_intent_datasets -> list with examples e
         train_data, val_data = load_intent_datasets("train_dataset.csv", "val_dataset.csv", do_lower_case)
         test_id = dataset_dict['test_id']
         test_ood = dataset_dict['test_ood']
@@ -77,6 +76,25 @@ def main():
 
         if args.save_path != "debug":
             save_model(ft_model, args)
+
+    elif args.task == "ood_detection":
+        #Load Model
+        print("Load model...")
+        model, config, tokenizer = set_model(args)
+
+        dataset_dict  = load_clinc(args)
+        test_id = dataset_dict['test_id']
+        test_ood = dataset_dict['test_ood']
+        test_id.to_csv("test_id_dataset.csv")
+        test_ood.to_csv("test_od_dataset.csv")
+        time.sleep(2)
+        test_data_id, test_data_ood = load_intent_datasets("test_id_dataset.csv", "test_od_dataset.csv", do_lower_case)
+        train_data, _ = load_intent_datasets("train_dataset.csv", "val_dataset.csv", do_lower_case)
+        
+        #OOD-Detection
+        print("Start OOD-Detection...")
+        detect_ood_DNNC(args, model, train_data, test_data_id, test_data_ood)
+
 
 
 if __name__ == "__main__":

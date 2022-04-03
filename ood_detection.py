@@ -6,6 +6,7 @@ from tqdm import tqdm
 from sklearn.metrics import confusion_matrix, classification_report
 from numpy import savetxt
 from utils.utils import get_labels, get_num_labels
+from utils.utils_DNNC import *
 
 
 def merge_keys(l, keys):
@@ -111,3 +112,96 @@ def test_detect_ood(args, model, prepare_dataset, test_dataset, centroids=None, 
 
     #Classfication Report
     print(classification_report(y_true, y_pred, labels=labels))
+
+
+def detect_ood_DNNC(args, model, train, test_id, test_ood):
+
+    for e in tqdm(test_id, desc = 'Intent examples'):
+        pred, conf, matched_example = predict_intent(e.text)
+        print("-----------------")
+
+        print(pred)
+        print(conf)
+        print(matched_example)
+    
+    
+    
+    def model_predict(data):
+
+        model.eval()
+
+        input = [InputExample(premise, hypothesis) for (premise, hypothesis) in data]
+
+        eval_features = convert_examples_to_features(input, train = False)
+        input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
+        input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
+        segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
+
+        max_len = input_mask.sum(dim=1).max().item()
+        input_ids = input_ids[:, :max_len]
+        input_mask = input_mask[:, :max_len]
+        segment_ids = segment_ids[:, :max_len]
+
+        CHUNK = 500
+        EXAMPLE_NUM = input_ids.size(0)
+        label_list = ["non_entailment", "entailment"]
+        labels = []
+        probs = None
+        start_index = 0
+
+        while start_index < EXAMPLE_NUM:
+            end_index = min(start_index+CHUNK, EXAMPLE_NUM)
+            
+            input_ids_ = input_ids[start_index:end_index, :].to(args.device)
+            input_mask_ = input_mask[start_index:end_index, :].to(args.device)
+            segment_ids_ = segment_ids[start_index:end_index, :].to(args.device)
+
+            with torch.no_grad():
+                outputs = model(input_ids=input_ids_, attention_mask=input_mask_, token_type_ids=segment_ids_)
+                logits = outputs[0]
+                probs_ = torch.softmax(logits, dim=1)
+
+            probs_ = probs_.detach().cpu()
+            if probs is None:
+                probs = probs_
+            else:
+                probs = torch.cat((probs, probs_), dim = 0)
+            labels += [label_list[torch.max(probs_[i], dim=0)[1].item()] for i in range(probs_.size(0))]
+            start_index = end_index
+
+        assert len(labels) == EXAMPLE_NUM
+        assert probs.size(0) == EXAMPLE_NUM
+            
+        return labels, probs
+
+
+
+    def predict_intent(text):
+
+        sampled_train = sample_example(train)
+
+        nli_input = []
+        for t in sampled_train:
+            for e in t['examples']:
+                nli_input.append((text, e)) #Satz, der zu predicten ist, mit allen anderen Trainierten Sätzen kreuzen (text, trained_text)
+
+        assert len(nli_input) > 0
+
+        results = model_predict(nli_input)
+        maxScore, maxIndex = results[1][:, 0].max(dim = 0)
+
+        maxScore = maxScore.item()
+        maxIndex = maxIndex.item()
+
+        index = -1
+        for t in train:
+            for e in t['examples']:
+                index += 1
+
+                if index == maxIndex:
+                    intent = t['task']
+                    matched_example = e
+
+        return intent, maxScore, matched_example
+
+

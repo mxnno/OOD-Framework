@@ -58,12 +58,12 @@ def evaluate(args, model, eval_dataset, tag="train"):
     results = {"accuracy": acc, "f1": f1}
     return results
 
-def evaluate_DNNC(args, model, eval_dataset):
+def evaluate_DNNC(args, model, tokenizer, eval_dataset):
 
     if len(eval_dataset) == 0:
             return None
 
-    eval_features = convert_examples_to_features(eval_dataset, train = False)
+    eval_features = convert_examples_to_features(args, eval_dataset, tokenizer, train = False)
     eval_dataloader = get_eval_dataloader(eval_features, args.batch_size)
     
     model.eval()
@@ -87,7 +87,7 @@ def evaluate_DNNC(args, model, eval_dataset):
         nb_eval_examples += input_ids.size(0)
 
     eval_accuracy = eval_accuracy / nb_eval_examples
-    return eval_accuracy
+    return {"accuracy": eval_accuracy}
     
 
 

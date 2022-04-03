@@ -88,6 +88,10 @@ def load_clinc(args):
     print(num_labels)
     label_names, label_ids = get_labels(args)
     print(label_names)
+
+    if args.model_ID == 8:
+        num_labels = len(label_names)
+
     classlabel = ClassLabel(num_classes=num_labels, names=label_names)
 
     def set_OOD_as_0(example):

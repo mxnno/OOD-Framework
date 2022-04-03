@@ -19,7 +19,7 @@ task_to_labels = {
     'banking_unlabeled': 2,
     'travel_unlabeled': 2,
     'banking_nli': 2,
-    'travel_nli:': 2
+    'travel_nli': 2
 }
 def get_num_labels(args):
     return task_to_labels[args.id_data]

@@ -1,3 +1,4 @@
+from unittest import result
 from tqdm import tqdm, trange
 from transformers.optimization import get_scheduler
 from accelerate import Accelerator
@@ -236,9 +237,10 @@ def finetune_DNNC(args, model, tokenizer, train_examples, dev_examples):
                 scheduler.step()
                 model.zero_grad()
 
-        acc = evaluate_DNNC(args, model, dev_examples)
+        results = evaluate_DNNC(args, model, tokenizer, dev_examples)
+        acc = results['accuracy']
         #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
-        wandb.log(acc, step=num_steps) if args.wandb == "log" else None
+        wandb.log(results, step=num_steps) if args.wandb == "log" else None
 
         if acc > best_dev_accuracy :
             best_model = model

@@ -17,7 +17,7 @@ THRESHOLDS = [i * 0.1 for i in range(11)]
 
 def convert_examples_to_features(args, examples, tokenizer, train):
 
-    label_map = {label: i for i, label in enumerate(["entailment", "non_entailment"])}
+    label_map = {label: i for i, label in enumerate(["non_entailment", "entailment"])}
     is_roberta = True
 
     if train:
@@ -170,12 +170,11 @@ def load_intent_datasets(train_file_path, dev_file_path, do_lower_case):
 
     return train_examples, dev_examples
 
-def create_nli_examples(args, train_data, val_data):
 
-    nli_train_examples = []
-    nli_dev_examples = []
+def sample_example(train_data):
 
-
+    #Liste mit [{task: 'travel_notification', examples: ['asdasd', 'awgwg']}]
+    
     labels = {} # unique classes
 
     for e in train_data:
@@ -193,8 +192,12 @@ def create_nli_examples(args, train_data, val_data):
             examples = labels[l][::]
         sampled_examples.append({'task': l, 'examples': examples})
 
-    
-    tasks = sampled_examples
+    return sampled_examples
+
+
+def create_nli_examples(args, train_data, val_data):
+
+    tasks = sample_example(train_data)
     all_entailment_examples = []
     all_non_entailment_examples = []
 
@@ -221,8 +224,8 @@ def create_nli_examples(args, train_data, val_data):
                     all_non_entailment_examples.append(InputExample(examples_1[j], examples_2[k], "non_entailment"))
                     all_non_entailment_examples.append(InputExample(examples_2[k], examples_1[j], "non_entailment"))                    
     
-    nli_train_examples.append(all_entailment_examples + all_non_entailment_examples)
-    nli_dev_examples.append(all_entailment_examples[:100] + all_non_entailment_examples[:100]) # sanity check for over-fitting
+    nli_train_examples = all_entailment_examples + all_non_entailment_examples
+    nli_dev_examples = all_entailment_examples[:100] + all_non_entailment_examples[:100] # sanity check for over-fitting
 
     # for j in range(args.over_sampling):
     #     nli_train_examples[-1] += all_entailment_examples

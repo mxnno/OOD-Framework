@@ -25,10 +25,20 @@ def evaluate(args, model, eval_dataset):
     preds2_list = []
     for batch in tqdm(eval_dataset):
         model.eval()
-        labels = batch["labels"].detach().cpu().numpy()
-        batch = {key: value.to(args.device) for key, value in batch.items()}
-        batch["labels"] = None
-        outputs = model(**batch)
+        
+        if args.model_ID == 8:
+            for input_ids, input_mask, segment_ids, label_ids in tqdm(eval_dataset, desc="Evaluating"):
+                input_ids = input_ids.to(args.device)
+                input_mask = input_mask.to(args.device)
+                segment_ids = segment_ids.to(args.device)
+
+            outputs = model(input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids)
+            labels = label_ids.numpy()
+        else:
+            labels = batch["labels"].detach().cpu().numpy()
+            batch = {key: value.to(args.device) for key, value in batch.items()}
+            batch["labels"] = None
+            outputs = model(**batch)
 
         logits_2 = outputs[0]
         logits = logits_2.detach().cpu().numpy()

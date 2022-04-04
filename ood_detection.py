@@ -114,25 +114,15 @@ def test_detect_ood(args, model, prepare_dataset, test_dataset, centroids=None, 
     print(classification_report(y_true, y_pred, labels=labels))
 
 
-def detect_ood_DNNC(args, model, train, test_id, test_ood):
+def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
 
-    for e in tqdm(test_id, desc = 'Intent examples'):
-        pred, conf, matched_example = predict_intent(e.text)
-        print("-----------------")
-
-        print(pred)
-        print(conf)
-        print(matched_example)
-    
-    
-    
     def model_predict(data):
 
         model.eval()
 
         input = [InputExample(premise, hypothesis) for (premise, hypothesis) in data]
 
-        eval_features = convert_examples_to_features(input, train = False)
+        eval_features = convert_examples_to_features(args, input, tokenizer, train = False)
         input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
         input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
         segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
@@ -174,8 +164,6 @@ def detect_ood_DNNC(args, model, train, test_id, test_ood):
             
         return labels, probs
 
-
-
     def predict_intent(text):
 
         sampled_train = sample_example(train)
@@ -194,7 +182,7 @@ def detect_ood_DNNC(args, model, train, test_id, test_ood):
         maxIndex = maxIndex.item()
 
         index = -1
-        for t in train:
+        for t in sampled_train:
             for e in t['examples']:
                 index += 1
 
@@ -204,4 +192,14 @@ def detect_ood_DNNC(args, model, train, test_id, test_ood):
 
         return intent, maxScore, matched_example
 
+    #for e in tqdm(test_id, desc = 'Intent examples'):
+    for e in test_id:
+        pred, conf, matched_example = predict_intent(e.text)
+        print("-----------------")
+        print(e.text)
+        print(pred)
+        print(conf)
+        print(matched_example)
+        print("-----------------")
+    
 

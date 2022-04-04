@@ -8,7 +8,7 @@ import torch
 
 
 
-def evaluate(args, model, eval_dataset, tag="train"):
+def evaluate(args, model, eval_dataset):
     
     #Accuracy + F1
     metric = load_metric("accuracy")
@@ -65,29 +65,31 @@ def evaluate_DNNC(args, model, tokenizer, eval_dataset):
 
     eval_features = convert_examples_to_features(args, eval_dataset, tokenizer, train = False)
     eval_dataloader = get_eval_dataloader(eval_features, args.batch_size)
+
+    return evaluate(args, model, eval_dataloader,)
     
-    model.eval()
-    eval_accuracy = 0
-    nb_eval_examples = 0
+    # model.eval()
+    # eval_accuracy = 0
+    # nb_eval_examples = 0
 
-    for input_ids, input_mask, segment_ids, label_ids in tqdm(eval_dataloader, desc="Evaluating"):
-        input_ids = input_ids.to(args.device)
-        input_mask = input_mask.to(args.device)
-        segment_ids = segment_ids.to(args.device)
+    # for input_ids, input_mask, segment_ids, label_ids in tqdm(eval_dataloader, desc="Evaluating"):
+    #     input_ids = input_ids.to(args.device)
+    #     input_mask = input_mask.to(args.device)
+    #     segment_ids = segment_ids.to(args.device)
 
-        with torch.no_grad():
-            outputs = model(input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids)
-            logits = outputs[0]
+    #     with torch.no_grad():
+    #         outputs = model(input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids)
+    #         logits = outputs[0]
 
-        logits = logits.detach().cpu().numpy()
-        label_ids = label_ids.numpy()
-        tmp_eval_accuracy = get_accuracy_DNNC(logits, label_ids)
+    #     logits = logits.detach().cpu().numpy()
+    #     label_ids = label_ids.numpy()
+    #     tmp_eval_accuracy = get_accuracy_DNNC(logits, label_ids)
 
-        eval_accuracy += tmp_eval_accuracy
-        nb_eval_examples += input_ids.size(0)
+    #     eval_accuracy += tmp_eval_accuracy
+    #     nb_eval_examples += input_ids.size(0)
 
-    eval_accuracy = eval_accuracy / nb_eval_examples
-    return {"accuracy": eval_accuracy}
+    # eval_accuracy = eval_accuracy / nb_eval_examples
+    # return {"accuracy": eval_accuracy}
     
 
 

@@ -34,6 +34,8 @@ def main():
     set_seed(args)
     #Todo: set seeds?
 
+    do_lower_case = True
+
 
     if args.task == "finetune":
 
@@ -55,7 +57,6 @@ def main():
         train_dataset.to_csv("train_dataset.csv")
         val_dataset = dataset_dict['validation']
         val_dataset.to_csv("val_dataset.csv")
-        do_lower_case = True
         time.sleep(2)
 
         #load_intent_datasets -> list with examples e
@@ -83,17 +84,19 @@ def main():
         model, config, tokenizer = set_model(args)
 
         dataset_dict  = load_clinc(args)
+        train_dataset = dataset_dict['train']
+        train_dataset.to_csv("train_dataset.csv")
         test_id = dataset_dict['test_id']
         test_ood = dataset_dict['test_ood']
         test_id.to_csv("test_id_dataset.csv")
         test_ood.to_csv("test_od_dataset.csv")
         time.sleep(2)
         test_data_id, test_data_ood = load_intent_datasets("test_id_dataset.csv", "test_od_dataset.csv", do_lower_case)
-        train_data, _ = load_intent_datasets("train_dataset.csv", "val_dataset.csv", do_lower_case)
+        train_data, _ = load_intent_datasets("train_dataset.csv", "train_dataset.csv", do_lower_case)
         
         #OOD-Detection
         print("Start OOD-Detection...")
-        detect_ood_DNNC(args, model, train_data, test_data_id, test_data_ood)
+        detect_ood_DNNC(args, model, tokenizer, train_data, test_data_id, test_data_ood)
 
 
 

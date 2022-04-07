@@ -9,6 +9,15 @@ from utils.utils import get_labels, get_num_labels
 from utils.utils_DNNC import *
 
 
+#Was macht welches Paper?
+#
+#ohne OOD-Daten
+#ID 1: sehr komisch -> auroc, AU-In, Au-Out, Acc-Out
+#ID 2: Aufteilung Test ID/OOD, score berechnen -> auroc und fpr95 (Funktionen nicht übersichtlich)
+#ID 8: Aufteilung Test ID/OOD, nur softmax score-> Acc-In, Recall-Out, Prec-Out, F1-Out (Funktionen übersichtlich)
+#ID 9: Aufteilung Test ID/OOD, nur softmax -> Acc-In, Auroc-Out, Aupr-In-Out-Ges, FPR-Ges, TNR@95TPR-Out, mini_ood_error (so naja)
+#I D14: keine Aufteilung, nutzen confusion matrix
+
 def merge_keys(l, keys):
     new_dict = {}
     for key in keys:
@@ -16,6 +25,16 @@ def merge_keys(l, keys):
         for i in l:
             new_dict[key] += i[key]
     return new_dict
+
+def get_treshold(method, value):
+
+    if method == "sofmtax":
+        if value > 0.7:
+            return 1
+        else:
+            return 0
+
+
 
 def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None):
     
@@ -25,6 +44,13 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
     #binär tn, fp, fn, tp = confusion_matrix([0, 1, 0, 1], [1, 1, 1, 0]).ravel()
     # und dann classification_report
 
+
+
+    #OOD Detection + Eval in 3 Schritten
+    # 1. Model prediction
+    # 2. Threshold anwenden -> 0 oder 1
+    # 3. Metriken berechnen
+
     model.prepare_ood(prepare_dataset)
 
     if centroids is not None:
@@ -33,33 +59,57 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
         keys = ['softmax', 'maha', 'cosine', 'energy']
 
     in_scores = []
+    i = 0
     for batch in tqdm(test_id_dataset):
-
+        i +=1
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         with torch.no_grad():
             ood_keys = model.compute_ood(**batch, centroids=centroids, delta=delta)
+            #for i, _ in enumerate(ood_keys["softmax"]):
+            #    ood_keys["softmax"][i] = get_treshold("sofmtax", ood_keys["softmax"][i])
             in_scores.append(ood_keys)
-    in_scores = merge_keys(in_scores, keys)
 
+        if i == 2:
+            break
+
+    in_scores = merge_keys(in_scores, keys)
+    print(len(in_scores))
+
+    i = 0
     out_scores = []
     for batch in tqdm(test_ood_dataset):
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         with torch.no_grad():
             ood_keys = model.compute_ood(**batch, centroids=centroids, delta=delta)
+            #for i, _ in enumerate(ood_keys["softmax"]):
+            #    ood_keys["softmax"][i] = get_treshold("sofmtax", ood_keys["softmax"][i])
             out_scores.append(ood_keys)
+
+        if i == 2:
+            break
     out_scores = merge_keys(out_scores, keys)
+    print(len(out_scores))
 
     outputs = {}
     for key in keys:
 
+
+        if key != "softmax":
+            continue
         ins = np.array(in_scores[key], dtype=np.float64)
+        print(ins)
         outs = np.array(out_scores[key], dtype=np.float64)
         inl = np.ones_like(ins).astype(np.int64)
         outl = np.zeros_like(outs).astype(np.int64)
         scores = np.concatenate([ins, outs], axis=0)
         labels = np.concatenate([inl, outl], axis=0)
+
+        in_acc = (ins == inl).mean().item()
+        out_acc = (outs == outl).mean().item()
+        print(in_acc)
+        print(out_acc)
 
         auroc, fpr_95 = get_auroc(labels, scores), get_fpr_95(labels, scores)
 

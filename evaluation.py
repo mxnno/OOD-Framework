@@ -8,7 +8,7 @@ import torch
 
 
 
-def evaluate(args, model, eval_dataset):
+def evaluate(args, model, eval_dataset, tag=None):
     
     #Accuracy + F1
     metric = load_metric("accuracy")

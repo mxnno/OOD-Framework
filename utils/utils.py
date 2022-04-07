@@ -22,7 +22,10 @@ task_to_labels = {
     'travel_nli': 2
 }
 def get_num_labels(args):
-    return task_to_labels[args.id_data]
+    if args.ood_data == "zero":
+        return task_to_labels[args.id_data] - 1
+    else:
+        return task_to_labels[args.id_data]
 
 def get_labels(args):
 
@@ -50,8 +53,12 @@ def get_labels(args):
     elif args.id_data == 'travel_nli':
         labels_name = ['ood', 'exchange_rate', 'car_rental', 'vaccines', 'international_visa', 'translate', 'carry_on', 'book_flight', 'timezone', 'flight_status', 'lost_luggage', 'book_hotel', 'plug_type', 'travel_alert', 'travel_notification', 'travel_suggestion']
         labels_id = [0, 38, 40, 52, 59, 61, 62, 63, 66, 80, 113, 116, 120, 128, 146, 149]
-    return labels_name, labels_id
+    
 
+    if args.ood_data == "zero":
+        return labels_name[1:], labels_id[1:]
+    else:
+        return labels_name, labels_id
 
 def save_model(model, args):
 

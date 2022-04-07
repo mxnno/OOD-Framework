@@ -8,6 +8,7 @@ from ood_detection import detect_ood, test_detect_ood
 from utils.args import get_args
 from data import preprocess_data, load_clinc
 from utils.utils import set_seed, save_model
+from utils.utils_gold import create_gold_json
 from accelerate import Accelerator
 
 warnings.filterwarnings("ignore")
@@ -19,10 +20,6 @@ def main():
     #get args
     args = get_args()
 
-
-    #init WandB
-    if args.wandb == "log":
-        wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
 
     #Accelerator
     if args.tpu == "tpu":
@@ -41,8 +38,13 @@ def main():
     #Preprocess Data
     print("Preprocess Data...")
     dataset_dict = load_clinc(args)
-    full_dataset = concatenate_datasets([dataset_dict['train'], dataset_dict['validation'], dataset_dict['test']])
-    full_dataset.to_csv("full_dataset")
+    dataset_dict['train'].to_csv("/content/drive/MyDrive/Masterarbeit/GOLD/train.csv")
+    dataset_dict['validation'].to_csv("/content/drive/MyDrive/Masterarbeit/GOLD/validation.csv")
+    dataset_dict['test'].to_csv("/content/drive/MyDrive/Masterarbeit/GOLD/test.csv")
+
+    create_gold_json(args)
+
+
 
        
 

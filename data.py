@@ -15,6 +15,8 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
         raw_datasets = load_clinc(args)
     elif args.dataset == 'clinc150_AUG':
         raw_datasets = load_clinc_with_Augmentation(args)
+    elif args.dataset == 'clinc150_AUG_ID':
+        raw_datasets = load_clinc_with_ID_Augmentation(args)
     elif args.dataset == 'test_eval':
         raw_datasets = test_evaluation_dataset()
     else:
@@ -80,6 +82,8 @@ def load_clinc(args):
     #ood_data: 'zero' -> nur ID, sonst ID + OOD
     ood_data = args.ood_data
     num_shards = int(100/args.few_shot)
+
+    ood_original = True
     
     #ic = label_ids[1] #Das muss noch überarbeitet werdne ???
 
@@ -92,7 +96,10 @@ def load_clinc(args):
     if args.model_ID == 8:
         num_labels = len(label_names)
 
-    classlabel = ClassLabel(num_classes=num_labels, names=label_names)
+    if args.ood_data == 'zero':
+        classlabel = ClassLabel(num_classes=num_labels, names=label_names)
+    else:
+        classlabel = ClassLabel(num_classes=num_labels + 1, names=['ood'] + label_names)
 
     def set_OOD_as_0(example):
         #OOD = label 0
@@ -139,7 +146,7 @@ def load_clinc(args):
     train_dataset = train_dataset.map(set_OOD_as_0)
 
     #ID Daten zufällig shuffeln und reduzieren auf n Few-Shot
-    id = train_dataset.filter(lambda example: example['intent'] in label_ids[1:])
+    id = train_dataset.filter(lambda example: example['intent'] in label_ids)
     id = id.shuffle(seed=42)
     id = id.sort('intent')
     id = id.shard(num_shards=num_shards, index=0)
@@ -148,11 +155,19 @@ def load_clinc(args):
     #Falls OOD:
     if ood_data != 'zero':
         #OOD Daten zufällig shuffeln und reduzieren auf 10*n Few-Shot
-        ood = train_dataset.filter(lambda example: example['intent'] not in label_ids[1:])
-        ood = ood.shuffle(seed=42)
-        ood = ood.sort('intent')
-        ood = ood.shard(num_shards=num_shards*10, index=0)
-        ood = ood.map(set_label_to_OOD)
+
+        if ood_original is True:
+            #wenn OOD nur original OOD
+            ood = train_dataset.filter(lambda example: example['intent']==0)
+        else:
+
+            #wenn OOD alle bis auf Domain
+            ood = train_dataset.filter(lambda example: example['intent'] not in label_ids)
+            
+            ood = ood.shuffle(seed=42)
+            ood = ood.sort('intent')
+            ood = ood.shard(num_shards=num_shards*10, index=0)
+            ood = ood.map(set_label_to_OOD)
 
         train_dataset = concatenate_datasets([id, ood])
 
@@ -173,7 +188,7 @@ def load_clinc(args):
     val_dataset = val_dataset.map(set_OOD_as_0)
 
     #ID Daten zufällig shuffeln und reduzieren auf n Few-Shot
-    val_id = val_dataset.filter(lambda example: example['intent'] in label_ids[1:])
+    val_id = val_dataset.filter(lambda example: example['intent'] in label_ids)
     val_id = val_id.shuffle(seed=42)
     val_id = val_id.sort('intent')
     val_id = val_id.shard(num_shards=num_shards, index=0)
@@ -182,11 +197,16 @@ def load_clinc(args):
 
     if ood_data != 'zero':
         #OOD Daten zufällig shuffeln und reduzieren auf 3*n Few-Shot
-        val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids[1:])
-        val_ood = val_ood.shuffle(seed=42)
-        val_ood = val_ood.sort('intent')
-        val_ood = val_ood.shard(num_shards=num_shards*3, index=0)
-        val_ood = val_ood.map(set_label_to_OOD)
+        if ood_original is True:
+            #wenn OOD nur original OOD
+            val_ood = val_dataset.filter(lambda example: example['intent']==0)
+            val_ood.cast_column("intent", classlabel)
+        else:
+            val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids)
+            val_ood = val_ood.shuffle(seed=42)
+            val_ood = val_ood.sort('intent')
+            val_ood = val_ood.shard(num_shards=num_shards*3, index=0)
+            val_ood = val_ood.map(set_label_to_OOD)
 
         val_dataset = concatenate_datasets([val_ood, val_id])
     else:
@@ -203,12 +223,15 @@ def load_clinc(args):
     test_dataset = test_dataset.map(set_OOD_as_0)
 
     #Test OOD
-    test_ood_dataset = test_dataset.filter(lambda example: example['intent'] not in label_ids[1:])
-    test_ood_dataset = test_ood_dataset.map(set_label_to_OOD)
+    if ood_original is True:
+        test_ood_dataset = test_dataset.filter(lambda example: example['intent'] == 0)
+    else:
+        test_ood_dataset = test_dataset.filter(lambda example: example['intent'] not in label_ids)
+        test_ood_dataset = test_ood_dataset.map(set_label_to_OOD)
     test_ood_dataset = test_ood_dataset.cast_column("intent", classlabel)
 
     #Test ID
-    test_id_dataset = test_dataset.filter(lambda example: example['intent'] in label_ids[1:])
+    test_id_dataset = test_dataset.filter(lambda example: example['intent'] in label_ids)
     test_id_dataset = test_id_dataset.map(set_label_to_ID)
     test_id_dataset = test_id_dataset.cast_column("intent", classlabel)
 
@@ -216,13 +239,21 @@ def load_clinc(args):
     test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
 
 
+    #???HR PROBLEM: keien OOD Daten -> OOD Test trotzdem auf 0 -> man kann keine "normale" eval machen, sonder muss zwingend ood und id getrennt betrachten bzw über Thresholds arbeiten, da es die klasse ood nicht gibt
 
     #train_dataset.to_csv('/content/drive/MyDrive/trainas.csv')  
 
     return DatasetDict({'train': train_dataset, 'validation': val_dataset, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
 
 
+def load_clinc_with_ID_Augmentation(args):
 
+    clinc_DatasetDict = load_clinc(args)
+    #get Augmented Data
+    train_data = load_dataset('csv', data_files={'train': ['/content/drive/MyDrive/Masterarbeit/ID_Augmentation/train_augmented.csv']})
+    clinc_DatasetDict['train'] = train_data['train'].remove_columns("Unnamed: 0")
+    print(clinc_DatasetDict)
+    return clinc_DatasetDict
 
 def load_clinc_with_Augmentation(args):
     
@@ -313,4 +344,3 @@ def test_evaluation_dataset(num_labels):
     full_test = concatenate_datasets([test_dataset_id, test_dataset_ood])
 
     return DatasetDict({'train': full_test, 'validation': full_test, 'test_ood': test_dataset_ood, 'test_id': test_dataset_id})
-

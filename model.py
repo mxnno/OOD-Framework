@@ -165,9 +165,6 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         outputs = self.roberta(input_ids, attention_mask=attention_mask)
         sequence_output = outputs[0]
         logits, pooled = self.classifier(sequence_output)
-        print("logits")
-        print(logits)
- 
         
 
         ood_keys = None
@@ -176,45 +173,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         #softmax_score(Scores der prediction für alle Klassen -> max(-1) gibt den Max Wert aus)
         #max_indices = Klasse, die den Max Wert hat
         softmax_score, softmax_idx= F.softmax(logits, dim=-1).max(-1)
-        print("softmax_score")
-        print(softmax_score)
-        print("softmax_idx")
-        print(softmax_idx)
-        # #von Gold Maxprob: (wsl das gleiche wie softmax)
-        # softmax_nn = nn.LogSoftmax(dim=1)
-        # predictions = softmax_nn(logits)
-        # predictions = predictions.detach().cpu()
-        # joined = torch.cat(predictions, axis=0)
-        # expo = torch.exp(joined)
-        # maxprob, indexes = torch.max(expo, axis=1)
-        # #return values < threshold   
-
-        # #von Gold Odin: (= maxprob mit temp) 
-        # temp = 1.2     
-        # predictions = softmax_nn(logits / temp)
-        # predictions = predictions.detach().cpu()
-        # joined = torch.cat(predictions, axis=0)
-        # expo = torch.exp(joined)
-        # odin, indexes = torch.max(expo, axis=1)   
-
-        # #von Gold Entropy:
-        # predictions = softmax_nn(logits / temp)
-        # predictions = predictions.detach().cpu()
-        # joined = torch.cat(predictions, axis=0)          # num_examples, num_classes
-        # expo = torch.exp(joined)                         # exponentiation is required due to LogSoftmax
-        # entropy_vals = entropy(expo, axis=1)
-        # #return entropy_vals > threshold
-
-        # #Scaling nach kFolden
-        # #pred_logits = np File der logits
-        # #temperature_value = 10/20/50/1000
-        # temperature_value = 10
-        # soften_pred_logits = logits.detach().cpu() / float(temperature_value)
-        # soften_pred_probs = np.exp(soften_pred_logits) / np.sum(np.exp(soften_pred_logits), axis=-1, keepdims=True)
-        # confidence_value = np.amax(soften_pred_probs, axis=-1, keepdims=False)
-        # confidence_index = np.argmax(soften_pred_probs, axis=-1)
-        # #return confidence_value, confidence_index, soften_pred_probs
-        # #man braucht hier wsl auch noch ein Treshold
+  
         
         #Maha
         maha_score = []
@@ -236,7 +195,6 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
 
         ood_keys = {
             'softmax': softmax_score.tolist(),
-            #'maxprob': maxprob.tolist(),
             'maha': maha_score.tolist(),
             'cosine': cosine_score.tolist(),
             'energy': energy_score.tolist(),
@@ -290,6 +248,9 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         centered_bank = (self.bank - self.class_mean[self.label_bank]).detach().cpu().numpy()
         precision = EmpiricalCovariance().fit(centered_bank).precision_.astype(np.float32)
         self.class_var = torch.from_numpy(precision).float().cuda()
+
+        torch.save(self.class_var, 'class_var.pt')
+        torch.save(self.class_mean, 'class_mean.pt')
 
 
 

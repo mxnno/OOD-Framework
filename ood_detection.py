@@ -116,7 +116,7 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
         outputs[tag + "_" + key + "_auroc"] = auroc
         outputs[tag + "_" + key + "_fpr95"] = fpr_95
 
-    wandb.log(outputs) if args.wandb == "log" else None
+    #wandb.log(outputs) if args.wandb == "log" else None
 
 
 def test_detect_ood(args, model, prepare_dataset, test_dataset, centroids=None, delta=None):

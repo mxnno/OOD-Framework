@@ -19,11 +19,6 @@ def main():
     #get args
     args = get_args()
 
-
-    #init WandB
-    if args.wandb == "log":
-        wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
-
     #Accelerator
     if args.tpu == "tpu":
         accelerator = Accelerator()
@@ -39,6 +34,10 @@ def main():
 
 
     if args.task == "finetune":
+
+        #init WandB
+        if args.wandb == "log":
+            wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
 
         #Load Model
         print("Load model...")
@@ -71,8 +70,8 @@ def main():
 
         #OOD-Detection
         print("Start OOD-Detection...")
-        #detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset)
-        test_detect_ood(args, model, dev_dataset, test_dataset)
+        detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset)
+        #test_detect_ood(args, model, dev_dataset, test_dataset)
 
 if __name__ == "__main__":
     main()

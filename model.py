@@ -165,7 +165,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         outputs = self.roberta(input_ids, attention_mask=attention_mask)
         sequence_output = outputs[0]
         logits, pooled = self.classifier(sequence_output)
-
+        print("logits")
         print(logits)
  
         
@@ -176,7 +176,9 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         #softmax_score(Scores der prediction für alle Klassen -> max(-1) gibt den Max Wert aus)
         #max_indices = Klasse, die den Max Wert hat
         softmax_score, softmax_idx= F.softmax(logits, dim=-1).max(-1)
+        print("softmax_score")
         print(softmax_score)
+        print("softmax_idx")
         print(softmax_idx)
         # #von Gold Maxprob: (wsl das gleiche wie softmax)
         # softmax_nn = nn.LogSoftmax(dim=1)

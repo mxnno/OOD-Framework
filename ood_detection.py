@@ -7,6 +7,7 @@ from sklearn.metrics import confusion_matrix, classification_report
 from numpy import savetxt
 from utils.utils import get_labels, get_num_labels
 from utils.utils_DNNC import *
+import pickle
 
 
 #Was macht welches Paper?
@@ -51,7 +52,9 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
     # 2. Threshold anwenden -> 0 oder 1
     # 3. Metriken berechnen
 
+    #mit dev oder Trainingsdaten HR???? 
     model.prepare_ood(prepare_dataset)
+
 
     if centroids is not None:
         keys = ['softmax', 'maha', 'cosine', 'energy', 'adb']
@@ -59,9 +62,7 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
         keys = ['softmax', 'maha', 'cosine', 'energy']
 
     in_scores = []
-    i = 0
     for batch in tqdm(test_id_dataset):
-        i +=1
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         with torch.no_grad():
@@ -69,14 +70,28 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
             #for i, _ in enumerate(ood_keys["softmax"]):
             #    ood_keys["softmax"][i] = get_treshold("sofmtax", ood_keys["softmax"][i])
             in_scores.append(ood_keys)
+        
 
-        if i == 2:
-            break
+    #zum Abspeichern der logits und pools
+    logit_dict = {}
+    for i, logits in enumerate(model.all_logits):
+        logit_dict[i] = logits
+    torch.save(logit_dict, 'all_id_logits.pt')
+    
+    pool_dict = {}
+    for i, logits in enumerate(model.all_pool):
+        logit_dict[i] = logits
+    torch.save(logit_dict, 'train_pooled.pt')
+
+    logit_dict = {}
+    pool_dict = {}
+    model.all_logits = []
+    model.all_pool = []
+
 
     in_scores = merge_keys(in_scores, keys)
     print(len(in_scores))
 
-    i = 0
     out_scores = []
     for batch in tqdm(test_ood_dataset):
         model.eval()
@@ -87,8 +102,22 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
             #    ood_keys["softmax"][i] = get_treshold("sofmtax", ood_keys["softmax"][i])
             out_scores.append(ood_keys)
 
-        if i == 2:
-            break
+    #zum Abspeichern der logits und pools
+    logit_dict = {}
+    for i, logits in enumerate(model.all_logits):
+        logit_dict[i] = logits
+    torch.save(logit_dict, 'all_ood_logits.pt')
+    
+    pool_dict = {}
+    for i, logits in enumerate(model.all_pool):
+        logit_dict[i] = logits
+    torch.save(logit_dict, 'all_ood_pooled.pt')
+
+    logit_dict = {}
+    pool_dict = {}
+    model.all_logits = []
+    model.all_pool = []
+    
     out_scores = merge_keys(out_scores, keys)
     print(len(out_scores))
 

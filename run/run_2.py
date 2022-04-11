@@ -70,7 +70,7 @@ def main():
 
         #OOD-Detection
         print("Start OOD-Detection...")
-        detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset)
+        detect_ood(args, model, train_dataset, test_id_dataset, test_ood_dataset)
         #test_detect_ood(args, model, dev_dataset, test_dataset)
 
 if __name__ == "__main__":

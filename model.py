@@ -86,6 +86,9 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         self.classifier = RobertaClassificationHead(config)
         self.init_weights()
         #self.post_init()
+        #die beiden unternen nr für Test -> können weg
+        self.all_logits = []
+        self.all_pool = []
 
     def forward(self, input_ids=None, attention_mask=None, token_type_ids=None, labels=None, onlyPooled=None):
 
@@ -167,6 +170,10 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         logits, pooled = self.classifier(sequence_output)
         
 
+        self.all_logits.append(logits)
+        self.all_pool.append(pooled)
+
+
         ood_keys = None
         #Softmax
         #max: Returns the maximum value of all elements in the input tensor (max, max_indices)
@@ -241,6 +248,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
 
         self.norm_bank = F.normalize(self.bank, dim=-1)
         N, d = self.bank.size()
+        #all_classes = liste mit label [0,1,2,3,4...14]
         self.all_classes = list(set(self.label_bank.tolist()))
         self.class_mean = torch.zeros(max(self.all_classes) + 1, d).cuda()
         for c in self.all_classes:
@@ -249,8 +257,8 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         precision = EmpiricalCovariance().fit(centered_bank).precision_.astype(np.float32)
         self.class_var = torch.from_numpy(precision).float().cuda()
 
-        torch.save(self.class_var, 'class_var.pt')
-        torch.save(self.class_mean, 'class_mean.pt')
+        torch.save(self.class_var, 'class_var.pt') # torch.Size([768, 768])
+        torch.save(self.class_mean, 'class_mean.pt') # torch.Size([15, 768])
 
 
 

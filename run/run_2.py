@@ -54,8 +54,6 @@ def main():
             save_model(ft_model, args)
 
     elif args.task == "ood_detection":
-
-        print("hi")
         
         if not args.save_path:
             print("Bitte einen Pfad angeben, der ein Model enthält!")
@@ -68,8 +66,13 @@ def main():
         #Preprocess Data
         train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
 
+        label_list = []
+        for batch in train_dataset:
+            label_list += list(batch["labels"].cpu().detach().numpy())
+
+        print(label_list)
         #OOD-Detection
-        print("Start OOD-Detection...")
+        #print("Start OOD-Detection...")
         detect_ood(args, model, train_dataset, test_id_dataset, test_ood_dataset)
         #test_detect_ood(args, model, dev_dataset, test_dataset)
 

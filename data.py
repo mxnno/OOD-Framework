@@ -176,7 +176,7 @@ def load_clinc(args):
     
     #train_dataset = train_dataset.shuffle(seed=42)
     train_dataset = train_dataset.cast_column("intent", classlabel)
-    train_dataset.to_csv('training.csv')
+    #train_dataset.to_csv('training.csv')
 
 
     ########################################################### Validation ###############################################################

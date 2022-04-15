@@ -80,8 +80,8 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
     
     pool_dict = {}
     for i, logits in enumerate(model.all_pool):
-        logit_dict[i] = logits
-    torch.save(logit_dict, 'train_pooled.pt')
+        pool_dict[i] = logits
+    torch.save(pool_dict, 'all_id_pooled.pt')
 
     logit_dict = {}
     pool_dict = {}
@@ -110,8 +110,8 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
     
     pool_dict = {}
     for i, logits in enumerate(model.all_pool):
-        logit_dict[i] = logits
-    torch.save(logit_dict, 'all_ood_pooled.pt')
+        pool_dict[i] = logits
+    torch.save(pool_dict, 'all_ood_pooled.pt')
 
     logit_dict = {}
     pool_dict = {}

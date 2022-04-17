@@ -195,22 +195,19 @@ def load_clinc(args):
     val_id = val_id.map(set_label_to_ID)
 
 
-    if ood_data != 'zero':
-        #OOD Daten zufällig shuffeln und reduzieren auf 3*n Few-Shot
-        if ood_original is True:
-            #wenn OOD nur original OOD
-            val_ood = val_dataset.filter(lambda example: example['intent']==0)
-            val_ood.cast_column("intent", classlabel)
-        else:
-            val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids)
-            val_ood = val_ood.shuffle(seed=42)
-            val_ood = val_ood.sort('intent')
-            val_ood = val_ood.shard(num_shards=num_shards*3, index=0)
-            val_ood = val_ood.map(set_label_to_OOD)
-
-        val_dataset = concatenate_datasets([val_ood, val_id])
+    #OOD Daten zufällig shuffeln und reduzieren auf 3*n Few-Shot
+    if ood_original is True:
+        #wenn OOD nur original OOD
+        val_ood = val_dataset.filter(lambda example: example['intent']==0)
+        val_ood.cast_column("intent", classlabel)
     else:
-        val_dataset = val_id
+        val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids)
+        val_ood = val_ood.shuffle(seed=42)
+        val_ood = val_ood.sort('intent')
+        val_ood = val_ood.shard(num_shards=num_shards*3, index=0)
+        val_ood = val_ood.map(set_label_to_OOD)
+
+    val_dataset = concatenate_datasets([val_ood, val_id])
 
     val_dataset = val_dataset.shuffle(seed=42)
     val_dataset = val_dataset.cast_column("intent", classlabel)

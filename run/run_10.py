@@ -36,26 +36,37 @@ def main():
     #Train
     train = dataset_dict['train'].rename_column("intent", "label")
     train = train.rename_column("text", "data")
+    train = train.remove_columns("")
     train.to_csv("/content/drive/MyDrive/Masterarbeit/OOD-Methoden/kFolden/train/train.csv")
     
     #Dev
-    dev_dataset = dataset_dict['validation'].rename_column("intent", "label")
+    dev_dataset = dataset_dict['validation']
+    dev_dataset = dev_dataset.remove_columns("")
+
+    id_dev = dev_dataset.filter(lambda example: example['intent'] in label_ids)
+    ood_dev = dev_dataset.filter(lambda example: example['intent'] not in label_ids)
+
+    id_dev.rename_column("intent", "label")
+    
     dev_dataset.to_csv("/content/drive/MyDrive/Masterarbeit/OOD-Methoden/kFolden/dev/dev_full.csv") 
     #split in id und ood
-    id_dev = dev_dataset.filter(lambda example: example['label'] in label_ids)
+    id_dev = 
     id_dev = id_dev.rename_column("text", "data")
     id_dev.to_csv("/content/drive/MyDrive/Masterarbeit/OOD-Methoden/kFolden/dev/id_dev.csv")
 
-    ood_dev = dev_dataset.filter(lambda example: example['label'] not in label_ids)
+    
     ood_dev = ood_dev.rename_column("text", "data")
     ood_dev.to_csv("/content/drive/MyDrive/Masterarbeit/OOD-Methoden/kFolden/dev/ood_dev.csv")
 
     #Test
     id_test = dataset_dict['test_id'].rename_column("intent", "label")
     id_test = id_test.rename_column("text", "data")
+    id_test = id_test.remove_columns("")
+
     id_test.to_csv("/content/drive/MyDrive/Masterarbeit/OOD-Methoden/kFolden/test/id_test.csv")
 
     ood_test = dataset_dict['test_ood'].rename_column("intent", "label")
+    ood_test = ood_test.remove_columns("")
     ood_test = ood_test.rename_column("text", "data")
     ood_test.to_csv("/content/drive/MyDrive/Masterarbeit/OOD-Methoden/kFolden/test/ood_test.csv")
 

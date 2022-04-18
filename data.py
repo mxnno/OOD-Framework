@@ -58,7 +58,7 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
         tokenized_datasets["train"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
     )
     eval_dataloader = DataLoader(
-        tokenized_datasets["validation"], batch_size=args.batch_size, collate_fn=data_collator
+        tokenized_datasets["val_id"], batch_size=args.batch_size, collate_fn=data_collator
     )
     test_dataloader = DataLoader(
         tokenized_datasets["test"], batch_size=args.batch_size, collate_fn=data_collator
@@ -193,13 +193,14 @@ def load_clinc(args):
     val_id = val_id.sort('intent')
     val_id = val_id.shard(num_shards=num_shards, index=0)
     val_id = val_id.map(set_label_to_ID)
+    val_id.cast_column("intent", classlabel)
 
 
     #OOD Daten zufällig shuffeln und reduzieren auf 3*n Few-Shot
     if ood_original is True:
         #wenn OOD nur original OOD
         val_ood = val_dataset.filter(lambda example: example['intent']==0)
-        val_ood.cast_column("intent", classlabel)
+        val_ood.to_csv("test.csv")
     else:
         val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids)
         val_ood = val_ood.shuffle(seed=42)
@@ -207,10 +208,12 @@ def load_clinc(args):
         val_ood = val_ood.shard(num_shards=num_shards*3, index=0)
         val_ood = val_ood.map(set_label_to_OOD)
 
-    val_dataset = concatenate_datasets([val_ood, val_id])
+    val_ood.cast_column("intent", classlabel)
 
+
+    val_dataset = concatenate_datasets([val_ood, val_id])
     val_dataset = val_dataset.shuffle(seed=42)
-    val_dataset = val_dataset.cast_column("intent", classlabel)
+
     
 
     ########################################################### Test ###############################################################
@@ -240,7 +243,7 @@ def load_clinc(args):
 
     #train_dataset.to_csv('/content/drive/MyDrive/trainas.csv')  
 
-    return DatasetDict({'train': train_dataset, 'validation': val_dataset, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
+    return DatasetDict({'train': train_dataset, 'validation': val_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
 
 
 def load_clinc_with_ID_Augmentation(args):

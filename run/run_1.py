@@ -21,10 +21,6 @@ def main():
     #get args
     args = get_args()
 
-    #init WandB
-    if args.wandb == "log":
-        wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
-
     #set device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     args.n_gpu = torch.cuda.device_count()
@@ -36,6 +32,10 @@ def main():
     num_labels = get_num_labels(args)
 
     if args.task == "finetune":
+
+        #init WandB
+        if args.wandb == "log":
+            wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
 
         ##################### IMLM ###############################
         #Load Model
@@ -65,7 +65,7 @@ def main():
         #Finetune BCAD + abspeichern
         print("Finetune BCAD...")
         ft_model = finetune_std(args, model, train_dataset, dev_dataset)
-        args.save_path = get_save_path(args).replace("/1/", "/1/IMLM_BCAD")
+        args.save_path = get_save_path(args).replace("/1/IMLM", "/1/IMLM_BCAD")
 
         #save finetuned model
         #Model speichern

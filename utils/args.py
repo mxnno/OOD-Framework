@@ -25,6 +25,7 @@ def get_args():
     parser.add_argument("--num_train_epochs", default=10.0, type=float)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--alpha", type=float, default=2.0)
+    parser.add_argument("--loss_std", type=str, choices=['ce', 'lmcl'], default='ce')
     parser.add_argument("--loss", type=str, choices=['margin-contrastive', 'similarity-contrastive', 'default'], default='default')
     #für ID 8:
     parser.add_argument("--gradient_accumulation_steps", type=int, default=4)

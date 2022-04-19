@@ -259,6 +259,9 @@ def load_clinc_with_Augmentation(args):
     
     clinc_DatasetDict = load_clinc(args)
 
+    #für ohne OOD-Daten
+    return clinc_DatasetDict
+
     def prepare_txt(example):
 
         #index und /t vor dem Satz entfernen

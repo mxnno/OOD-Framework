@@ -165,18 +165,19 @@ def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, 
 
     training_args = TrainingArguments(
         output_dir = args.save_path + "IMLM/Trainer/",
+        overwrite_output_dir = True,
         per_device_train_batch_size = args.batch_size,
         learning_rate = args.learning_rate,
         weight_decay = args.weight_decay,
         warmup_ratio  = args.warmup_ratio,
         num_train_epochs = args.num_train_epochs,
         #später loggen hier (geht mit wandb)
-        logging_strategy = "no",
+        logging_strategy = "epoch",
         report_to = "wandb",
-        save_strategy  = "no",
-        seed = args.seed
-
-        #load_best_model_at_end = True
+        save_strategy  = "epoch",
+        seed = args.seed,
+        evaluation_strategy = "epoch",
+        load_best_model_at_end = True,
         # -> https://huggingface.co/docs/transformers/main_classes/trainer#transformers.TrainingArguments.load_best_model_at_end
         #When set to True, the parameters save_strategy needs to be the same as eval_strategy, and in the case it is “steps”, save_steps must be a round multiple of eval_steps.
         )

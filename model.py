@@ -1,4 +1,5 @@
 from lib2to3.pgen2 import token
+from re import S
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -24,6 +25,7 @@ def set_model(args):
             config.gradient_checkpointing = True
             config.alpha = args.alpha
             config.loss = args.loss
+            config.loss_std = args.loss_std
             model = RobertaForMaskedLM.from_pretrained(args.model_name_or_path, config=config)
             tokenizer = RobertaTokenizerFast.from_pretrained(args.model_name_or_path)
         else:
@@ -32,6 +34,7 @@ def set_model(args):
             config.gradient_checkpointing = True
             config.alpha = args.alpha
             config.loss = args.loss
+            config.loss_std = args.loss_std
             model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
             tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
         model.to(args.device)
@@ -45,11 +48,20 @@ def set_model(args):
         config.gradient_checkpointing = True
         config.alpha = args.alpha
         config.loss = args.loss
+        config.loss_std = args.loss_std
         tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
         model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
         model.to(args.device)
 
     return model, config, tokenizer
+
+
+def pair_cosine_similarity(x, x_adv, eps=1e-8):
+    n = x.norm(p=2, dim=1, keepdim=True)
+    n_adv = x_adv.norm(p=2, dim=1, keepdim=True)
+    return (x @ x.t()) / (n * n.t()).clamp(min=eps), (x_adv @ x_adv.t()) / (n_adv * n_adv.t()).clamp(min=eps), (x @ x_adv.t()) / (n * n_adv.t()).clamp(min=eps)
+
+
 #####################################################################################################################################################
 
 class RobertaClassificationHead(nn.Module):
@@ -119,8 +131,14 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
                 loss_fct = MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+                if self.config.loss_std == 'ce':
+                    loss_fct = CrossEntropyLoss()
+                    loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                else:
+                    #LMCL Loss
+                    margin=0.35
+                    loss = labels * (logits - margin) + (1 - labels) * logits
 
 
             if self.config.loss == 'margin-contrastive':
@@ -139,7 +157,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
                 return ((loss, cos_loss) + output) if loss is not None else output
 
             elif self.config.loss == 'similarity-contrastive':
-                # ID 2
+                # ID 2 + 3
                 norm_pooled = F.normalize(pooled, dim=-1)
                 cosine_score = torch.exp(norm_pooled @ norm_pooled.t() / 0.3)
                 mask = (labels.unsqueeze(1) == labels.unsqueeze(0)).float()
@@ -154,6 +172,42 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
                 output = (logits,) + outputs[2:]
                 output = output + (pooled,)
                 return ((loss, cos_loss) + output) if loss is not None else output
+
+            elif self.config.loss == 'similarity-contrastive-augm':
+                # IID 3
+                # sollte so gehen: https://github.com/parZival27/supervised-contrastive-learning-for-out-of-domain-detection/blob/358c6069712a1966a65fb06c3ba43cf8f8239dca/model.py#L14
+                # nt_xent macht das gleiche wie der Code für similarity-contrastive
+                # hat aber noch zusätzlich x_adv (augmented adverserial attack)
+                seq_embed = sequence_output
+                #seq_embed = seq_embed.clone().detach().requires_grad_(True).float()
+                loss.backward(retrain_graph=True)
+                seq_embed.retain_grad()  # we need to get gradient w.r.t embeddings
+                unnormalized_noise = seq_embed.grad.detach_()
+                for p in self.parameters():
+                    if p.grad is not None:
+                        p.grad.detach_()
+                        p.grad.zero_()
+                norm = unnormalized_noise.norm(p=2, dim=-1)
+                normalized_noise = unnormalized_noise / (norm.unsqueeze(dim=-1) + 1e-10)  # add 1e-10 to avoid NaN
+                noise_embedding = seq_embed + self.norm_coef * normalized_noise
+                logits_adv, pooled_adv = self.classifier(noise_embedding)
+                mask = torch.mm(labels,labels.T).bool().long() 
+                t = 0.1
+                x, x_adv, x_c = pair_cosine_similarity(pooled, pooled_adv)
+                x = torch.exp(x / t)
+                x_adv = torch.exp(x_adv / t)
+                x_c = torch.exp(x_c / t)
+                mask_count = mask.sum(1)
+                mask_reverse = (~(mask.bool())).long()
+                dis = (x * (mask - torch.eye(x.size(0)).long().cuda()) + x_c * mask) / (x.sum(1) + x_c.sum(1) - torch.exp(torch.tensor(1 / t))) + mask_reverse
+                dis_adv = (x_adv * (mask - torch.eye(x.size(0)).long().cuda()) + x_c.T * mask) / (x_adv.sum(1) + x_c.sum(0) - torch.exp(torch.tensor(1 / t))) + mask_reverse
+                loss = (torch.log(dis).sum(1) + torch.log(dis_adv).sum(1)) / mask_count
+                loss = -loss.mean()
+                print(loss)
+                output = (logits,) + outputs[2:]
+                output = output + (pooled,)
+                return ((loss, cos_loss) + output) if loss is not None else output
+
             else:
                 pass
                 
@@ -161,6 +215,9 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         output = output + (pooled,)
         return ((loss, None) + output) if loss is not None else output
         #return (loss, None/cos_loss, logits, outputs[2:], pooled,)
+
+
+    
         
 
     def compute_ood(self, input_ids=None, attention_mask=None, labels=None, centroids=None, delta=None, test=None):

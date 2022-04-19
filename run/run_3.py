@@ -35,6 +35,8 @@ def main():
 
     if args.task == "finetune":
 
+        #Erst Pretrain auf SCL dann Finetune auf CE oder LMCL
+
         #init WandB
         if args.wandb == "log":
             wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
@@ -48,8 +50,10 @@ def main():
         train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
 
         #Pretrain SCL
-        print("Pretrain SCL (margin/similarity) ...")
+        print("Pretrain SCL ...")
+        model.config.loss = 'similarity-contrastive-augm'
         ft_model =  finetune_std(args, model, train_dataset, dev_dataset, accelerator)
+
 
         #Finetune auf CE oder LMCL + abspeichern
         print("Finetune CE/LMCL...")

@@ -8,6 +8,7 @@ from ood_detection import detect_ood
 from utils.args import get_args
 from data import preprocess_data
 from utils.utils import set_seed, get_num_labels, save_model, get_save_path
+from accelerate import Accelerator
 
 warnings.filterwarnings("ignore")
 
@@ -21,15 +22,19 @@ def main():
     #get args
     args = get_args()
 
-    #set device
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    args.n_gpu = torch.cuda.device_count()
-    args.device = device
-    set_seed(args)
-    #Todo: set seeds?
+    #Accelerator
+    if args.tpu == "tpu":
+        accelerator = Accelerator()
+        args.device = accelerator.device
+    else:
+        #set device
+        accelerator = None
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        args.n_gpu = torch.cuda.device_count()
+        args.device = device
+        set_seed(args)
+        #Todo: set seeds?
 
-    #get num_labels
-    num_labels = get_num_labels(args)
 
     if args.task == "finetune":
 
@@ -40,32 +45,33 @@ def main():
         ##################### IMLM ###############################
         #Load Model
         print("Load model for IMLM...")
-        model, config, tokenizer = set_model(args, num_labels)
+        model, config, tokenizer = set_model(args)
 
         #Preprocess Data
         print("Preprocess Data for IMLM...")
-        train_dataset, dev_dataset, datacollector = preprocess_data(args.dataset, args, num_labels, tokenizer, no_Dataloader=True, model_type='LanguageModeling')
+        train_dataset, dev_dataset, datacollector = preprocess_data(args, tokenizer, no_Dataloader=True, model_type='LanguageModeling')
 
         #Finetune IMLM + abspeichern
         print("Finetune IMLM...")
         trainer = finetune_imlm(args, model, train_dataset, dev_dataset, datacollector, tokenizer)
-        args.save_path = get_save_path(args).replace("/1/", "/1/IMLM")
+        args.save_path = get_save_path(args).replace("/1/", "/1/IMLM/")
         args.model_name_or_path = args.save_path
         trainer.save_model(args.save_path)
 
         ##################### BCAD ###############################
         #Load Model for BCAD (args.model_name_or_path wurde geändert)
         print("Load model for BCAD...")
-        model, config, tokenizer = set_model(args, num_labels)
+        model, config, tokenizer = set_model(args)
         
         #Preprocess Data
         print("Preprocess Data for IMLM...")
-        train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data("clinc150_AUG", args, num_labels, tokenizer)
+        args.dataset = "clinc150_AUG"
+        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
         
         #Finetune BCAD + abspeichern
         print("Finetune BCAD...")
-        ft_model = finetune_std(args, model, train_dataset, dev_dataset)
-        args.save_path = get_save_path(args).replace("/1/IMLM", "/1/IMLM_BCAD")
+        ft_model = finetune_std(args, model, train_dataset, dev_dataset, accelerator)
+        args.save_path = get_save_path(args).replace("/1/", "/1/IMLM_BCAD/")
 
         #save finetuned model
         #Model speichern
@@ -82,10 +88,10 @@ def main():
 
         #Load Model
         print("Load model...")
-        model, config, tokenizer = set_model(args, num_labels)
+        model, config, tokenizer = set_model(args)
         
         #Preprocess Data
-        train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
+        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
 
         
         #OOD-Detection

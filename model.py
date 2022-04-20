@@ -174,24 +174,35 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
                 return ((loss, cos_loss) + output) if loss is not None else output
 
             elif self.config.loss == 'similarity-contrastive-augm':
+                norm_coef = 0.1
                 # IID 3
                 # sollte so gehen: https://github.com/parZival27/supervised-contrastive-learning-for-out-of-domain-detection/blob/358c6069712a1966a65fb06c3ba43cf8f8239dca/model.py#L14
                 # nt_xent macht das gleiche wie der Code für similarity-contrastive
                 # hat aber noch zusätzlich x_adv (augmented adverserial attack)
-                seq_embed = sequence_output
+                sequence_output.requires_grad_(True)
                 #seq_embed = seq_embed.clone().detach().requires_grad_(True).float()
-                loss.backward(retrain_graph=True)
-                seq_embed.retain_grad()  # we need to get gradient w.r.t embeddings
-                unnormalized_noise = seq_embed.grad.detach_()
+                sequence_output.retain_grad()  # we need to get gradient w.r.t embeddings
+                loss.backward(retain_graph=True)
+                
+                unnormalized_noise = sequence_output.grad.detach_()
                 for p in self.parameters():
                     if p.grad is not None:
                         p.grad.detach_()
                         p.grad.zero_()
                 norm = unnormalized_noise.norm(p=2, dim=-1)
                 normalized_noise = unnormalized_noise / (norm.unsqueeze(dim=-1) + 1e-10)  # add 1e-10 to avoid NaN
-                noise_embedding = seq_embed + self.norm_coef * normalized_noise
+                noise_embedding = sequence_output + norm_coef * normalized_noise
                 logits_adv, pooled_adv = self.classifier(noise_embedding)
-                mask = torch.mm(labels,labels.T).bool().long() 
+
+                #labels umformem:
+                #geg: [14, 1, 4, 2, 2, 0 ...] -> [8,15] on hot encoded
+                mask_labels = torch.zeros(labels.size()[0], 15).to('cuda:0')
+                for i, idx in enumerate(labels):
+                    mask_labels[i][idx] = 1
+                mask = torch.mm(mask_labels,mask_labels.T).bool().long()
+                print(mask)
+                #mask = (labels.unsqueeze(1) == labels.unsqueeze(0)).bool().long() 
+                #mask = mask - torch.diag(torch.diag(mask))
                 t = 0.1
                 x, x_adv, x_c = pair_cosine_similarity(pooled, pooled_adv)
                 x = torch.exp(x / t)
@@ -203,10 +214,10 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
                 dis_adv = (x_adv * (mask - torch.eye(x.size(0)).long().cuda()) + x_c.T * mask) / (x_adv.sum(1) + x_c.sum(0) - torch.exp(torch.tensor(1 / t))) + mask_reverse
                 loss = (torch.log(dis).sum(1) + torch.log(dis_adv).sum(1)) / mask_count
                 loss = -loss.mean()
-                print(loss)
+                print("loss: " + str(loss.item()))
                 output = (logits,) + outputs[2:]
                 output = output + (pooled,)
-                return ((loss, cos_loss) + output) if loss is not None else output
+                return ((loss, None) + output) if loss is not None else output
 
             else:
                 pass

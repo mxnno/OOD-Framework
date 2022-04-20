@@ -51,10 +51,11 @@ def main():
 
         #Pretrain SCL
         print("Pretrain SCL ...")
+        args.num_train_epoch = 100
         model.config.loss = 'similarity-contrastive-augm'
         ft_model =  finetune_std(args, model, train_dataset, dev_dataset, accelerator)
 
-
+        args.num_train_epoch = 3
         #Finetune auf CE oder LMCL + abspeichern
         print("Finetune CE/LMCL...")
         model.config.loss = ''

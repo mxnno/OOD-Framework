@@ -22,7 +22,8 @@ task_to_labels = {
     'travel_nli': 2
 }
 def get_num_labels(args):
-    if args.ood_data == "zero":
+    if args.ood_data == "zero" and args.model_ID != 8:
+        #ID 8 DNNC muss 2 Label haben
         return task_to_labels[args.id_data] - 1
     else:
         return task_to_labels[args.id_data]

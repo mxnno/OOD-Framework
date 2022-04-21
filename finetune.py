@@ -229,6 +229,7 @@ def finetune_DNNC(args, model, tokenizer, train_examples, dev_examples):
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
 
+            print(loss.item())
             loss.backward()
             num_steps += 1
 

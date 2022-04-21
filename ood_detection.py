@@ -213,7 +213,8 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
 
         CHUNK = 500
         EXAMPLE_NUM = input_ids.size(0)
-        label_list = ["non_entailment", "entailment"]
+        #label_list = ["non_entailment", "entailment"]
+        label_list = ["entailment", "non_entailment"]
         labels = []
         probs = None
         start_index = 0
@@ -228,6 +229,9 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
             with torch.no_grad():
                 outputs = model(input_ids=input_ids_, attention_mask=input_mask_, token_type_ids=segment_ids_)
                 logits = outputs[0]
+
+
+                #alles bis auf maha und adb sollten hier möglch sein
                 probs_ = torch.softmax(logits, dim=1)
 
             probs_ = probs_.detach().cpu()
@@ -235,12 +239,17 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
                 probs = probs_
             else:
                 probs = torch.cat((probs, probs_), dim = 0)
+
+                #50/50 Entscheidung ob non_etailment oder entailemnt
+                # was anderes als Softmax möglich?
             labels += [label_list[torch.max(probs_[i], dim=0)[1].item()] for i in range(probs_.size(0))]
             start_index = end_index
 
         assert len(labels) == EXAMPLE_NUM
         assert probs.size(0) == EXAMPLE_NUM
-            
+        
+        # return labgel liste für das eine Beispiel kombiniert mit allen Trainingsdaten ['non_entailment', 'entailment', 'non_entailment'...]
+        # return probs für die Labels für die beiden Klassen: [[0.9804, 0.0196],[0.9804, 0.0196],...]
         return labels, probs
 
     def predict_intent(text):
@@ -255,7 +264,9 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
         assert len(nli_input) > 0
 
         results = model_predict(nli_input)
-        maxScore, maxIndex = results[1][:, 0].max(dim = 0)
+        #results[1] = [[0.9804, 0.0196],[0.9804, 0.0196],...] -> linke Seite wsl für non_ent., rechts entailment
+        #-> maxScore, maxIndex = results[1][:, 1].max(dim = 0) # -> non entail max
+        maxScore, maxIndex = results[1][:, 0].max(dim = 0) # -> entail max
 
         maxScore = maxScore.item()
         maxIndex = maxIndex.item()
@@ -276,6 +287,17 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
         pred, conf, matched_example = predict_intent(e.text)
         print("-----------------")
         print(e.text)
+        print(e.label)
+        print(pred)
+        print(conf)
+        print(matched_example)
+        print("-----------------")
+
+    for e in test_ood:
+        pred, conf, matched_example = predict_intent(e.text)
+        print("-----------------")
+        print(e.text)
+        print(e.label)
         print(pred)
         print(conf)
         print(matched_example)

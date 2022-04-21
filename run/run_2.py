@@ -9,7 +9,7 @@ from utils.args import get_args
 from data import preprocess_data
 from utils.utils import set_seed, save_model
 from accelerate import Accelerator
-
+from model_temp import ModelWithTemperature
 warnings.filterwarnings("ignore")
 
 ## ID 2
@@ -58,11 +58,13 @@ def main():
         if args.save_path != "debug":
             save_model(ft_model, args)
 
+
     elif args.task == "ood_detection":
         
         if not args.save_path:
             print("Bitte einen Pfad angeben, der ein Model enthält!")
             return False
+
 
         #Load Model
         print("Load model...")
@@ -70,6 +72,15 @@ def main():
 
         #Preprocess Data
         train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        
+
+        #Temp für Softmax ermitteln
+        # Now we're going to wrap the model with a decorator that adds temperature scaling
+        temp_model = ModelWithTemperature(model)
+
+        # Tune the model temperature, and save the results
+        temp_model.set_temperature(dev_dataset)
+    
 
         label_list = []
         for batch in train_dataset:

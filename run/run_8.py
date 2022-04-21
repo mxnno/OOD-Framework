@@ -69,6 +69,7 @@ def main():
 
         # NLI Examples erstellen
         nli_train, nli_dev = create_nli_examples(args, train_data, val_data)
+        print(nli_train)
 
         # Tokenization passiert in finetune Methode
         #Finetune:
@@ -92,6 +93,7 @@ def main():
         test_ood.to_csv("test_od_dataset.csv")
         time.sleep(2)
         test_data_id, test_data_ood = load_intent_datasets("test_id_dataset.csv", "test_od_dataset.csv", do_lower_case)
+        print(test_data_id)
         train_data, _ = load_intent_datasets("train_dataset.csv", "train_dataset.csv", do_lower_case)
         
         #OOD-Detection

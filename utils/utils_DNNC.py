@@ -17,7 +17,7 @@ THRESHOLDS = [i * 0.1 for i in range(11)]
 
 def convert_examples_to_features(args, examples, tokenizer, train):
 
-    label_map = {label: i for i, label in enumerate(["non_entailment", "entailment"])}
+    label_map = {label: i for i, label in enumerate(["entailment", "non_entailment"])}
     is_roberta = True
 
     if train:

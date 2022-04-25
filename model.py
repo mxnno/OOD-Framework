@@ -282,7 +282,9 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
             probs, preds = F.softmax(logits_adb.detach(), dim = 1).max(dim = 1)
             euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)
             #data.unseen_token_id = num_labels -> bei 5 labels -> 0-4: ID -> 5: OOD 
-            preds[euc_dis >= delta[preds]] = self.num_labels
+            print(preds)
+            print(euc_dis)
+            preds[euc_dis >= delta[preds]] = 0
             #return preds
             #ood_keys['adb'] = euc_dis.tolist()
             ood_keys['adb'] = preds

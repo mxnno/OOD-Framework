@@ -37,7 +37,7 @@ def get_treshold(method, value):
 
 
 
-def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None):
+def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None, temp=None):
     
     #Varianz für Distanzen bestimmen
 

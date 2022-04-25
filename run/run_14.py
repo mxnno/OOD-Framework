@@ -46,7 +46,7 @@ def main():
         train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
 
         #Finetune Std + abspeichern
-
+        # learn intent representation mit softmax loss
         print("Finetune...")
         ft_model =  finetune_std(args, model, train_dataset, dev_dataset)
         if args.save_path != "debug":

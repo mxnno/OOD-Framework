@@ -10,7 +10,7 @@ import torch
 
 def evaluate(args, model, eval_dataset, tag=None):
     
-    #Accuracy + F1
+    #F1
     metric = load_metric("accuracy")
 
     def compute_metrics(preds, labels):

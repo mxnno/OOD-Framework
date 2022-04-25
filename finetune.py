@@ -11,7 +11,7 @@ import numpy as np
 from evaluation import evaluate, evaluate_DNNC
 from optimizer import get_optimizer_2
 from utils.utils import get_num_labels
-from utils.utils_ADB import BoundaryLoss
+from utils.utils_ADB import BoundaryLoss, plot_curve
 from utils.utils_DNNC import *
 from finetune_TPU import finetune_std_TPU
 warnings.filterwarnings("ignore")
@@ -62,6 +62,8 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
 
     criterion_boundary = BoundaryLoss(num_labels = model.num_labels, feat_dim = args.feat_dim)
     delta = F.softplus(criterion_boundary.delta)
+    delta_points = []
+    delta_points.append(delta)
 
     #evtl parser.add_argument("--lr_boundary", type=float, default=0.05, help="The learning rate of the decision boundary.")
     optimizer = torch.optim.Adam(criterion_boundary.parameters(), lr = 0.05)
@@ -99,11 +101,8 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
 
 
     centroids = centroids_cal(args, train_dataloader)
-
-    wait = 0
-    best_delta, best_centroids = None, None
-
     num_steps = 0
+    best_eval_score = 0
 
     for epoch in range(int(args.num_train_epochs)):
         model.train()
@@ -129,37 +128,29 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
                 nb_tr_examples += input_ids.size(0)
                 nb_tr_steps += 1
 
-    #     delta_points.append(delta)
+        #pro epoche die delta_points abespeichern
+        delta_points.append(delta)
         
-    #     # if epoch <= 20:
-    #     #     plot_curve(self.delta_points)
+        plot_curve(delta_points)
 
-    #     loss = tr_loss / nb_tr_steps
-    #     print('train_loss',loss)
+        loss = tr_loss / nb_tr_steps
+        print('train_loss',loss)
         
-    #     eval_score = evaluation(args, data, mode="eval")
-    #     print('eval_score',eval_score)
+        eval_score = evaluate(args, model, dev_dataloader, tag="dev")['f1']
+        wandb.log(eval_score, step=num_steps) if args.wandb == "log" else print("results:" + eval_score)
+        print('eval_score',eval_score)
         
-    #     if eval_score >= self.best_eval_score:
-    #         wait = 0
-    #         self.best_eval_score = eval_score
-    #         best_delta = self.delta
-    #         best_centroids = self.centroids
-    #     else:
-    #         wait += 1
-    #         if wait >= args.wait_patient:
-    #             break
+        if eval_score >= best_eval_score:
+            best_eval_score = eval_score
+            best_delta = delta
+            best_centroids = centroids
     
-    # delta = best_delta
-    # centroids = best_centroids
 
     #EVTL IST DIE save_results METHODE INTERESSANT (PLOTS!) -> ist aber nicht hier -> im Orginalcode
-
-    results = evaluate(args, model, dev_dataloader, tag="dev")
     #ToDo: bestes Model speichern
-    wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
+        
 
-    return model, centroids, delta
+    return model, best_centroids, best_delta, delta_points
 
 def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, tokenizer ):
 

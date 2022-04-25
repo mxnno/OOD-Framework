@@ -4,6 +4,9 @@ from torch.nn import functional as F
 
 
 class ModelWithTemperature(nn.Module):
+
+    #Nach https://arxiv.org/pdf/1706.04599.pdf
+    
     """
     A thin decorator, which wraps a model with temperature scaling
     model (nn.Module):
@@ -43,11 +46,15 @@ class ModelWithTemperature(nn.Module):
         logits_list = []
         labels_list = []
         with torch.no_grad():
-            for input, label in valid_loader:
-                input = input.cuda()
-                logits = self.model(input)
+            for batch in valid_loader:
+                batch = {key: value.to('cuda:0') for key, value in batch.items()}
+                label = batch['labels']
+                input_ids = batch['input_ids']
+                outputs = self.model(input_ids)
+                logits = outputs[1]
                 logits_list.append(logits)
                 labels_list.append(label)
+
             logits = torch.cat(logits_list).cuda()
             labels = torch.cat(labels_list).cuda()
 

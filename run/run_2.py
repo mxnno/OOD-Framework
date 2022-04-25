@@ -80,6 +80,7 @@ def main():
 
         # Tune the model temperature, and save the results
         temp_model.set_temperature(dev_dataset)
+
     
 
         label_list = []
@@ -89,7 +90,7 @@ def main():
         print(label_list)
         #OOD-Detection
         #print("Start OOD-Detection...")
-        detect_ood(args, model, train_dataset, test_id_dataset, test_ood_dataset)
+        detect_ood(args, model, train_dataset, test_id_dataset, test_ood_dataset, temp=temp_model.temperature.item())
         #test_detect_ood(args, model, dev_dataset, test_dataset)
 
 if __name__ == "__main__":

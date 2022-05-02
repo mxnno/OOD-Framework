@@ -131,17 +131,18 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
         #pro epoche die delta_points abespeichern
         delta_points.append(delta)
         
-        plot_curve(delta_points)
+        #plot_curve(delta_points)
 
         loss = tr_loss / nb_tr_steps
         print('train_loss',loss)
         
-        eval_score = evaluate(args, model, dev_dataloader, tag="dev")['f1']
+        eval_score = evaluate(args, model, dev_dataloader, tag="dev")
+        f1_score = eval_score['f1']
         wandb.log(eval_score, step=num_steps) if args.wandb == "log" else print("results:" + eval_score)
-        print('eval_score',eval_score)
+        print('eval_score',f1_score)
         
-        if eval_score >= best_eval_score:
-            best_eval_score = eval_score
+        if f1_score >= best_eval_score:
+            best_eval_score = f1_score
             best_delta = delta
             best_centroids = centroids
     
@@ -150,7 +151,7 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
     #ToDo: bestes Model speichern
         
 
-    return model, best_centroids, best_delta, delta_points
+    return model, best_centroids, best_delta
 
 def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, tokenizer ):
 

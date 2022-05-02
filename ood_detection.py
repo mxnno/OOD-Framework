@@ -125,7 +125,7 @@ def detect_ood(args, model, prepare_dataset, test_id_dataset, test_ood_dataset, 
     for key in keys:
 
 
-        if key != "softmax":
+        if key != "adb":
             continue
         ins = np.array(in_scores[key], dtype=np.float64)
         print(ins)

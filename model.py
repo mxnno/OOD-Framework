@@ -280,11 +280,15 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         if centroids is not None:
             logits_adb = euclidean_metric(pooled, centroids)
             probs, preds = F.softmax(logits_adb.detach(), dim = 1).max(dim = 1)
+            preds = torch.ones_like(preds)
+            preds.to('cuda:0')
             euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)
             #data.unseen_token_id = num_labels -> bei 5 labels -> 0-4: ID -> 5: OOD 
-            print(preds)
+            print(delta)
             print(euc_dis)
+            print(delta[preds])
             preds[euc_dis >= delta[preds]] = 0
+            print(preds)
             #return preds
             #ood_keys['adb'] = euc_dis.tolist()
             ood_keys['adb'] = preds

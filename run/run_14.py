@@ -7,6 +7,7 @@ from finetune import finetune_std, finetune_ADB
 from ood_detection import detect_ood
 from utils.args import get_args
 from data import preprocess_data
+from accelerate import Accelerator
 from utils.utils import set_seed, get_num_labels, save_model, save_tensor, get_save_path
 
 warnings.filterwarnings("ignore")
@@ -21,34 +22,38 @@ def main():
     #get args
     args = get_args()
 
-    #init WandB
-    if args.wandb == "log":
-        wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
-
-    #set device
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    args.n_gpu = torch.cuda.device_count()
-    args.device = device
-    set_seed(args)
-    #Todo: set seeds?
-
-    #get num_labels
-    num_labels = get_num_labels(args)
+    #Accelerator
+    if args.tpu == "tpu":
+        accelerator = Accelerator()
+        args.device = accelerator.device
+    else:
+        #set device
+        accelerator = None
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        args.n_gpu = torch.cuda.device_count()
+        args.device = device
+        set_seed(args)
+        #Todo: set seeds?
 
     if args.task == "finetune":
 
+        #init WandB
+        if args.wandb == "log":
+            wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
+
+
         #Load Model
         print("Load model...")
-        model, config, tokenizer = set_model(args, num_labels)
+        model, config, tokenizer = set_model(args)
 
         #Preprocess Data
         print("Preprocess Data...")
-        train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
+        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
 
         #Finetune Std + abspeichern
         # learn intent representation mit softmax loss
         print("Finetune...")
-        ft_model =  finetune_std(args, model, train_dataset, dev_dataset)
+        ft_model =  finetune_std(args, model, train_dataset, dev_dataset, accelerator)
         if args.save_path != "debug":
             save_model(ft_model, args)
 
@@ -56,10 +61,10 @@ def main():
         print("Finetune ADB...")
         ft_model, centroids, delta = finetune_ADB(args, ft_model, train_dataset, dev_dataset)
         if args.save_path != "debug":
-            args.save_path = get_save_path(args).replace("/14/", "/14/ADB")
+            args.save_path = get_save_path(args)
             save_model(ft_model, args)
-            save_tensor(centroids, args.save_path)
-            save_tensor(delta, args.save_path)
+            save_tensor(centroids, args.save_path + "/centroids.pt")
+            save_tensor(delta, args.save_path + "/delta.pt")
         else:
             detect_ood(args, ft_model, dev_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
 
@@ -72,7 +77,7 @@ def main():
 
         #Load Model
         print("Load model...")
-        model, config, tokenizer = set_model(args, num_labels)
+        model, config, tokenizer = set_model(args)
 
         #centroids holen
         centroids = torch.load(args.model_name_or_path + "/centroids.pt")
@@ -80,7 +85,7 @@ def main():
         delta = torch.load(args.model_name_or_path + "/delta.pt")
 
         #Preprocess Data
-        train_dataset, dev_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args.dataset, args, num_labels, tokenizer)
+        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
 
         #OOD-Detection
         print("Start OOD-Detection...")

@@ -231,7 +231,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
     
         
 
-    def compute_ood(self, input_ids=None, attention_mask=None, labels=None, centroids=None, delta=None, test=None):
+    def compute_ood_outputs(self, input_ids=None, attention_mask=None, labels=None, centroids=None, delta=None, test=None):
 
         outputs = self.roberta(input_ids, attention_mask=attention_mask)
         sequence_output = outputs[0]
@@ -240,63 +240,8 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
 
         self.all_logits.append(logits)
         self.all_pool.append(pooled)
-
-
-        ood_keys = None
-        #Softmax
-        #max: Returns the maximum value of all elements in the input tensor (max, max_indices)
-        #softmax_score(Scores der prediction für alle Klassen -> max(-1) gibt den Max Wert aus)
-        #max_indices = Klasse, die den Max Wert hat
-        softmax_score, softmax_idx= F.softmax(logits, dim=-1).max(-1)
   
-        
-        #Maha
-        maha_score = []
-        for c in self.all_classes:
-            centered_pooled = pooled - self.class_mean[c].unsqueeze(0)
-            ms = torch.diag(centered_pooled @ self.class_var @ centered_pooled.t())
-            maha_score.append(ms)
-        maha_score = torch.stack(maha_score, dim=-1)
-        maha_score = maha_score.min(-1)[0]
-        maha_score = -maha_score
-
-        #Cosine
-        norm_pooled = F.normalize(pooled, dim=-1)
-        cosine_score = norm_pooled @ self.norm_bank.t()
-        cosine_score = cosine_score.max(-1)[0]
-
-        #Energy
-        energy_score = torch.logsumexp(logits, dim=-1)
-
-        ood_keys = {
-            'softmax': softmax_score.tolist(),
-            'maha': maha_score.tolist(),
-            'cosine': cosine_score.tolist(),
-            'energy': energy_score.tolist(),
-        }
-
-        #ADB
-        euc_dis = []
-        if centroids is not None:
-            logits_adb = euclidean_metric(pooled, centroids)
-            probs, preds = F.softmax(logits_adb.detach(), dim = 1).max(dim = 1)
-            preds = torch.ones_like(preds)
-            preds.to('cuda:0')
-            euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)
-            #data.unseen_token_id = num_labels -> bei 5 labels -> 0-4: ID -> 5: OOD 
-            print(delta)
-            print(euc_dis)
-            print(delta[preds])
-            preds[euc_dis >= delta[preds]] = 0
-            print(preds)
-            #return preds
-            #ood_keys['adb'] = euc_dis.tolist()
-            ood_keys['adb'] = preds
-            #preds wird dann in cm gepackt un dan noch mit F-measure berechnet (https://github.com/thuiar/Adaptive-Decision-Boundary/blob/727dfca95cd254cbfa165a43517304403f6a59ea/util.py#L64)
-        
-        if test is not None:
-            return ood_keys, logits, softmax_idx
-        return ood_keys
+        return logits, pooled
 
     def prepare_ood(self, dataloader=None):
         self.bank = None

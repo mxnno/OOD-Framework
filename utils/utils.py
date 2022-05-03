@@ -73,9 +73,18 @@ def save_model(model, args):
 def get_save_path(args):
     return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.tpu)
 
+def get_result_path(args):
+    return '/content/drive/MyDrive/Masterarbeit/Results/{}/{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot)
+
 def save_tensor(tensor, path, tesnor_name="Tensor"):
     torch.save(tensor, path)
     print(tesnor_name + " saved at: " + path)
+
+def save_logits(logits, name):
+    logit_dict = {}
+    for i, logits in enumerate(logits):
+        logit_dict[i] = logits
+    torch.save(logit_dict, name) 
 
 
 

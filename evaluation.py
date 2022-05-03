@@ -1,10 +1,60 @@
 import numpy as np
-from sklearn.metrics import roc_auc_score, f1_score
+from sklearn.metrics import roc_auc_score, accuracy_score, recall_score, f1_score
 from datasets import load_metric
 from tqdm import tqdm
 import torch.nn.functional as F
 from utils.utils_DNNC import convert_examples_to_features, get_eval_dataloader
-import torch
+from utils.utils import get_result_path
+import csv
+
+
+
+
+def evaluate_test(args, scores):
+
+    #
+    score_list = ['logits_score', 'softmax_score', 'softmax_score_in_temp', 'cosine_score', 'energy_score', 'entropy_score', 'doc_score', 'gda_score', 'maha_score', 'lof_score']
+    csvPath = get_result_path(args) + "/results.py"
+    header = ['Method', "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
+
+    with open(csvPath, encoding='utf-8') as csvf:
+
+        writer = csv.writer(csvf, delimiter=',')
+        writer.writerow(header)
+
+        for score_name in score_list:
+            data = []
+            y_pred_in = scores.__dict__[score_name + "_in"]
+            y_pred_out = scores.__dict__[score_name + "_out"]
+
+            labels_in = np.ones_like(y_pred_in).astype(np.int64)
+            labels_out = np.zeros_like(y_pred_out).astype(np.int64)
+            preds_gesamt = np.concatenate((y_pred_in, y_pred_out), axis=-1)
+            labels_gesamt = np.concatenate((labels_in, labels_out), axis=-1)
+
+            in_acc = accuracy_score(labels_in, y_pred_in)
+            in_recall = recall_score(labels_in, y_pred_in)
+            in_f1 = f1_score(labels_in, y_pred_in)
+            out_acc = accuracy_score(labels_out, y_pred_out)
+            out_recall = recall_score(labels_out, y_pred_out, pos_label=0)
+            out_f1 = f1_score(labels_out, y_pred_out, pos_label=0)
+
+            acc = accuracy_score(labels_gesamt, preds_gesamt)
+            recall = recall_score(labels_gesamt, preds_gesamt)
+            f1 = f1_score(labels_gesamt, preds_gesamt)
+            roc_auc = roc_auc_score(labels_gesamt, preds_gesamt)
+            fpr_95 = get_fpr_95(labels_gesamt, preds_gesamt)
+
+            data = [in_acc, in_recall, in_f1, out_acc, out_recall, out_f1, acc, recall, f1, roc_auc, fpr_95]
+
+        writer.writerow([score_name.replace("_score", ""),] + data)
+
+        csvf.clsoe()
+
+        print("Result file saved at: " + csvPath)
+
+        
+
 
 
 

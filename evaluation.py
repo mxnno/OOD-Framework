@@ -6,23 +6,28 @@ import torch.nn.functional as F
 from utils.utils_DNNC import convert_examples_to_features, get_eval_dataloader
 from utils.utils import get_result_path
 import csv
-
+import os
 
 
 
 def evaluate_test(args, scores):
 
     #
-    score_list = ['logits_score', 'softmax_score', 'softmax_score_in_temp', 'cosine_score', 'energy_score', 'entropy_score', 'doc_score', 'gda_score', 'maha_score', 'lof_score']
-    csvPath = get_result_path(args) + "/results.py"
+    score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'energy_score', 'entropy_score', 'doc_score', 'gda_score', 'maha_score', 'lof_score']
+   
     header = ['Method', "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
-
-    with open(csvPath, encoding='utf-8') as csvf:
+    csvPath = get_result_path(args)
+    if not os.path.isdir(get_result_path(args)):
+        os.mkdir(get_result_path(args))
+    csvPath += "/results.csv"
+    with open(csvPath, 'w', encoding='utf-8') as csvf:
 
         writer = csv.writer(csvf, delimiter=',')
         writer.writerow(header)
 
         for score_name in score_list:
+            if score_name == "doc_score":
+                continue
             data = []
             y_pred_in = scores.__dict__[score_name + "_in"]
             y_pred_out = scores.__dict__[score_name + "_out"]
@@ -47,11 +52,9 @@ def evaluate_test(args, scores):
 
             data = [in_acc, in_recall, in_f1, out_acc, out_recall, out_f1, acc, recall, f1, roc_auc, fpr_95]
 
-        writer.writerow([score_name.replace("_score", ""),] + data)
+            writer.writerow([score_name.replace("_score", ""),] + data)
 
-        csvf.clsoe()
-
-        print("Result file saved at: " + csvPath)
+    print("Result file saved at: " + csvPath)
 
         
 

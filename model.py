@@ -247,6 +247,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         self.bank = None
         self.label_bank = None
         for batch in dataloader:
+            print("huhu")
             self.eval()
             batch = {key: value.cuda() for key, value in batch.items()}
             labels = batch['labels']
@@ -276,9 +277,9 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         precision = EmpiricalCovariance().fit(centered_bank).precision_.astype(np.float32)
         self.class_var = torch.from_numpy(precision).float().cuda()
 
-        torch.save(self.norm_bank, 'norm_bank.pt') 
-        torch.save(self.class_var, 'class_var.pt') # torch.Size([768, 768])
-        torch.save(self.class_mean, 'class_mean.pt') # torch.Size([15, 768])
+        #torch.save(self.norm_bank, 'norm_bank.pt') 
+        #torch.save(self.class_var, 'class_var.pt') # torch.Size([768, 768])
+        #torch.save(self.class_mean, 'class_mean.pt') # torch.Size([15, 768])
 
 
 

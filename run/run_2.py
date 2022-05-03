@@ -4,7 +4,7 @@ import warnings
 
 from model import  set_model
 from finetune import finetune_std
-from ood_detection import detect_ood, test_detect_ood
+from ood_detection import detect_ood
 from utils.args import get_args
 from data import preprocess_data
 from utils.utils import set_seed, save_model
@@ -79,19 +79,12 @@ def main():
         temp_model = ModelWithTemperature(model)
 
         # Tune the model temperature, and save the results
-        temp_model.set_temperature(dev_dataset)
+        best_temp = temp_model.set_temperature(dev_dataset)
 
-    
 
-        label_list = []
-        for batch in train_dataset:
-            label_list += list(batch["labels"].cpu().detach().numpy())
-
-        print(label_list)
         #OOD-Detection
-        #print("Start OOD-Detection...")
-        detect_ood(args, model, train_dataset, test_id_dataset, test_ood_dataset, temp=temp_model.temperature.item())
-        #test_detect_ood(args, model, dev_dataset, test_dataset)
+        print("Start OOD-Detection...")
+        detect_ood(args, model, train_dataset, dev_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
 
 if __name__ == "__main__":
     main()

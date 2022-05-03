@@ -28,7 +28,7 @@ def merge_keys(l, keys):
 
 
 
-def detect_ood(args, model, train_dataset, dev_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None, temp=None):
+def detect_ood(args, model, train_dataset, dev_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None, best_temp=None):
     
 
     #OOD Detection + Eval in 3 Schritten
@@ -47,8 +47,8 @@ def detect_ood(args, model, train_dataset, dev_dataset, test_id_dataset, test_oo
         with torch.no_grad():
             model.compute_ood_outputs(**batch, centroids=centroids, delta=delta)
         
-    all_logits_train = model.all_logits
-    all_pool_train = model.all_pool
+    all_logits_train = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
+    all_pool_train = reduce(lambda x,y: torch.cat((x,y)), model.all_pool[::])
 
     #zum Abspeichern der logits und pools
     #save_logits(all_logits_train, 'all_logits_train.pt')
@@ -63,8 +63,8 @@ def detect_ood(args, model, train_dataset, dev_dataset, test_id_dataset, test_oo
         with torch.no_grad():
             model.compute_ood_outputs(**batch, centroids=centroids, delta=delta)
         
-    all_logits_in = model.all_logits
-    all_pool_in = model.all_pool
+    all_logits_in = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
+    all_pool_in = reduce(lambda x,y: torch.cat((x,y)), model.all_pool[::])
 
     #zum Abspeichern der logits und pools
     #save_logits(all_logits_in, 'all_id_logits.pt')
@@ -79,9 +79,8 @@ def detect_ood(args, model, train_dataset, dev_dataset, test_id_dataset, test_oo
         with torch.no_grad():
             model.compute_ood_outputs(**batch, centroids=centroids, delta=delta)
            
-    all_logits_out = model.all_logits
-    all_pool_out = model.all_pool
-
+    all_logits_out = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
+    all_pool_out = reduce(lambda x,y: torch.cat((x,y)), model.all_pool[::])
     #zum Abspeichern der logits und pools
     #save_logits(all_logits_out, 'all_ood_logits.pt')
     #save_logits(all_pool_out, 'all_ood_pooled.pt')
@@ -95,7 +94,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, test_id_dataset, test_oo
         all_classes = [0,] + all_classes
 
     scores = Scores(thresholds, all_logits_in, all_logits_out, all_pool_in, all_pool_out, all_logits_train, all_pool_train, model.norm_bank, all_classes, train_labels, model.class_mean, model.class_var)
-    scores.calculate_scores()
+    scores.calculate_scores(best_temp)
     thresholds.calculate_tresholds(scores)
     scores.apply_tresholds()
    
@@ -231,6 +230,7 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
 
 def get_model_prediction(logits):
     #return label_pred des Models
+    print(logits)
     a, label_pred = logits.max(dim = 1)
     return a, label_pred.cpu().detach().numpy()
 
@@ -266,6 +266,7 @@ def get_entropy_score(logits):
 
     softmax = F.softmax(logits, dim=-1)
     expo = torch.exp(softmax)
+    expo = expo.cpu()
     return entropy(expo, axis=1)
 
 def get_cosine_score(pooled, norm_bank):
@@ -302,7 +303,7 @@ def get_maha_score(pooled, all_classes, class_mean, class_var, full_scores=False
 
 
 
-def get_gda_score(train_logits, test_logits_in, test_logits_out, train_labels):
+def get_gda_score(train_logits, test_logits_in, test_logits_out, train_labels, distance_type="euclidean"):
 
     def gda_help(prob_test, means, distance_type, cov):
         num_samples = prob_test.shape[0]
@@ -334,13 +335,14 @@ def get_gda_score(train_logits, test_logits_in, test_logits_out, train_labels):
     prob_test_out = prob_test_out.cpu().detach().numpy()
     #solver {‘svd’, ‘lsqr’, ‘eigen’}
     gda = LinearDiscriminantAnalysis(solver="lsqr", shrinkage=None, store_covariance=True)
+    train_labels.cpu().detach().numpy()
     gda.fit(prob_train, train_labels)
     y_pred_in = gda.predict(prob_test_in)
     y_pred_out = gda.predict(prob_test_out)
 
     means =  gda.means_
     #distance_type  = "mahalanobis"
-    distance_type  = "euclidean"
+    #distance_type  = "euclidean"
     cov = gda.covariance_
 
     results_in = gda_help(prob_test_in, means, distance_type, cov)
@@ -461,6 +463,15 @@ class Scores():
         self.pooled_out = pooled_out
         self.logits_train = logits_train
         self.pooled_train = pooled_train
+        
+        print("######### SIZE ############")
+        print(logits_in.size())
+        print(logits_out.size())
+        print(pooled_in.size())
+        print(pooled_out.size())
+        print(logits_train.size())
+        print(pooled_train.size())
+        print("############################")
 
         #sonstiges
         
@@ -505,7 +516,7 @@ class Scores():
 
         self.tresholds = tresholds
 
-    def calculate_scores(self):
+    def calculate_scores(self, best_temp):
         
         ################## Nur Logits #####################
         self.logits_score_in, _ = get_model_prediction(self.logits_in)
@@ -516,10 +527,8 @@ class Scores():
         self.softmax_score_out, idx_out= get_softmax_score(self.logits_out)
 
         ################# SOFTMAX TMP #####################
-        temp_class = ModelWithTemperature()
-        temp = temp_class.set_temperature()
-        self.softmax_score_temp_in, _ = get_softmax_score_with_temp(self.logits_in, temp)
-        self.softmax_score_temp_out, _ = get_softmax_score_with_temp(self.logits_out, temp)
+        self.softmax_score_temp_in, _ = get_softmax_score_with_temp(self.logits_in, best_temp)
+        self.softmax_score_temp_out, _ = get_softmax_score_with_temp(self.logits_out, best_temp)
 
         ################# COSINE ##########################
         self.cosine_score_in = get_cosine_score(self.pooled_in, self.norm_bank)
@@ -535,8 +544,8 @@ class Scores():
 
         #################### DOC ##########################
         # (return 0/1 -> kein treshold notwendig)
-        self.doc_score_in = get_doc_score(self.logits_train, self.train_labels, self.logits_in, self.all_classes)
-        self.doc_score_out = get_doc_score(self.logits_train, self.train_labels, self.logits_out, self.all_classes)
+        #self.doc_score_in = get_doc_score(self.logits_train, self.train_labels, self.logits_in, self.all_classes)
+        #self.doc_score_out = get_doc_score(self.logits_train, self.train_labels, self.logits_out, self.all_classes)
 
         ################### GDA ############################
         # ist maha und euclid

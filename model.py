@@ -251,6 +251,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
             self.eval()
             batch = {key: value.cuda() for key, value in batch.items()}
             labels = batch['labels']
+            print(labels)
             #forward ohne labels
             outputs = self.roberta(input_ids=batch['input_ids'],attention_mask=batch['attention_mask'])
             sequence_output = outputs[0]

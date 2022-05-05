@@ -14,6 +14,7 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from functools import reduce
 from evaluation import evaluate_test
+from scipy.stats import chi2
 
 
 
@@ -36,7 +37,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, test_id_dataset, test_oo
     # 2. Threshold anwenden -> 0 oder 1
     # 3. Metriken berechnen
 
-    #mit dev oder Trainingsdaten HR???? 
+   # für maha etc.
     model.prepare_ood(dev_dataset)
 
     #Train 
@@ -87,15 +88,34 @@ def detect_ood(args, model, train_dataset, dev_dataset, test_id_dataset, test_oo
     #zum Abspeichern der logits und pools
     #save_logits(all_logits_out, 'all_ood_logits.pt')
     #save_logits(all_pool_out, 'all_ood_pooled.pt')
+    model.all_logits = []
+    model.all_pool = []
 
+    #Dev:
+    dev_labels = []
+    for batch in tqdm(dev_dataset):
+        model.eval()
+        batch = {key: value.to(args.device) for key, value in batch.items()}
+        dev_label = batch["labels"].cpu().detach()
+        with torch.no_grad():
+            model.compute_ood_outputs(**batch, centroids=centroids, delta=delta)
+        dev_labels.append(dev_label)
+    
+    all_logits_dev = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
+    all_pool_dev = reduce(lambda x,y: torch.cat((x,y)), model.all_pool[::])
+    dev_labels = reduce(lambda x,y: torch.cat((x,y)), dev_labels[::])
+    print(all_pool_dev)
+    print(all_pool_in)
 
 
     #2. Treshold + Scores
     thresholds = Tresholds()
+    scores_dev = Scores(thresholds, all_logits_dev, all_logits_out, all_pool_dev, all_pool_out, all_logits_train, all_pool_train, model.norm_bank, model.all_classes, train_labels, dev_labels, model.class_mean, model.class_var)
+    scores_dev.calculate_scores(best_temp)
+    thresholds.calculate_tresholds(scores_dev)
 
-    scores = Scores(thresholds, all_logits_in, all_logits_out, all_pool_in, all_pool_out, all_logits_train, all_pool_train, model.norm_bank, model.all_classes, train_labels, model.class_mean, model.class_var)
+    scores = Scores(thresholds, all_logits_in, all_logits_out, all_pool_in, all_pool_out, all_logits_train, all_pool_train, model.norm_bank, model.all_classes, train_labels, dev_labels, model.class_mean, model.class_var)
     scores.calculate_scores(best_temp)
-    thresholds.calculate_tresholds(scores)
     scores.apply_tresholds()
    
 
@@ -335,8 +355,6 @@ def get_gda_score(train_logits, test_logits_in, test_logits_out, train_labels, d
     #solver {‘svd’, ‘lsqr’, ‘eigen’}
     gda = LinearDiscriminantAnalysis(solver="lsqr", shrinkage=None, store_covariance=True)
     train_labels.cpu().detach().numpy()
-    print(prob_train)
-    print(train_labels)
     gda.fit(prob_train, train_labels)
     y_pred_in = gda.predict(prob_test_in)
     y_pred_out = gda.predict(prob_test_out)
@@ -454,7 +472,7 @@ def get_doc_score(train_logits, train_labels, logits_in, all_classes):
 
 class Scores():
 
-    def __init__(self, tresholds, logits_in, logits_out, pooled_in, pooled_out, logits_train, pooled_train, norm_bank, all_classes, train_labels, class_mean, class_var):
+    def __init__(self, tresholds, logits_in, logits_out, pooled_in, pooled_out, logits_train, pooled_train, norm_bank, all_classes, train_labels, dev_labels, class_mean, class_var):
 
         #Logits & Pooled
 
@@ -471,6 +489,7 @@ class Scores():
         self.norm_bank = norm_bank
         self.all_classes = all_classes # all_classes = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
         self.train_labels = train_labels # labels aller Trainingsdaten: [1, 11, 3, 1, 14, ...]
+        self.dev_labels = dev_labels
         self.class_mean = class_mean
         self.class_var = class_var
 
@@ -518,6 +537,7 @@ class Scores():
         ################## SOFTMAX ########################
         self.softmax_score_in, idx_in = get_softmax_score(self.logits_in)
         self.softmax_score_out, idx_out= get_softmax_score(self.logits_out)
+        
 
         ################# SOFTMAX TMP #####################
         self.softmax_score_temp_in, _ = get_softmax_score_with_temp(self.logits_in, best_temp)
@@ -526,6 +546,9 @@ class Scores():
         ################# COSINE ##########################
         self.cosine_score_in = get_cosine_score(self.pooled_in, self.norm_bank)
         self.cosine_score_out = get_cosine_score(self.pooled_out, self.norm_bank)
+        print(self.cosine_score_in)
+        print(self.cosine_score_out)
+        print("#############")
 
         ################### ENERGY #######################
         self.energy_score_in = get_energy_score(self.logits_in)
@@ -578,6 +601,7 @@ class Scores():
         ################## SOFTMAX ########################
         self.softmax_score_in = np.where(self.softmax_score_in >= self.tresholds.softmax_t, 1, 0)
         self.softmax_score_out = np.where(self.softmax_score_out >= self.tresholds.softmax_t, 1, 0)
+    
   
         ################## SOFTMAX TEMP ###########################
         self.softmax_score_temp_in = np.where(self.softmax_score_temp_in >= self.tresholds.sofmtax_temp_t, 1, 0)
@@ -594,6 +618,9 @@ class Scores():
         ################## Cosine ###############
         self.cosine_score_in = np.where(self.cosine_score_in >= self.tresholds.cosine_t, 1, 0)
         self.cosine_score_out = np.where(self.cosine_score_out >= self.tresholds.cosine_t, 1, 0)
+        print(self.cosine_score_in)
+        print(self.cosine_score_out)
+        print("#############")
 
         ################## Energy ###############
         self.energy_score_in = np.where(self.energy_score_in >= self.tresholds.energy_t, 1, 0)
@@ -619,29 +646,44 @@ class Tresholds():
         self.gda_t = 0
 
 
-    def treshold_picker(self, pred_in, pred_out, f, t, step, min):
+    def treshold_picker(self, t_pred, f, t, step, min):
 
+        #https://www.machinelearningplus.com/statistics/mahalanobis-distance/
+        significance_level=0.01
+        self.critical_value = chi2.ppf((1-significance_level), df=t_pred.shape[1]-1)
+        print('Critical value is: ', self.critical_value)
+
+        if min is False:
+            n = int(t_pred.size/10)
+            print(n)
+            #return np.partition(t_pred, n-1)[n-1]
+            return np.amin(t_pred)
+        else:
+            n = int(int(t_pred.size) - int(t_pred.size/10))
+            #return np.partition(t_pred, n-1)[n-1]
+            return np.max(t_pred)
+
+
+        
         #nach Acc gesamt
         #oder nach F1
-        if not isinstance(pred_in, np.ndarray):
-            pred_in = pred_in.cpu().detach().numpy()
-            pred_out = pred_out.cpu().detach().numpy()
+        if not isinstance(t_pred, np.ndarray):
+            t_pred = t_pred.cpu().detach().numpy()
 
         best_t = 0
         best_acc = 0
-        labels_in = np.ones_like(pred_in).astype(np.int64)
-        labels_out = np.zeros_like(pred_out).astype(np.int64)
-        labels_gesamt = np.concatenate((labels_in, labels_out), axis=-1)
+        labels_in = np.ones_like(t_pred).astype(np.int64)
 
         steps = np.linspace(f,t,step)
         for i in steps:
 
-            t_pred = np.concatenate((pred_in, pred_out), axis=-1)
             if min is True:
                 t_pred = np.where(t_pred <= i, 1, 0)
             else:
                 t_pred = np.where(t_pred >= i, 1, 0)
-            acc = accuracy_score(labels_gesamt, t_pred)
+            acc = accuracy_score(labels_in, t_pred)
+
+            print(acc)
 
             if acc > best_acc:
                 best_acc = acc
@@ -652,25 +694,25 @@ class Tresholds():
     def calculate_tresholds(self, scores):
 
         ################## LOGITS ########################
-        self.logits_t = self.treshold_picker(scores.logits_score_in, scores.logits_score_out, 0, 5, 500, min=False)
+        self.logits_t = self.treshold_picker(scores.logits_score_in, 0, 5, 500, min=False)
 
         ################## SOFTMAX ########################
-        self.softmax_t = self.treshold_picker(scores.softmax_score_in, scores.softmax_score_out, 0, 1, 50, min=False)
-
+        self.softmax_t = self.treshold_picker(scores.softmax_score_in, 0, 1, 50, min=False)
+    
         ################## SOFTMAX TEMP ###########################
-        self.sofmtax_temp_t = self.treshold_picker(scores.softmax_score_temp_in, scores.softmax_score_temp_out, 0, 1, 50, min=False)
+        self.sofmtax_temp_t = self.treshold_picker(scores.softmax_score_temp_in, 0, 1, 50, min=False)
 
         ################### MAHA ############################
-        self.maha_t = self.treshold_picker(scores.maha_score_in, scores.maha_score_out, 0, 1000, 50, min=True)
+        self.maha_t = self.treshold_picker(scores.maha_score_in, 0, 1000, 50, min=True)
 
         ################## Entropy ###############
-        self.entropy_t = self.treshold_picker(scores.entropy_score_in, scores.entropy_score_out, 2.5, 3, 500, min=True)
+        self.entropy_t = self.treshold_picker(scores.entropy_score_in, 2.5, 3, 500, min=True)
 
         ################## Cosine ###############
-        self.cosine_t = self.treshold_picker(scores.cosine_score_in, scores.cosine_score_out, 0, 1, 50, min=False)
-
+        self.cosine_t = self.treshold_picker(scores.cosine_score_in, 0, 1, 50, min=False)
+        print(self.cosine_t)
         ################## Energy ###############
-        self.energy_t = self.treshold_picker(scores.energy_score_in, scores.energy_score_out, 0, 5, 500, min=False)
-
+        self.energy_t = self.treshold_picker(scores.energy_score_in, 0, 5, 500, min=False)
+        
         ################### GDA ###############
-        self.gda_t = self.treshold_picker(scores.gda_score_in, scores.gda_score_out, 0, 5, 500, min=False)
+        self.gda_t = self.treshold_picker(scores.gda_score_in, 0, 5, 500, min=False)

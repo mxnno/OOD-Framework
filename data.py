@@ -58,7 +58,7 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
         tokenized_datasets["train"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
     )
     eval_dataloader = DataLoader(
-        tokenized_datasets["val_id"], batch_size=args.batch_size, collate_fn=data_collator
+        tokenized_datasets["val_id"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
     )
     test_dataloader = DataLoader(
         tokenized_datasets["test"], batch_size=args.batch_size, collate_fn=data_collator
@@ -195,26 +195,34 @@ def load_clinc(args):
     val_id = val_id.map(set_label_to_ID)
     val_id.cast_column("intent", classlabel)
 
+    #Falls OOD:
+    if ood_data != 'zero':
+        #OOD Daten zufällig shuffeln und reduzieren auf 10*n Few-Shot
 
-    #OOD Daten zufällig shuffeln und reduzieren auf 3*n Few-Shot
-    if ood_original is True:
-        #wenn OOD nur original OOD
-        val_ood = val_dataset.filter(lambda example: example['intent']==0)
-        val_ood.to_csv("test.csv")
+        #OOD Daten zufällig shuffeln und reduzieren auf 3*n Few-Shot
+        if ood_original is True:
+            #wenn OOD nur original OOD
+            val_ood = val_dataset.filter(lambda example: example['intent']==0)
+        else:
+            val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids)
+            val_ood = val_ood.shuffle(seed=42)
+            val_ood = val_ood.sort('intent')
+            val_ood = val_ood.shard(num_shards=num_shards*3, index=0)
+            val_ood = val_ood.map(set_label_to_OOD)
+
+            val_dataset = concatenate_datasets([val_ood, val_id])
+
     else:
-        val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids)
-        val_ood = val_ood.shuffle(seed=42)
-        val_ood = val_ood.sort('intent')
-        val_ood = val_ood.shard(num_shards=num_shards*3, index=0)
-        val_ood = val_ood.map(set_label_to_OOD)
+        val_dataset = val_id
+        val_ood = val_id
 
-    val_ood.cast_column("intent", classlabel)
+    val_dataset.cast_column("intent", classlabel)
 
+    val_dataset.to_csv("val_csv")
 
-    val_dataset = concatenate_datasets([val_ood, val_id])
-    val_dataset = val_dataset.shuffle(seed=42)
 
     
+
 
     ########################################################### Test ###############################################################
 

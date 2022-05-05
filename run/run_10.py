@@ -44,6 +44,7 @@ def main():
     id_dev = id_dev.rename_column("text", "data")
     id_dev.to_csv("/content/drive/MyDrive/Masterarbeit/OOD-Methoden/kFolden/clinc/dev/id_dev.csv")
 
+    #dev soll keine ood Daten haben -> val_ood = val_id (in data.py) nochmal prüfen
     ood_dev = dataset_dict['val_ood'].rename_column("intent", "label")
     ood_dev = ood_dev.rename_column("text", "data")
     ood_dev.to_csv("/content/drive/MyDrive/Masterarbeit/OOD-Methoden/kFolden/clinc/dev/ood_dev.csv")

@@ -58,8 +58,14 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     train_dataloader = DataLoader(
         tokenized_datasets["train"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
     )
-    eval_dataloader = DataLoader(
+    val_dataloader = DataLoader(
+        tokenized_datasets["validation"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
+    )
+    val_id_dataloader = DataLoader(
         tokenized_datasets["val_id"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
+    )
+    val_ood_dataloader = DataLoader(
+        tokenized_datasets["val_ood"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
     )
     test_dataloader = DataLoader(
         tokenized_datasets["test"], batch_size=args.batch_size, collate_fn=data_collator
@@ -74,7 +80,7 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     #for batch in eval_dataloader:
         #print({k: v.shape for k, v in batch.items()})
 
-    return train_dataloader, eval_dataloader, test_dataloader, test_id_dataloader, test_ood_dataloader
+    return train_dataloader, val_dataloader, val_id_dataloader, val_ood_dataloader, test_dataloader, test_id_dataloader, test_ood_dataloader
 
 
 def load_clinc(args):

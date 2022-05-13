@@ -15,6 +15,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from functools import reduce
 from evaluation import evaluate_test
 from scipy.stats import chi2
+from model import  set_model
 
 
 
@@ -34,9 +35,16 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
 
     #OOD Detection + Eval in 3 Schritten
     # 1. Model prediction (BATCH SIZE = 1 !!)
+    # ToDo: - Varianz + OC-SVM Score (z.B. nach Mahascore zusätzlich) hinzufügen -> Anhand 1-2 Beispielen testen, ob Mehrwert oder nicht
     # 2. Threshold anwenden -> 0 oder 1
+    # **************************
+    # * - Tresholdunabhängige Metriken 
+    # * - best Treshold (über Testdaten) (wie z.B. DNNC oder clinc)
+    # * - avg Treshold (über Train/Dev und z.B. über Mean)
+    # * - OC-SVM
+    # *************************
     # WICHTIG: wie komme ich auf T
-    #       1. Über Testdaten selber -> besten Treshold picken (wie z.B. DNNC oder clinc)
+    #       1. Über Testdaten selber -> besten Treshold picken 
     #       2. Über DEV-Daten (min, mittelwert-Varianz...)
     #       3. Über SVM, log.Regression (geht wsl nicht)
     #       4. DOC anschauen, da braucht man keine Tresholds, UNK -> LOF (https://github.com/thuiar/TEXTOIR/blob/main/open_intent_detection/methods/DeepUnk/manager.py#L146)
@@ -47,7 +55,13 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     #   WICHTIG: Prüfen ob DTACC mit Treshold .5 * ...
 
    # für maha etc.
-    model.prepare_ood(dev_dataset)
+    model.prepare_ood(dev_id_dataset)
+    #Wichtig:
+    #bei Maha muss prepare und Trehsold predriction auf unterschiedlichen Daten ausgeführt werden, d.h. z.B. prepare mit Training und Treshold mit dev -> sonst kommen immer die gleiche Werte raus (15 oder 90 für alle Maha Predictions)
+
+    #model2 = set_model(args)
+    #model.prepare_ood(dev_id_dataset)
+
 
     #Train 
     train_labels = []
@@ -80,8 +94,9 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     all_pool_in = reduce(lambda x,y: torch.cat((x,y)), model.all_pool[::])
 
     #zum Abspeichern der logits und pools
-    #save_logits(all_logits_in, 'all_id_logits.pt')
-    #save_logits(all_pool_in, 'all_id_pooled.pt')
+    #save_logits(all_logits_in, '1305_traindev_id_logits.pt')
+    print(all_pool_in.size())
+    save_logits(all_pool_in, '/content/drive/MyDrive/Masterarbeit/Results/1305_dev_id_pool.pt')
     model.all_logits = []
     model.all_pool = []
     
@@ -95,14 +110,15 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     all_logits_out = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
     all_pool_out = reduce(lambda x,y: torch.cat((x,y)), model.all_pool[::])
     #zum Abspeichern der logits und pools
-    #save_logits(all_logits_out, 'all_ood_logits.pt')
-    #save_logits(all_pool_out, 'all_ood_pooled.pt')
+    #save_logits(all_logits_out, '1305_traindev_ood_logits.pt')
+    save_logits(all_pool_out, '/content/drive/MyDrive/Masterarbeit/Results/1305_dev_ood_pool.pt')
+    print(all_pool_out.size())
     model.all_logits = []
     model.all_pool = []
 
     #Dev:
     dev_labels = []
-    for batch in tqdm(dev_dataset):
+    for batch in tqdm(dev_id_dataset):
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         dev_label = batch["labels"].cpu().detach()
@@ -113,11 +129,16 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     all_logits_dev = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
     all_pool_dev = reduce(lambda x,y: torch.cat((x,y)), model.all_pool[::])
     dev_labels = reduce(lambda x,y: torch.cat((x,y)), dev_labels[::])
-    print(dev_labels)
+    #save_logits(all_logits_out, 'all_ood_logits.pt')
+    save_logits(all_pool_dev, '/content/drive/MyDrive/Masterarbeit/Results/1305_dev_treshold_pool.pt')
+    print(all_pool_dev.size())
+    model.all_logits = []
+    model.all_pool = []
+
 
 
     #2. Treshold + Scores
-    thresholds = Tresholds()
+    #thresholds = Tresholds()
     #scores_dev = Scores(thresholds, all_logits_dev, all_logits_out, all_pool_dev, all_pool_out, all_logits_train, all_pool_train, model.norm_bank, model.all_classes, train_labels, dev_labels, model.class_mean, model.class_var)
     #scores_dev.calculate_scores(best_temp)
     #thresholds.calculate_tresholds(scores_dev)

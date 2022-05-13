@@ -277,6 +277,12 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         centered_bank = (self.bank - self.class_mean[self.label_bank]).detach().cpu().numpy()
         precision = EmpiricalCovariance().fit(centered_bank).precision_.astype(np.float32)
         self.class_var = torch.from_numpy(precision).float().cuda()
+        print("###################")
+        print(self.class_mean)
+        print(self.class_var)
+        print(self.all_classes)
+        print("###################")
+
 
         #torch.save(self.norm_bank, 'norm_bank.pt') 
         #torch.save(self.class_var, 'class_var.pt') # torch.Size([768, 768])

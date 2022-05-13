@@ -71,7 +71,8 @@ def main():
         model, config, tokenizer = set_model(args)
 
         #Preprocess Data
-        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        #dev_dataset = train + dev_id
+        train_dataset, dev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
         
 
         #Temp für Softmax ermitteln
@@ -84,7 +85,7 @@ def main():
 
         #OOD-Detection
         print("Start OOD-Detection...")
-        detect_ood(args, model, train_dataset, dev_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
+        detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
 
 if __name__ == "__main__":
     main()

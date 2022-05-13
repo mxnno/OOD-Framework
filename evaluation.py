@@ -220,3 +220,103 @@ def fpr_and_fdr_at_recall(y_true, y_score, recall_level=0.95, pos_label=1.):
     cutoff = np.argmin(np.abs(recall - recall_level))
 
     return fps[cutoff] / (np.sum(np.logical_not(y_true)))
+
+def tnr_at_tpr95 (scores_in, scores_out):
+    #scores_in: 450 1D Scores von trainingsdaten
+    stypes = {"test"}
+    tp, fp = dict(), dict()
+    tnr_at_tpr95 = dict()
+    for stype in stypes:
+        known = scores_in
+        novel = scores_out
+        known.sort()
+        novel.sort()
+        end = np.max([np.max(known), np.max(novel)])
+        start = np.min([np.min(known),np.min(novel)])
+        num_k = known.shape[0]
+        num_n = novel.shape[0]
+        tp[stype] = -np.ones([num_k+num_n+1], dtype=int)
+        fp[stype] = -np.ones([num_k+num_n+1], dtype=int)
+        tp[stype][0], fp[stype][0] = num_k, num_n
+        k, n = 0, 0
+        for l in range(num_k+num_n):
+            if k == num_k:
+                tp[stype][l+1:] = tp[stype][l]
+                fp[stype][l+1:] = np.arange(fp[stype][l]-1, -1, -1)
+                break
+            elif n == num_n:
+                tp[stype][l+1:] = np.arange(tp[stype][l]-1, -1, -1)
+                fp[stype][l+1:] = fp[stype][l]
+                break
+            else:
+                if novel[n] < known[k]:
+                    n += 1
+                    tp[stype][l+1] = tp[stype][l]
+                    fp[stype][l+1] = fp[stype][l] - 1
+                else:
+                    k += 1
+                    tp[stype][l+1] = tp[stype][l] - 1
+                    fp[stype][l+1] = fp[stype][l]
+        tpr95_pos = np.abs(tp[stype] / num_k - .95).argmin()
+        tnr_at_tpr95[stype] = 1. - fp[stype][tpr95_pos] / num_n
+
+    
+    tpr =  np.concatenate([[1.], tp[stype]/tp[stype][0], [0.]])
+    fpr = np.concatenate([[1.], fp[stype]/fp[stype][0], [0.]])
+    auroc = -np.trapz(1.-fpr, tpr)
+    
+    #0.5 is wsl Treshold...
+    dtacc = .5 * (tp[stype]/tp[stype][0] + 1.-fp[stype]/fp[stype][0]).max()
+
+    #Auin
+    denom = tp[stype]+fp[stype]
+    denom[denom == 0.] = -1.
+    pin_ind = np.concatenate([[True], denom > 0., [True]])
+    pin = np.concatenate([[.5], tp[stype]/denom, [0.]])
+    auin = -np.trapz(pin[pin_ind], tpr[pin_ind])
+
+    #Auout
+    denom = tp[stype][0]-tp[stype]+fp[stype][0]-fp[stype]
+    denom[denom == 0.] = -1.
+    pout_ind = np.concatenate([[True], denom > 0., [True]])
+    pout = np.concatenate([[0.], (fp[stype][0]-fp[stype])/denom, [.5]])
+    auout = np.trapz(pout[pout_ind], 1.-fpr[pout_ind])
+
+
+    #Treshold berechnen von ID3
+    #https://github.com/parZival27/supervised-contrastive-learning-for-out-of-domain-detection/blob/358c6069712a1966a65fb06c3ba43cf8f8239dca/utils.py#L223
+    #nehmen fp, tp und fn = 0
+    seen_m_dist = scores_in
+    unseen_m_dist = []
+    lst = []
+    for item in seen_m_dist:
+        lst.append((item, "seen"))
+    for item in unseen_m_dist:
+        lst.append((item, "unseen"))
+    # sort by m_dist: [(5.65, 'seen'), (8.33, 'seen'), ..., (854.3, 'unseen')]
+    lst = sorted(lst, key=lambda item: item[0])
+
+    threshold = 0.
+    tp, fp, fn = len(unseen_m_dist), len(seen_m_dist), 0
+
+    def compute_f1(tp, fp, fn):
+        p = tp / (tp + fp + 1e-10)
+        r = tp / (tp + fn + 1e-10)
+        return (2 * p * r) / (p + r + 1e-10)
+
+    f1 = compute_f1(tp, fp, fn)
+
+    for m_dist, label in lst:
+        if label == "seen":  # fp -> tn
+            fp -= 1
+        else:  # tp -> fn
+            tp -= 1
+            fn += 1
+        if compute_f1(tp, fp, fn) > f1:
+            f1 = compute_f1(tp, fp, fn)
+            threshold = m_dist + 1e-10
+
+    print("estimated threshold:", threshold)
+
+    return tp, fp, tnr_at_tpr95["test"]
+

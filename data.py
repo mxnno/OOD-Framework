@@ -1,3 +1,4 @@
+from scipy.fftpack import idstn
 import datasets
 from datasets import load_dataset, concatenate_datasets, DatasetDict, ClassLabel
 from torch.utils.data import DataLoader
@@ -210,10 +211,11 @@ def load_clinc(args):
             val_ood = val_ood.shard(num_shards=num_shards*3, index=0)
             val_ood = val_ood.map(set_label_to_OOD)
 
-            val_dataset = concatenate_datasets([val_ood, val_id])
+            val_dataset = concatenate_datasets([val_ood, val_id, id])
+            val_ood = concatenate_datasets([val_ood, val_id])
 
     else:
-        val_dataset = val_id
+        val_dataset = concatenate_datasets([id, val_id])
         val_ood = val_id
 
     val_dataset.cast_column("intent", classlabel)
@@ -251,7 +253,8 @@ def load_clinc(args):
 
     #train_dataset.to_csv('/content/drive/MyDrive/trainas.csv')  
 
-    return DatasetDict({'train': train_dataset, 'validation': val_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
+    #dev_dataset = train + dev_id
+    return DatasetDict({'train': train_dataset, 'validation':  val_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
 
 
 def load_clinc_with_ID_Augmentation(args):

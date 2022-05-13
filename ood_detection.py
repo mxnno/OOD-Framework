@@ -29,13 +29,22 @@ def merge_keys(l, keys):
 
 
 
-def detect_ood(args, model, train_dataset, dev_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None, best_temp=None):
+def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None, best_temp=None):
     
 
     #OOD Detection + Eval in 3 Schritten
     # 1. Model prediction (BATCH SIZE = 1 !!)
     # 2. Threshold anwenden -> 0 oder 1
+    # WICHTIG: wie komme ich auf T
+    #       1. Über Testdaten selber -> besten Treshold picken (wie z.B. DNNC oder clinc)
+    #       2. Über DEV-Daten (min, mittelwert-Varianz...)
+    #       3. Über SVM, log.Regression (geht wsl nicht)
+    #       4. DOC anschauen, da braucht man keine Tresholds, UNK -> LOF (https://github.com/thuiar/TEXTOIR/blob/main/open_intent_detection/methods/DeepUnk/manager.py#L146)
+    #       5. ID3 Methode (was ist unseen und seen?) mit testID vs TestOOD kommen gleiche ergebnisse wie bei mir raus.. evtl train vs dev oder schauen, dass man tp und fp aus den anderen mehtoden ohne Trehsold bekommt -> aber wsl viel zu hoher Treshold
     # 3. Metriken berechnen
+    # - mit T
+    # - ohne T (auroc-score (ID1 hier schon vorhanden), tnr_at_tpr95 (ID2), + weitere -> siehe unter tnr_at_tpr95 Evaluation)
+    #   WICHTIG: Prüfen ob DTACC mit Treshold .5 * ...
 
    # für maha etc.
     model.prepare_ood(dev_dataset)
@@ -104,23 +113,22 @@ def detect_ood(args, model, train_dataset, dev_dataset, test_id_dataset, test_oo
     all_logits_dev = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
     all_pool_dev = reduce(lambda x,y: torch.cat((x,y)), model.all_pool[::])
     dev_labels = reduce(lambda x,y: torch.cat((x,y)), dev_labels[::])
-    print(all_pool_dev)
-    print(all_pool_in)
+    print(dev_labels)
 
 
     #2. Treshold + Scores
     thresholds = Tresholds()
-    scores_dev = Scores(thresholds, all_logits_dev, all_logits_out, all_pool_dev, all_pool_out, all_logits_train, all_pool_train, model.norm_bank, model.all_classes, train_labels, dev_labels, model.class_mean, model.class_var)
-    scores_dev.calculate_scores(best_temp)
-    thresholds.calculate_tresholds(scores_dev)
+    #scores_dev = Scores(thresholds, all_logits_dev, all_logits_out, all_pool_dev, all_pool_out, all_logits_train, all_pool_train, model.norm_bank, model.all_classes, train_labels, dev_labels, model.class_mean, model.class_var)
+    #scores_dev.calculate_scores(best_temp)
+    #thresholds.calculate_tresholds(scores_dev)
 
-    scores = Scores(thresholds, all_logits_in, all_logits_out, all_pool_in, all_pool_out, all_logits_train, all_pool_train, model.norm_bank, model.all_classes, train_labels, dev_labels, model.class_mean, model.class_var)
-    scores.calculate_scores(best_temp)
-    scores.apply_tresholds()
+    #scores = Scores(thresholds, all_logits_in, all_logits_out, all_pool_in, all_pool_out, all_logits_train, all_pool_train, model.norm_bank, model.all_classes, train_labels, dev_labels, model.class_mean, model.class_var)
+    #scores.calculate_scores(best_temp)
+    #scores.apply_tresholds()
    
 
     #3. Metriken anwenden
-    evaluate_test(args, scores)
+    #evaluate_test(args, scores)
 
    
 
@@ -537,7 +545,6 @@ class Scores():
         ################## SOFTMAX ########################
         self.softmax_score_in, idx_in = get_softmax_score(self.logits_in)
         self.softmax_score_out, idx_out= get_softmax_score(self.logits_out)
-        
 
         ################# SOFTMAX TMP #####################
         self.softmax_score_temp_in, _ = get_softmax_score_with_temp(self.logits_in, best_temp)
@@ -546,9 +553,6 @@ class Scores():
         ################# COSINE ##########################
         self.cosine_score_in = get_cosine_score(self.pooled_in, self.norm_bank)
         self.cosine_score_out = get_cosine_score(self.pooled_out, self.norm_bank)
-        print(self.cosine_score_in)
-        print(self.cosine_score_out)
-        print("#############")
 
         ################### ENERGY #######################
         self.energy_score_in = get_energy_score(self.logits_in)
@@ -569,25 +573,45 @@ class Scores():
 
         
         ################### MAHA ############################
-        full_scores = False
+        full_scores = True
         self.maha_score_in = get_maha_score(self.pooled_in, self.all_classes, self.class_mean, self.class_var, full_scores=full_scores)
         self.maha_score_out = get_maha_score(self.pooled_out, self.all_classes, self.class_mean, self.class_var, full_scores=full_scores)
         self.maha_score_train = get_maha_score(self.pooled_train, self.all_classes, self.class_mean, self.class_var, full_scores=full_scores)  
+
+        
+        maha_score_in = self.maha_score_in.cpu().detach().numpy()
+        var = []
+        for e in maha_score_in:
+          var.append(np.var(e))
+        print("##########")
+        print(var)
+        np.save("/content/drive/MyDrive/Masterarbeit/Results/full_in_maha.npy", maha_score_in)
+        
+        maha_score_out = self.maha_score_out.cpu().detach().numpy()
+        var = []
+        for e in maha_score_out:
+          var.append(np.var(e))
+        print("##########")
+        print(var)
+        np.save("/content/drive/MyDrive/Masterarbeit/Results/full_out_maha.npy", maha_score_out)
+
+        raise NotImplementedError
 
         if full_scores == True:
             #ID 1: zusätzlich svm
             candidate_list = [1e-9, 1e-7, 1e-5, 1e-3, 0.01, 0.1, 0.2, 0.5]
             nuu = candidate_list[2]
             c_lr = svm.OneClassSVM(nu=nuu, kernel='linear', degree=2)
-            #brauchen noch einen Maha Score vom Training
-            c_lr.fit(self.maha_score_train)
-            self.maha_score_in =  c_lr.score_samples(self.maha_score_in)
-            self.maha_score_out =  c_lr.score_samples(self.maha_score_out)
+            #brauchen noch einen Maha Score vom Training -> oder dev??? HR???, da es im paper 1 kein Dev datensatz gibt, haben die Training genommen
+            maha_train = self.maha_score_train.cpu().detach().numpy()
+            c_lr.fit(maha_train)
+            self.maha_score_in =  c_lr.score_samples(self.maha_score_in.cpu().detach().numpy())
+            self.maha_score_out =  c_lr.score_samples(self.maha_score_out.cpu().detach().numpy())
 
 
         #################### LOF ############################
         #(return 0/1 -> kein treshold notwendig)
-        # hier nochmal prüfen ob das passt?
+        # hier nochmal prüfen ob das passt? HR???
 
         self.lof_score_in, self.lof_score_out = get_lof_score(self.logits_in, self.logits_out, self.pooled_in, self.pooled_out, self.pooled_train)
 
@@ -648,22 +672,41 @@ class Tresholds():
 
     def treshold_picker(self, t_pred, f, t, step, min):
 
-        #https://www.machinelearningplus.com/statistics/mahalanobis-distance/
-        significance_level=0.01
-        self.critical_value = chi2.ppf((1-significance_level), df=t_pred.shape[1]-1)
-        print('Critical value is: ', self.critical_value)
+        # #https://www.machinelearningplus.com/statistics/mahalanobis-distance/
+        # significance_level=0.01
+        # self.critical_value = chi2.ppf((1-significance_level), df=t_pred.shape[1]-1)
+        # print('Critical value is: ', self.critical_value)
 
         if min is False:
             n = int(t_pred.size/10)
             print(n)
-            #return np.partition(t_pred, n-1)[n-1]
+            return np.partition(t_pred, n-1)[n-1]
             return np.amin(t_pred)
         else:
             n = int(int(t_pred.size) - int(t_pred.size/10))
-            #return np.partition(t_pred, n-1)[n-1]
+            return np.partition(t_pred, n-1)[n-1]
             return np.max(t_pred)
 
+        
+        def svm_tresholds():
+            #bestimmt keinen Treshold -> sofort 0/1
+            #keine guten Ergebnisse -> siehe OOD-metriken
+            nuu = 0.001991961961961962
+            c_lr = None
+            c_lr = svm.OneClassSVM(nu=nuu, kernel='linear', degree=2)
+            #c_lr = svm.OneClassSVM(gamma='scale', nu=0.01) 
+            c_lr.fit(x_dev)
+            y_test_id = c_lr.predict(x_test_id)
+            #-1 mit 0 tauschen
+            y_test_id = np.where(y_test_id == -1, 0, 1)
 
+            y_test_ood = c_lr.predict(x_test_ood)
+            #-1 mit 0 tauschen
+            y_test_ood = np.where(y_test_ood == -1, 0, 1)
+
+        def linear_regression():
+            #nicht möglich, da man dev-labels braucht und die immer 1 sind 
+            pass
         
         #nach Acc gesamt
         #oder nach F1
@@ -678,10 +721,10 @@ class Tresholds():
         for i in steps:
 
             if min is True:
-                t_pred = np.where(t_pred <= i, 1, 0)
+                y_pred = np.where(t_pred <= i, 1, 0)
             else:
-                t_pred = np.where(t_pred >= i, 1, 0)
-            acc = accuracy_score(labels_in, t_pred)
+                y_pred = np.where(t_pred >= i, 1, 0)
+            acc = accuracy_score(labels_in, y_pred)
 
             print(acc)
 

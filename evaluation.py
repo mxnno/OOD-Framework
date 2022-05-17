@@ -9,17 +9,57 @@ import csv
 import os
 
 
+def evaluate_metriken_ohne_Treshold(args, scores):
 
-def evaluate_test(args, scores):
-
-    #
-    score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'energy_score', 'entropy_score', 'doc_score', 'gda_score', 'maha_score', 'lof_score']
-   
-    header = ['Method', "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
+    #Alle mit _ocsvm
+    #evtl noch gda
+    score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score']
+    header = ['Method', "tnr_at_tpr95", "auroc", "dtacc", "au_in", "au_out"]
     csvPath = get_result_path(args)
     if not os.path.isdir(get_result_path(args)):
         os.mkdir(get_result_path(args))
-    csvPath += "/results.csv"
+    csvPath += "/results_metriken_ohne_Treshold.csv"
+
+    with open(csvPath, 'w', encoding='utf-8') as csvf:
+
+        writer = csv.writer(csvf, delimiter=',')
+        writer.writerow(header)
+
+        for score_name in score_list:
+            data = []
+            # ohne OCSVM
+            pred_in = scores.__dict__[score_name + "_in"]
+            pred_out = scores.__dict__[score_name + "_out"]
+            tnr_at_tpr95, auroc, dtacc, au_in, au_out = get_metriken_ohne_Treshold(pred_in, pred_out)
+
+            data = [tnr_at_tpr95, auroc, dtacc, au_in, au_out]
+
+            writer.writerow([score_name.replace("_score", ""),] + data)
+
+            # mit OCSVM 
+            pred_in = scores.__dict__[score_name + "_in_ocsvm"]
+            pred_out = scores.__dict__[score_name + "_out_ocsvm"]
+            tnr_at_tpr95, auroc, dtacc, au_in, au_out = get_metriken_ohne_Treshold(pred_in, pred_out)
+
+            data = [tnr_at_tpr95, auroc, dtacc, au_in, au_out]
+
+            writer.writerow([score_name.replace("_score", ""),] + data)
+
+    print("Result file saved at: " + csvPath)
+
+
+
+
+def evaluate_mit_Treshold(args, scores, name):
+
+    #
+    score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'energy_score', 'entropy_score', 'gda_eucl_score', 'gda_maha_score', 'maha_score']
+   
+    header = ['Method', "in_acc + out_recall", "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
+    csvPath = get_result_path(args)
+    if not os.path.isdir(get_result_path(args)):
+        os.mkdir(get_result_path(args))
+    csvPath += "/results_mit_Treshold_" + name + ".csv"
     with open(csvPath, 'w', encoding='utf-8') as csvf:
 
         writer = csv.writer(csvf, delimiter=',')
@@ -50,14 +90,66 @@ def evaluate_test(args, scores):
             roc_auc = roc_auc_score(labels_gesamt, preds_gesamt)
             fpr_95 = get_fpr_95(labels_gesamt, preds_gesamt)
 
-            data = [in_acc, in_recall, in_f1, out_acc, out_recall, out_f1, acc, recall, f1, roc_auc, fpr_95]
+            data = [in_acc + out_recall, in_acc, in_recall, in_f1, out_acc, out_recall, out_f1, acc, recall, f1, roc_auc, fpr_95]
 
             writer.writerow([score_name.replace("_score", ""),] + data)
 
     print("Result file saved at: " + csvPath)
 
-        
 
+def evaluate_scores_ohne_Treshold(args, scores):
+
+    if args.model_ID == 14:
+        score_list = ['adb_score', 'lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score']
+    else:
+        score_list = ['lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score']
+
+    header = ['Method', "in_acc + out_recall", "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
+    csvPath = get_result_path(args)
+    if not os.path.isdir(get_result_path(args)):
+        os.mkdir(get_result_path(args))
+    csvPath = get_result_path(args)
+    if not os.path.isdir(get_result_path(args)):
+        os.mkdir(get_result_path(args))
+    csvPath += "/results_scores_ohne_Treshold.csv"
+    with open(csvPath, 'w', encoding='utf-8') as csvf:
+
+        writer = csv.writer(csvf, delimiter=',')
+        writer.writerow(header)
+
+        for score_name in score_list:
+
+            data = []
+            if score_name in ['adb_score', 'lof_score', 'doc_score']:
+                y_pred_in = scores.__dict__[score_name + "_in"]
+                y_pred_out = scores.__dict__[score_name + "_out"]
+            else:
+                y_pred_in = scores.__dict__[score_name + "_in_ocsvm"]
+                y_pred_out = scores.__dict__[score_name + "_out_ocsvm"]
+
+            labels_in = np.ones_like(y_pred_in).astype(np.int64)
+            labels_out = np.zeros_like(y_pred_out).astype(np.int64)
+            preds_gesamt = np.concatenate((y_pred_in, y_pred_out), axis=-1)
+            labels_gesamt = np.concatenate((labels_in, labels_out), axis=-1)
+
+            in_acc = accuracy_score(labels_in, y_pred_in)
+            in_recall = recall_score(labels_in, y_pred_in)
+            in_f1 = f1_score(labels_in, y_pred_in)
+            out_acc = accuracy_score(labels_out, y_pred_out)
+            out_recall = recall_score(labels_out, y_pred_out, pos_label=0)
+            out_f1 = f1_score(labels_out, y_pred_out, pos_label=0)
+
+            acc = accuracy_score(labels_gesamt, preds_gesamt)
+            recall = recall_score(labels_gesamt, preds_gesamt)
+            f1 = f1_score(labels_gesamt, preds_gesamt)
+            roc_auc = roc_auc_score(labels_gesamt, preds_gesamt)
+            fpr_95 = get_fpr_95(labels_gesamt, preds_gesamt)
+
+            data = [in_acc, in_recall, in_f1, out_acc, out_recall, out_f1, acc, recall, f1, roc_auc, fpr_95]
+
+            writer.writerow([score_name.replace("_score", ""),] + data)
+
+    print("Result file saved at: " + csvPath)
 
 
 
@@ -75,7 +167,6 @@ def evaluate(args, model, eval_dataset, tag=None):
 
 
     label_list, logit_list = [], []
-    preds2_list = []
     for batch in tqdm(eval_dataset):
         model.eval()
         
@@ -97,27 +188,19 @@ def evaluate(args, model, eval_dataset, tag=None):
         logits = logits_2.detach().cpu().numpy()
         label_list.append(labels)
         logit_list.append(logits)
-        softmax_label = F.softmax(logits_2, dim=-1).max(-1)[1]
-        preds2_list.append(softmax_label.detach().cpu().numpy())
 
 
     preds = np.concatenate(logit_list, axis=0)
-    preds2 = np.concatenate(preds2_list, axis=0)
 
     labels = np.concatenate(label_list, axis=0)
     results = compute_metrics(preds, labels)
-    print("Accuracy: " + str(results))
 
-    #index of max
-    #bei multiclass evtl noch ein softmax?
+
     preds1 = np.argmax(preds, axis=1)
     acc, f1 = get_acc_and_f1(preds1, labels, model.num_labels)
     print("acc " + str(acc))
     print("f1 " + str(f1))
 
-    acc2, f2 = get_acc_and_f1(preds2, labels, model.num_labels)
-    print("acc2 " + str(acc2))
-    print("f12 " + str(f2))
     results = {"accuracy": acc, "f1": f1}
     return results
 
@@ -220,103 +303,82 @@ def fpr_and_fdr_at_recall(y_true, y_score, recall_level=0.95, pos_label=1.):
     cutoff = np.argmin(np.abs(recall - recall_level))
 
     return fps[cutoff] / (np.sum(np.logical_not(y_true)))
+    
 
-def tnr_at_tpr95 (scores_in, scores_out):
+def get_metriken_ohne_Treshold (scores_in, scores_out):
     #scores_in: 450 1D Scores von trainingsdaten
-    stypes = {"test"}
-    tp, fp = dict(), dict()
-    tnr_at_tpr95 = dict()
-    for stype in stypes:
-        known = scores_in
-        novel = scores_out
-        known.sort()
-        novel.sort()
-        end = np.max([np.max(known), np.max(novel)])
-        start = np.min([np.min(known),np.min(novel)])
-        num_k = known.shape[0]
-        num_n = novel.shape[0]
-        tp[stype] = -np.ones([num_k+num_n+1], dtype=int)
-        fp[stype] = -np.ones([num_k+num_n+1], dtype=int)
-        tp[stype][0], fp[stype][0] = num_k, num_n
-        k, n = 0, 0
-        for l in range(num_k+num_n):
-            if k == num_k:
-                tp[stype][l+1:] = tp[stype][l]
-                fp[stype][l+1:] = np.arange(fp[stype][l]-1, -1, -1)
-                break
-            elif n == num_n:
-                tp[stype][l+1:] = np.arange(tp[stype][l]-1, -1, -1)
-                fp[stype][l+1:] = fp[stype][l]
-                break
+
+    known = scores_in
+    novel = scores_out
+    known.sort()
+    novel.sort()
+    end = np.max([np.max(known), np.max(novel)])
+    start = np.min([np.min(known),np.min(novel)])
+    num_k = known.shape[0]
+    num_n = novel.shape[0]
+    tp = -np.ones([num_k+num_n+1], dtype=int)
+    fp = -np.ones([num_k+num_n+1], dtype=int)
+    tp[0], fp[0] = num_k, num_n
+    k, n = 0, 0
+    for l in range(num_k+num_n):
+        if k == num_k:
+            tp[l+1:] = tp[l]
+            fp[l+1:] = np.arange(fp[l]-1, -1, -1)
+            break
+        elif n == num_n:
+            tp[l+1:] = np.arange(tp[l]-1, -1, -1)
+            fp[l+1:] = fp[l]
+            break
+        else:
+            if novel[n] < known[k]:
+                n += 1
+                tp[l+1] = tp[l]
+                fp[l+1] = fp[l] - 1
             else:
-                if novel[n] < known[k]:
-                    n += 1
-                    tp[stype][l+1] = tp[stype][l]
-                    fp[stype][l+1] = fp[stype][l] - 1
-                else:
-                    k += 1
-                    tp[stype][l+1] = tp[stype][l] - 1
-                    fp[stype][l+1] = fp[stype][l]
-        tpr95_pos = np.abs(tp[stype] / num_k - .95).argmin()
-        tnr_at_tpr95[stype] = 1. - fp[stype][tpr95_pos] / num_n
+                k += 1
+                tp[l+1] = tp[l] - 1
+                fp[l+1] = fp[l]
+    tpr95_pos = np.abs(tp / num_k - .95).argmin()
+    tnr_at_tpr95 = 1. - fp[tpr95_pos] / num_n
 
     
-    tpr =  np.concatenate([[1.], tp[stype]/tp[stype][0], [0.]])
-    fpr = np.concatenate([[1.], fp[stype]/fp[stype][0], [0.]])
+    tpr =  np.concatenate([[1.], tp/tp[0], [0.]])
+    fpr = np.concatenate([[1.], fp/fp[0], [0.]])
+
+
+
+    #######################################################
+    #Area Under the Receiver Operating Characteristic Curve
     auroc = -np.trapz(1.-fpr, tpr)
+    #######################################################
     
-    #0.5 is wsl Treshold...
-    dtacc = .5 * (tp[stype]/tp[stype][0] + 1.-fp[stype]/fp[stype][0]).max()
 
-    #Auin
-    denom = tp[stype]+fp[stype]
+    #######################################################
+    #Detection Accuracy
+    dtacc = .5 * (tp/tp[0] + 1.-fp/fp[0]).max()
+    #######################################################
+
+
+    #######################################################
+    #Area under the Precision-Recall curve
+    #für ID: Auin
+    denom = tp+fp
     denom[denom == 0.] = -1.
     pin_ind = np.concatenate([[True], denom > 0., [True]])
-    pin = np.concatenate([[.5], tp[stype]/denom, [0.]])
+    pin = np.concatenate([[.5], tp/denom, [0.]])
     auin = -np.trapz(pin[pin_ind], tpr[pin_ind])
 
-    #Auout
-    denom = tp[stype][0]-tp[stype]+fp[stype][0]-fp[stype]
+    #für OOD: Auout
+    denom = tp[0]-tp+fp[0]-fp
     denom[denom == 0.] = -1.
     pout_ind = np.concatenate([[True], denom > 0., [True]])
-    pout = np.concatenate([[0.], (fp[stype][0]-fp[stype])/denom, [.5]])
+    pout = np.concatenate([[0.], (fp[0]-fp)/denom, [.5]])
     auout = np.trapz(pout[pout_ind], 1.-fpr[pout_ind])
+    #######################################################
 
 
-    #Treshold berechnen von ID3
-    #https://github.com/parZival27/supervised-contrastive-learning-for-out-of-domain-detection/blob/358c6069712a1966a65fb06c3ba43cf8f8239dca/utils.py#L223
-    #nehmen fp, tp und fn = 0
-    seen_m_dist = scores_in
-    unseen_m_dist = []
-    lst = []
-    for item in seen_m_dist:
-        lst.append((item, "seen"))
-    for item in unseen_m_dist:
-        lst.append((item, "unseen"))
-    # sort by m_dist: [(5.65, 'seen'), (8.33, 'seen'), ..., (854.3, 'unseen')]
-    lst = sorted(lst, key=lambda item: item[0])
 
-    threshold = 0.
-    tp, fp, fn = len(unseen_m_dist), len(seen_m_dist), 0
+    return tnr_at_tpr95, auroc, dtacc, auin, auout
 
-    def compute_f1(tp, fp, fn):
-        p = tp / (tp + fp + 1e-10)
-        r = tp / (tp + fn + 1e-10)
-        return (2 * p * r) / (p + r + 1e-10)
 
-    f1 = compute_f1(tp, fp, fn)
-
-    for m_dist, label in lst:
-        if label == "seen":  # fp -> tn
-            fp -= 1
-        else:  # tp -> fn
-            tp -= 1
-            fn += 1
-        if compute_f1(tp, fp, fn) > f1:
-            f1 = compute_f1(tp, fp, fn)
-            threshold = m_dist + 1e-10
-
-    print("estimated threshold:", threshold)
-
-    return tp, fp, tnr_at_tpr95["test"]
 

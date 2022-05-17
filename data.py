@@ -58,8 +58,8 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     train_dataloader = DataLoader(
         tokenized_datasets["train"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
     )
-    val_dataloader = DataLoader(
-        tokenized_datasets["validation"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
+    trainval_dataloader = DataLoader(
+        tokenized_datasets["trainval"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
     )
     val_id_dataloader = DataLoader(
         tokenized_datasets["val_id"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
@@ -80,7 +80,7 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     #for batch in eval_dataloader:
         #print({k: v.shape for k, v in batch.items()})
 
-    return train_dataloader, val_dataloader, val_id_dataloader, val_ood_dataloader, test_dataloader, test_id_dataloader, test_ood_dataloader
+    return train_dataloader, trainval_dataloader, val_id_dataloader, val_ood_dataloader, test_dataloader, test_id_dataloader, test_ood_dataloader
 
 
 def load_clinc(args):
@@ -88,7 +88,7 @@ def load_clinc(args):
     #num_labels: Anzahl label -> 2 oder 151
     #ood_data: 'zero' -> nur ID, sonst ID + OOD
     ood_data = args.ood_data
-    num_shards = int(100/args.few_shot)
+    num_shards = int(100/(args.few_shot*2))
 
     ood_original = True
     
@@ -196,9 +196,9 @@ def load_clinc(args):
 
     #ID Daten zufällig shuffeln und reduzieren auf n Few-Shot
     val_id = val_dataset.filter(lambda example: example['intent'] in label_ids)
-    val_id = val_id.shuffle(seed=42)
-    val_id = val_id.sort('intent')
-    val_id = val_id.shard(num_shards=num_shards, index=0)
+    #val_id = val_id.shuffle(seed=42)
+    #val_id = val_id.sort('intent')
+    #val_id = val_id.shard(num_shards=num_shards, index=0)
     val_id = val_id.map(set_label_to_ID)
     val_id.cast_column("intent", classlabel)
 
@@ -260,7 +260,7 @@ def load_clinc(args):
     #train_dataset.to_csv('/content/drive/MyDrive/trainas.csv')  
 
     #dev_dataset = train + dev_id
-    return DatasetDict({'train': train_dataset, 'validation':  val_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
+    return DatasetDict({'train': train_dataset, 'trainval':  val_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
 
 
 def load_clinc_with_ID_Augmentation(args):

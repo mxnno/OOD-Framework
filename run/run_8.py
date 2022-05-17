@@ -25,7 +25,7 @@ def main():
 
     #init WandB
     if args.wandb == "log":
-        wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
+        wandb.init(project=args.model_ID, name='{}_{}_{}_{}_{}'.format(args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed))
 
     #set device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

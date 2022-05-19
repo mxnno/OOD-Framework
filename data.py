@@ -154,7 +154,7 @@ def load_clinc(args):
 
     #ID Daten zufällig shuffeln und reduzieren auf n Few-Shot
     id = train_dataset.filter(lambda example: example['intent'] in label_ids)
-    id = id.shuffle(seed=42)
+    id = id.shuffle(seed=args.seed)
     id = id.sort('intent')
     id = id.shard(num_shards=num_shards, index=0)
     id = id.map(set_label_to_ID)
@@ -171,7 +171,7 @@ def load_clinc(args):
             #wenn OOD alle bis auf Domain
             ood = train_dataset.filter(lambda example: example['intent'] not in label_ids)
             
-            ood = ood.shuffle(seed=42)
+            ood = ood.shuffle(seed=args.seed)
             ood = ood.sort('intent')
             ood = ood.shard(num_shards=num_shards*10, index=0)
             ood = ood.map(set_label_to_OOD)
@@ -181,7 +181,7 @@ def load_clinc(args):
     else:
         train_dataset = id
     
-    #train_dataset = train_dataset.shuffle(seed=42)
+    #train_dataset = train_dataset.shuffle(seed=args.seed)
     train_dataset = train_dataset.cast_column("intent", classlabel)
     #train_dataset.to_csv('training.csv')
 
@@ -196,9 +196,9 @@ def load_clinc(args):
 
     #ID Daten zufällig shuffeln und reduzieren auf n Few-Shot
     val_id = val_dataset.filter(lambda example: example['intent'] in label_ids)
-    #val_id = val_id.shuffle(seed=42)
-    #val_id = val_id.sort('intent')
-    #val_id = val_id.shard(num_shards=num_shards, index=0)
+    val_id = val_id.shuffle(seed=args.seed)
+    val_id = val_id.sort('intent')
+    val_id = val_id.shard(num_shards=num_shards, index=0)
     val_id = val_id.map(set_label_to_ID)
     val_id.cast_column("intent", classlabel)
 
@@ -212,24 +212,23 @@ def load_clinc(args):
             val_ood = val_dataset.filter(lambda example: example['intent']==0)
         else:
             val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids)
-            val_ood = val_ood.shuffle(seed=42)
+            val_ood = val_ood.shuffle(seed=args.seed)
             val_ood = val_ood.sort('intent')
             val_ood = val_ood.shard(num_shards=num_shards*3, index=0)
             val_ood = val_ood.map(set_label_to_OOD)
 
-            val_dataset = concatenate_datasets([val_ood, val_id, id])
+            trainval_dataset = concatenate_datasets([val_ood, val_id, id])
             val_ood = concatenate_datasets([val_ood, val_id])
 
     else:
-        val_dataset = concatenate_datasets([id, val_id])
+        trainval_dataset = concatenate_datasets([id, val_id])
         val_ood = val_id
 
-    val_dataset.cast_column("intent", classlabel)
+    trainval_dataset.cast_column("intent", classlabel)
 
-    val_dataset.to_csv("val_csv")
-
-
-    
+    #val_id.to_csv("val_csv")
+    #train_dataset.to_csv("train_csv")
+    #trainval_dataset.to_csv("trainval_csv")
 
 
     ########################################################### Test ###############################################################
@@ -260,7 +259,7 @@ def load_clinc(args):
     #train_dataset.to_csv('/content/drive/MyDrive/trainas.csv')  
 
     #dev_dataset = train + dev_id
-    return DatasetDict({'train': train_dataset, 'trainval':  val_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
+    return DatasetDict({'train': train_dataset, 'trainval':  trainval_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
 
 
 def load_clinc_with_ID_Augmentation(args):
@@ -299,7 +298,7 @@ def load_clinc_with_Augmentation(args):
 
         data_dict = load_dataset('text', data_files={'train': datafile})
         train_dataset = data_dict['train']
-        train_dataset = train_dataset.shuffle(seed=42)
+        train_dataset = train_dataset.shuffle(seed=args.seed)
         train_dataset = train_dataset.shard(num_shards=70, index=0)
         train_dataset = train_dataset.map(prepare_txt)
         classlabel = ClassLabel(num_classes = num_labels, names = label_names)

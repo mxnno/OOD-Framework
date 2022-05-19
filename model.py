@@ -200,7 +200,6 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
                 for i, idx in enumerate(labels):
                     mask_labels[i][idx] = 1
                 mask = torch.mm(mask_labels,mask_labels.T).bool().long()
-                print(mask)
                 #mask = (labels.unsqueeze(1) == labels.unsqueeze(0)).bool().long() 
                 #mask = mask - torch.diag(torch.diag(mask))
                 t = 0.1
@@ -214,7 +213,6 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
                 dis_adv = (x_adv * (mask - torch.eye(x.size(0)).long().cuda()) + x_c.T * mask) / (x_adv.sum(1) + x_c.sum(0) - torch.exp(torch.tensor(1 / t))) + mask_reverse
                 loss = (torch.log(dis).sum(1) + torch.log(dis_adv).sum(1)) / mask_count
                 loss = -loss.mean()
-                print("loss: " + str(loss.item()))
                 output = (logits,) + outputs[2:]
                 output = output + (pooled,)
                 return ((loss, None) + output) if loss is not None else output
@@ -247,11 +245,9 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         self.bank = None
         self.label_bank = None
         for batch in dataloader:
-            print("huhu")
             self.eval()
             batch = {key: value.cuda() for key, value in batch.items()}
             labels = batch['labels']
-            print(labels)
             #forward ohne labels
             outputs = self.roberta(input_ids=batch['input_ids'],attention_mask=batch['attention_mask'])
             sequence_output = outputs[0]
@@ -277,16 +273,10 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
         centered_bank = (self.bank - self.class_mean[self.label_bank]).detach().cpu().numpy()
         precision = EmpiricalCovariance().fit(centered_bank).precision_.astype(np.float32)
         self.class_var = torch.from_numpy(precision).float().cuda()
-        print("###################")
-        print(self.class_mean[0][:5])
-        print(self.class_var[0][:5])
-        print(self.all_classes)
-        print("###################")
-
 
         #torch.save(self.norm_bank, '/content/drive/MyDrive/Masterarbeit/Results/1305_train_norm_bank.pt') 
-        torch.save(self.class_var, '/content/drive/MyDrive/Masterarbeit/Results/1305_train_class_var.pt') # torch.Size([768, 768])
-        torch.save(self.class_mean, '/content/drive/MyDrive/Masterarbeit/Results/1305_train_class_mean.pt') # torch.Size([15, 768])
+        #torch.save(self.class_var, '/content/drive/MyDrive/Masterarbeit/Results/1305_train_class_var.pt') # torch.Size([768, 768])
+        #torch.save(self.class_mean, '/content/drive/MyDrive/Masterarbeit/Results/1305_train_class_mean.pt') # torch.Size([15, 768])
 
 
 

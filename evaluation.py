@@ -43,7 +43,7 @@ def evaluate_metriken_ohne_Treshold(args, scores):
 
             data = [tnr_at_tpr95, auroc, dtacc, au_in, au_out]
 
-            writer.writerow([score_name.replace("_score", ""),] + data)
+            writer.writerow([score_name.replace("_score", "_ocsvm"),] + data)
 
     print("Result file saved at: " + csvPath)
 
@@ -90,7 +90,7 @@ def evaluate_mit_Treshold(args, scores, name):
             roc_auc = roc_auc_score(labels_gesamt, preds_gesamt)
             fpr_95 = get_fpr_95(labels_gesamt, preds_gesamt)
 
-            data = [in_acc + out_recall, in_acc, in_recall, in_f1, out_acc, out_recall, out_f1, acc, recall, f1, roc_auc, fpr_95]
+            data = [(in_acc + out_recall), in_acc, in_recall, in_f1, out_acc, out_recall, out_f1, acc, recall, f1, roc_auc, fpr_95]
 
             writer.writerow([score_name.replace("_score", ""),] + data)
 
@@ -123,9 +123,13 @@ def evaluate_scores_ohne_Treshold(args, scores):
             if score_name in ['adb_score', 'lof_score', 'doc_score']:
                 y_pred_in = scores.__dict__[score_name + "_in"]
                 y_pred_out = scores.__dict__[score_name + "_out"]
+                label_name = score_name.replace("_score", "")
+
             else:
                 y_pred_in = scores.__dict__[score_name + "_in_ocsvm"]
                 y_pred_out = scores.__dict__[score_name + "_out_ocsvm"]
+                label_name = score_name.replace("_score", "_ocsvm_01")
+
 
             labels_in = np.ones_like(y_pred_in).astype(np.int64)
             labels_out = np.zeros_like(y_pred_out).astype(np.int64)
@@ -145,15 +149,15 @@ def evaluate_scores_ohne_Treshold(args, scores):
             roc_auc = roc_auc_score(labels_gesamt, preds_gesamt)
             fpr_95 = get_fpr_95(labels_gesamt, preds_gesamt)
 
-            data = [in_acc, in_recall, in_f1, out_acc, out_recall, out_f1, acc, recall, f1, roc_auc, fpr_95]
+            data = [(in_acc + out_recall), in_acc, in_recall, in_f1, out_acc, out_recall, out_f1, acc, recall, f1, roc_auc, fpr_95]
 
-            writer.writerow([score_name.replace("_score", ""),] + data)
+            writer.writerow([label_name,] + data)
 
     print("Result file saved at: " + csvPath)
 
 
 
-def evaluate(args, model, eval_dataset, tag=None):
+def evaluate(args, model, eval_dataset, tag=""):
     
     #F1
     metric = load_metric("accuracy")
@@ -198,10 +202,10 @@ def evaluate(args, model, eval_dataset, tag=None):
 
     preds1 = np.argmax(preds, axis=1)
     acc, f1 = get_acc_and_f1(preds1, labels, model.num_labels)
-    print("acc " + str(acc))
-    print("f1 " + str(f1))
+    print("acc_" + tag + ": " + str(acc))
+    print("f1_" + tag + ": " + str(f1))
 
-    results = {"accuracy": acc, "f1": f1}
+    results = {"accuracy_" + tag: acc, "f1_" + tag: f1}
     return results
 
 def evaluate_DNNC(args, model, tokenizer, eval_dataset):

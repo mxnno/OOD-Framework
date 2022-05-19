@@ -19,6 +19,10 @@ warnings.filterwarnings("ignore")
 
 def finetune_std(args, model, train_dataloader, dev_dataloader, accelerator):
 
+    best_f1 = 0
+    best_model = model
+    best_epoch = 0
+
     if accelerator is not None:
         print("finetune_std_TPU")
         return finetune_std_TPU(args, model, train_dataloader, dev_dataloader, accelerator)
@@ -50,12 +54,20 @@ def finetune_std(args, model, train_dataloader, dev_dataloader, accelerator):
             if cos_loss:
                 wandb.log({'cos_loss': cos_loss.item()}, step=num_steps) if args.wandb == "log" else print("Cos-Loss: " + str(loss.item()))
 
-        results = evaluate(args, model, dev_dataloader, tag="dev")
+        results_dev = evaluate(args, model, dev_dataloader, tag="dev")
+        results_train = evaluate(args, model, train_dataloader, tag="train")
         #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
-        wandb.log(results, step=num_steps) if args.wandb == "log" else None
-    #ToDo: return best Model speichern
+        wandb.log({**results_dev, **results_train}, step=num_steps) if args.wandb == "log" else None
+    
+        #bestes Model zurückgeben
+        f1 = results_dev['f1_dev']
+        if f1 >= best_f1:
+            best_model = model
+            f1 = best_f1
+            best_epoch = epoch
 
-    return model
+    print("Best model from epoch: " + str(best_epoch))
+    return best_model
 
 
 def finetune_ADB(args, model, train_dataloader, dev_dataloader):

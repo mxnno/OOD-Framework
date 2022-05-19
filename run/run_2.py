@@ -37,7 +37,7 @@ def main():
 
         #init WandB
         if args.wandb == "log":
-            wandb.init(project=args.model_ID, name='{}_{}_{}_{}_{}'.format(args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed))
+            wandb.init(project=str(args.model_ID), name='{}_{}_{}_{}_{}'.format(args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed))
 
         #Load Model
         print("Load model...")
@@ -46,6 +46,7 @@ def main():
         #Preprocess Data
         print("Preprocess Data...")
         train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        
 
         #Pretrain SCL
         print("Pretrain SCL (margin/similarity) ...")

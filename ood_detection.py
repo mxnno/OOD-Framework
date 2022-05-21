@@ -114,7 +114,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
 
     #zum Abspeichern der logits und pools
     #save_logits(all_logits_in, '1305_traindev_id_logits.pt')
-    save_logits(all_pool_in, '/content/drive/MyDrive/Masterarbeit/Results/1305_dev_id_pool.pt')
+    #save_logits(all_pool_in, '/content/drive/MyDrive/Masterarbeit/Results/1305_dev_id_pool.pt')
     model.all_logits = []
     model.all_pool = []
     
@@ -129,7 +129,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     all_pool_out = reduce(lambda x,y: torch.cat((x,y)), model.all_pool[::])
     #zum Abspeichern der logits und pools
     #save_logits(all_logits_out, '1305_traindev_ood_logits.pt')
-    save_logits(all_pool_out, '/content/drive/MyDrive/Masterarbeit/Results/1305_dev_ood_pool.pt')
+    #save_logits(all_pool_out, '/content/drive/MyDrive/Masterarbeit/Results/1305_dev_ood_pool.pt')
     model.all_logits = []
     model.all_pool = []
 
@@ -438,7 +438,7 @@ def get_maha_score(pooled, all_classes, class_mean, class_var, full_scores=False
 
 
 
-def get_gda_score(train_logits, test_logits_in, test_logits_out, dev_logits, train_labels, distance_type="euclidean", full_scores=False):
+def get_gda_score(train_logits, test_logits_in, test_logits_out, dev_logits, train_labels, distance_type, full_scores):
 
     #andere Methode um Means und Varianz zu bekommen -> ansonsten genauso wie maha
 
@@ -1059,6 +1059,8 @@ class Tresholds():
         self.energy_t = self.treshold_picker(method, scores.energy_score_dev, scores.energy_score_in, scores.energy_score_out, np.min(scores.energy_score_out), max(scores.energy_score_in), 500, min=False)
         
         ################### GDA ###############
+        print(scores.gda_eucl_score_in)
+        print(scores.gda_eucl_score_out)
         self.gda_eucl_t = self.treshold_picker(method, scores.gda_eucl_score_dev, scores.gda_eucl_score_in, scores.gda_eucl_score_out, np.min(scores.gda_eucl_score_in), max(scores.gda_eucl_score_out), 500, min=True)
         self.gda_maha_t = self.treshold_picker(method, scores.gda_maha_score_train, scores.gda_maha_score_in, scores.gda_maha_score_out, np.min(scores.gda_maha_score_in), max(scores.gda_maha_score_out), 500, min=False)
 

@@ -484,11 +484,12 @@ def get_gda_score(train_logits, test_logits_in, test_logits_out, dev_logits, tra
     means =  gda.means_
     cov = gda.covariance_
 
+    results_train = gda_help(prob_train, means, distance_type, cov)
     results_dev = gda_help(prob_dev, means, distance_type, cov)
     results_in = gda_help(prob_test_in, means, distance_type, cov)
     results_out = gda_help(prob_test_out, means, distance_type, cov)
     
-    return results_dev, results_in, results_out
+    return results_train, results_dev, results_in, results_out
 
 
 def get_lof_score(logits_in, logits_out, pooled_in, pooled_out, train_pooled, args=None):
@@ -751,10 +752,11 @@ class Scores():
 
         ################### GDA ############################
         # ist maha und euclid
-        self.gda_maha_score_train_ocsvm, self.gda_maha_score_in_ocsvm , self.gda_maha_score_out_ocsvm = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "maha", True)
-        self.gda_maha_score_train, self.gda_maha_score_in , self.gda_maha_score_out = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "maha", False)
-        self.gda_eucl_score_dev_ocsvm, self.gda_eucl_score_in_ocsvm , self.gda_eucl_score_out_ocsvm = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "euclidean", True)
-        self.gda_eucl_score_dev, self.gda_eucl_score_in , self.gda_eucl_score_out = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "euclidean", False)
+        self.gda_maha_score_train_ocsvm, self.gda_maha_score_dev_ocsvm, self.gda_maha_score_in_ocsvm , self.gda_maha_score_out_ocsvm = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "maha", True)
+        self.gda_maha_score_train, self.gda_maha_score_dev, self.gda_maha_score_in , self.gda_maha_score_out = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "maha", False)
+        
+        self.gda_eucl_score_train_ocsvm, self.gda_eucl_score_dev_ocsvm, self.gda_eucl_score_in_ocsvm , self.gda_eucl_score_out_ocsvm = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "euclidean", True)
+        self.gda_eucl_score_train, self.gda_eucl_score_dev, self.gda_eucl_score_in , self.gda_eucl_score_out = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "euclidean", False)
         
         ################### MAHA ############################
         self.maha_score_in_ocsvm = get_maha_score(self.pooled_in, self.all_classes, self.class_mean, self.class_var, True)
@@ -887,10 +889,10 @@ class Scores():
         self.energy_score_out = np.where(self.energy_score_out >= tresholds.energy_t, 1, 0)
 
         ################### GDA ###############
-        self.gda_maha_score_in = np.where(self.gda_maha_score_in >= tresholds.gda_maha_t, 1, 0)
-        self.gda_maha_score_out = np.where(self.gda_maha_score_out >= tresholds.gda_maha_t, 1, 0)
-        self.gda_eucl_score_in = np.where(self.gda_eucl_score_in >= tresholds.gda_eucl_t, 1, 0)
-        self.gda_eucl_score_out = np.where(self.gda_eucl_score_out >= tresholds.gda_eucl_t, 1, 0)
+        self.gda_maha_score_in = np.where(self.gda_maha_score_in <= tresholds.gda_maha_t, 1, 0)
+        self.gda_maha_score_out = np.where(self.gda_maha_score_out <= tresholds.gda_maha_t, 1, 0)
+        self.gda_eucl_score_in = np.where(self.gda_eucl_score_in <= tresholds.gda_eucl_t, 1, 0)
+        self.gda_eucl_score_out = np.where(self.gda_eucl_score_out <= tresholds.gda_eucl_t, 1, 0)
 
 
 
@@ -1059,12 +1061,8 @@ class Tresholds():
         self.energy_t = self.treshold_picker(method, scores.energy_score_dev, scores.energy_score_in, scores.energy_score_out, np.min(scores.energy_score_out), max(scores.energy_score_in), 500, min=False)
         
         ################### GDA ###############
-        print(scores.gda_eucl_score_in)
-        print(scores.gda_eucl_score_out)
         self.gda_eucl_t = self.treshold_picker(method, scores.gda_eucl_score_dev, scores.gda_eucl_score_in, scores.gda_eucl_score_out, np.min(scores.gda_eucl_score_in), max(scores.gda_eucl_score_out), 500, min=True)
-        self.gda_maha_t = self.treshold_picker(method, scores.gda_maha_score_train, scores.gda_maha_score_in, scores.gda_maha_score_out, np.min(scores.gda_maha_score_in), max(scores.gda_maha_score_out), 500, min=False)
-
-
+        self.gda_maha_t = self.treshold_picker(method, scores.gda_maha_score_dev, scores.gda_maha_score_in, scores.gda_maha_score_out, np.min(scores.gda_maha_score_in), max(scores.gda_maha_score_out), 500, min=True)
 
 
 

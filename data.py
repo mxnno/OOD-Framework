@@ -90,7 +90,7 @@ def load_clinc(args):
     ood_data = args.ood_data
     num_shards = int(100/(args.few_shot*2))
 
-    ood_original = True
+    ood_original = False
     
     #ic = label_ids[1] #Das muss noch überarbeitet werdne ???
 
@@ -226,8 +226,8 @@ def load_clinc(args):
 
     trainval_dataset.cast_column("intent", classlabel)
 
-    #val_id.to_csv("val_csv")
-    #train_dataset.to_csv("train_csv")
+    val_id.to_csv("val_id_csv")
+    train_dataset.to_csv("train_csv")
     #trainval_dataset.to_csv("trainval_csv")
 
 
@@ -252,6 +252,9 @@ def load_clinc(args):
 
     #Test ganz
     test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
+
+
+
 
 
     #???HR PROBLEM: keien OOD Daten -> OOD Test trotzdem auf 0 -> man kann keine "normale" eval machen, sonder muss zwingend ood und id getrennt betrachten bzw über Thresholds arbeiten, da es die klasse ood nicht gibt

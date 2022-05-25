@@ -112,6 +112,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     all_logits_in = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
     all_pool_in = reduce(lambda x,y: torch.cat((x,y)), model.all_pool[::])
 
+
     #zum Abspeichern der logits und pools
     #save_logits(all_logits_in, '1305_traindev_id_logits.pt')
     #save_logits(all_pool_in, '/content/drive/MyDrive/Masterarbeit/Results/1305_dev_id_pool.pt')
@@ -928,7 +929,7 @@ class Tresholds():
                 #Mean - Varianz
                 #t = np.mean(pred_dev) - np.var(pred_dev)
 
-                #max - 1/x der Distanz zwischen max und mean
+                #max - 1/3 der Distanz zwischen max und mean
                 #t = np.max(pred_dev) - (np.max(pred_dev) - np.mean(pred_dev)) * 1/3
                 return t
 

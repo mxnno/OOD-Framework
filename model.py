@@ -16,6 +16,8 @@ def set_model(args):
 
     num_labels = get_num_labels(args)
 
+
+
     if args.model_ID == 1:
 
         
@@ -29,7 +31,7 @@ def set_model(args):
             model = RobertaForMaskedLM.from_pretrained(args.model_name_or_path, config=config)
             tokenizer = RobertaTokenizerFast.from_pretrained(args.model_name_or_path)
         else:
-            #damm BCAD Finetuning mit dem IMLM-finegetuned model, das extra abgespeichert wird
+            #dann BCAD Finetuning mit dem IMLM-finegetuned model, das extra abgespeichert wird
             config = RobertaConfig.from_pretrained("roberta-base", num_labels=num_labels)
             config.gradient_checkpointing = True
             config.alpha = args.alpha

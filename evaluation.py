@@ -216,7 +216,7 @@ def evaluate_DNNC(args, model, tokenizer, eval_dataset):
     eval_features = convert_examples_to_features(args, eval_dataset, tokenizer, train = False)
     eval_dataloader = get_eval_dataloader(eval_features, args.batch_size)
 
-    return evaluate(args, model, eval_dataloader,)
+    return evaluate(args, model, eval_dataloader,"dev")
     
     # model.eval()
     # eval_accuracy = 0

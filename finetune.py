@@ -245,7 +245,7 @@ def finetune_DNNC(args, model, tokenizer, train_examples, dev_examples):
                 model.zero_grad()
 
         results = evaluate_DNNC(args, model, tokenizer, dev_examples)
-        acc = results['accuracy']
+        acc = results['acc_dev']
         #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
         wandb.log(results, step=num_steps) if args.wandb == "log" else None
 

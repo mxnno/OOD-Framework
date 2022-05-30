@@ -10,6 +10,7 @@ from utils.args import get_args
 from data import preprocess_data, load_clinc
 from utils.utils import set_seed, get_num_labels, save_model, save_tensor, get_save_path
 from utils.utils_DNNC import *
+from accelerate import Accelerator
 
 warnings.filterwarnings("ignore")
 
@@ -23,16 +24,18 @@ def main():
     #get args
     args = get_args()
 
-    #init WandB
-    if args.wandb == "log":
-        wandb.init(project=str(args.model_ID), name='{}_{}_{}_{}_{}'.format(args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed))
-
-    #set device
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    args.n_gpu = torch.cuda.device_count()
-    args.device = device
-    set_seed(args)
-    #Todo: set seeds?
+    #Accelerator
+    if args.tpu == "tpu":
+        accelerator = Accelerator()
+        args.device = accelerator.device
+    else:
+        #set device
+        accelerator = None
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        args.n_gpu = torch.cuda.device_count()
+        args.device = device
+        set_seed(args)
+        #Todo: set seeds?
 
     do_lower_case = True
 
@@ -45,7 +48,7 @@ def main():
 
         # #Preprocess NLI Data -> load 
         # print("Preprocess NLI Data...")
-        # nli_train_examples = load_nli_examples('/content/drive/MyDrive/Masterarbeit/DNNC/nli/all_nli.train.txt', True)
+        #nli_train_examples = load_nli_examples('/content/drive/MyDrive/Masterarbeit/DNNC/nli/all_nli.train.txt', True)
         # nli_dev_examples = load_nli_examples('/content/drive/MyDrive/Masterarbeit/DNNC/nli/all_nli.dev.txt', True)
 
         #NLI Pretrain + abspeichern
@@ -69,7 +72,6 @@ def main():
 
         # NLI Examples erstellen
         nli_train, nli_dev = create_nli_examples(args, train_data, val_data)
-        print(nli_train)
 
         # Tokenization passiert in finetune Methode
         #Finetune:
@@ -93,7 +95,6 @@ def main():
         test_ood.to_csv("test_od_dataset.csv")
         time.sleep(2)
         test_data_id, test_data_ood = load_intent_datasets("test_id_dataset.csv", "test_od_dataset.csv", do_lower_case)
-        print(test_data_id)
         train_data, _ = load_intent_datasets("train_dataset.csv", "train_dataset.csv", do_lower_case)
         
         #OOD-Detection

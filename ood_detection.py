@@ -70,7 +70,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
         batch = {key: value.to(args.device) for key, value in batch.items()}
         train_label = batch["labels"].cpu().detach()
         with torch.no_grad():
-            model.compute_ood_outputs(**batch, centroids=centroids, delta=delta)
+            model.compute_ood_outputs(**batch)
         train_labels.append(train_label)
         
     all_logits_train = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
@@ -90,7 +90,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
         batch = {key: value.to(args.device) for key, value in batch.items()}
         dev_label = batch["labels"].cpu().detach()
         with torch.no_grad():
-            model.compute_ood_outputs(**batch, centroids=centroids, delta=delta)
+            model.compute_ood_outputs(**batch)
         dev_labels.append(dev_label)
     
     all_logits_dev = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
@@ -107,7 +107,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         with torch.no_grad():
-            model.compute_ood_outputs(**batch, centroids=centroids, delta=delta)
+            model.compute_ood_outputs(**batch)
         
     all_logits_in = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
     all_pool_in = reduce(lambda x,y: torch.cat((x,y)), model.all_pool[::])
@@ -124,7 +124,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         with torch.no_grad():
-            model.compute_ood_outputs(**batch, centroids=centroids, delta=delta)
+            model.compute_ood_outputs(**batch)
            
     all_logits_out = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
     all_pool_out = reduce(lambda x,y: torch.cat((x,y)), model.all_pool[::])
@@ -215,9 +215,10 @@ def detect_ood_adb(scores, centroids, delta, pool_in, pool_out):
         return preds_ones
 
 
+
 def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
 
-    def model_predict(data):
+    def model_predict(data, method="softmax"):
 
         model.eval()
 
@@ -253,8 +254,12 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
                 logits = outputs[0]
 
 
-                #alles bis auf maha und adb sollten hier möglch sein
-                probs_ = torch.softmax(logits, dim=1)
+                if method == "softmax":
+                    probs_ = torch.softmax(logits, dim=1)
+                elif method == "energy":
+                    probs_ = torch.logsumexp(logits, dim=-1)
+                elif method == "logits":
+                    probs_ = logits
 
             probs_ = probs_.detach().cpu()
             if probs is None:
@@ -304,9 +309,14 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
 
         return intent, maxScore, matched_example
 
-    #for e in tqdm(test_id, desc = 'Intent examples'):
+    #for e in tqdm(test_id, desc = 'Intent examples')
+    pred_id = []
+    pred_ood = []
+
     for e in test_id:
         pred, conf, matched_example = predict_intent(e.text)
+
+        pred_id.append(conf)
         print("-----------------")
         print(e.text)
         print(e.label)
@@ -317,6 +327,7 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
 
     for e in test_ood:
         pred, conf, matched_example = predict_intent(e.text)
+        pred_ood.append(conf)
         print("-----------------")
         print(e.text)
         print(e.label)
@@ -325,6 +336,8 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
         print(matched_example)
         print("-----------------")
     
+    print(pred_id)
+    print(pred_ood)
 
 
 
@@ -1068,3 +1081,91 @@ class Tresholds():
 
 
 #- Evaluate
+
+
+
+
+###########################
+#FÜR ID 0 mit BERT
+def detect_ood_bert(args, model, test_id_dataset, test_ood_dataset, best_temp=None):
+
+
+    def compute_ood_outputs(model, input_ids=None, attention_mask=None):
+
+        outputs = model.roberta(input_ids, attention_mask=attention_mask)
+        sequence_output = outputs[0]
+        logits, pooled = model.classifier(sequence_output)
+
+        #outputs = model.bert(input_ids, attention_mask=attention_mask)
+        #pooled_output = pooled = outputs[1]
+        #pooled_output = model.dropout(pooled_output)
+        #logits = model.classifier(pooled_output)
+        
+
+        return logits
+
+    all_logits_in = []
+    all_logits_out = []
+    #Test-ID:
+    for batch in tqdm(test_id_dataset):
+        model.eval()
+        batch = {key: value.to(args.device) for key, value in batch.items()}
+        input_ids = batch["input_ids"]
+        attention_mask = batch["attention_mask"]
+        with torch.no_grad():
+            all_logits_in.append(compute_ood_outputs(model, input_ids, attention_mask))
+        
+    all_logits_in = reduce(lambda x,y: torch.cat((x,y)), all_logits_in[::])
+
+    
+    #Test-OOD:
+    for batch in tqdm(test_ood_dataset):
+        model.eval()
+        batch = {key: value.to(args.device) for key, value in batch.items()}
+        input_ids = batch["input_ids"]
+        attention_mask = batch["attention_mask"]
+        with torch.no_grad():
+            all_logits_out.append(compute_ood_outputs(model, input_ids, attention_mask))
+           
+    all_logits_out = reduce(lambda x,y: torch.cat((x,y)), all_logits_out[::])
+
+
+    logits_in = get_model_prediction(all_logits_in)
+    logits_out = get_model_prediction(all_logits_out)
+    softmax_in = get_softmax_score(all_logits_in, False)
+    softmax_out = get_softmax_score(all_logits_out, False)
+
+
+    def bert_treshold(pred_in, pred_out, f,t,step, min=False):
+    
+        #WENN NACH ACC+REC OPTIMIERT WERDEN SOLL
+        threshold = 0
+        best_acc = 0
+        labels_in = np.ones_like(pred_in).astype(np.int64)
+        labels_out = np.zeros_like(pred_out).astype(np.int64)
+        labels_gesamt = np.concatenate((labels_in, labels_out), axis=-1)
+
+        steps = np.linspace(f,t,step)
+        for i in steps:
+
+            t_pred = np.concatenate((pred_in, pred_out), axis=-1)
+            if min is True:
+                t_pred = np.where(t_pred <= i, 1, 0)
+                t_pred_in =  np.where(pred_in <= i, 1, 0)
+                t_pred_out = np.where(pred_out <= i, 1, 0) 
+            else:
+                t_pred_in =  np.where(pred_in > i, 1, 0)
+                t_pred_out = np.where(pred_out > i, 1, 0)
+            acc = accuracy_score(labels_in, t_pred_in)
+            rec = recall_score(labels_out, t_pred_out, pos_label=0)
+
+            if acc+rec > best_acc:
+                best_acc = acc+rec
+                threshold = i
+
+        return best_acc
+
+    logits_acc = bert_treshold(logits_in, logits_out, 0, 10, 1000)
+    print(logits_acc)
+    softmax_acc = bert_treshold(softmax_in, softmax_out, 0, 10, 1000)
+    print(softmax_acc)

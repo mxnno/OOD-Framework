@@ -233,7 +233,6 @@ def finetune_DNNC(args, model, tokenizer, train_examples, dev_examples):
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
 
-            print(loss.item())
             loss.backward()
             num_steps += 1
 
@@ -244,8 +243,10 @@ def finetune_DNNC(args, model, tokenizer, train_examples, dev_examples):
                 scheduler.step()
                 model.zero_grad()
 
+            wandb.log({'loss': loss.item()}, step=num_steps) if args.wandb == "log" else print("Loss: " + str(loss.item()))
+
         results = evaluate_DNNC(args, model, tokenizer, dev_examples)
-        acc = results['acc_dev']
+        acc = results['accuracy_dev']
         #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
         wandb.log(results, step=num_steps) if args.wandb == "log" else None
 

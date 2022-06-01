@@ -42,6 +42,10 @@ def main():
 
     if args.task == "finetune":
 
+        #init WandB
+        if args.wandb == "log":
+            wandb.init(project=str(args.model_ID), name='{}_{}_{}_{}_{}'.format(args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed))
+
         #Load Model
         print("Load model...")
         model, config, tokenizer = set_model(args)
@@ -58,7 +62,7 @@ def main():
         dataset_dict  = load_clinc(args)
         train_dataset = dataset_dict['train']
         train_dataset.to_csv("train_dataset.csv")
-        val_dataset = dataset_dict['validation']
+        val_dataset = dataset_dict['val_id']
         val_dataset.to_csv("val_dataset.csv")
         time.sleep(2)
 

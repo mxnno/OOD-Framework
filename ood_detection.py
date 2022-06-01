@@ -14,7 +14,7 @@ from sklearn import svm
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from functools import reduce
-from evaluation import evaluate_metriken_ohne_Treshold, evaluate_mit_Treshold, evaluate_scores_ohne_Treshold
+from evaluation import evaluate_metriken_ohne_Treshold, evaluate_mit_Treshold, evaluate_scores_ohne_Treshold, evaluate_NLI
 from scipy.stats import chi2
 from model import  set_model
 
@@ -218,7 +218,7 @@ def detect_ood_adb(scores, centroids, delta, pool_in, pool_out):
 
 def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
 
-    def model_predict(data, method="softmax"):
+    def model_predict(data, method="logits"):
 
         model.eval()
 
@@ -313,31 +313,38 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
     pred_id = []
     pred_ood = []
 
-    for e in test_id:
+    for e in tqdm(test_id, desc = 'ID examples'):
         pred, conf, matched_example = predict_intent(e.text)
 
         pred_id.append(conf)
-        print("-----------------")
-        print(e.text)
-        print(e.label)
-        print(pred)
-        print(conf)
-        print(matched_example)
-        print("-----------------")
+        # print("-----------------")
+        # print(e.text)
+        # print(e.label)
+        # print(pred)
+        # print(conf)
+        # print(matched_example)
+        # print("-----------------")
 
-    for e in test_ood:
+    for e in tqdm(test_ood, desc = 'OOD examples'):
         pred, conf, matched_example = predict_intent(e.text)
         pred_ood.append(conf)
-        print("-----------------")
-        print(e.text)
-        print(e.label)
-        print(pred)
-        print(conf)
-        print(matched_example)
-        print("-----------------")
+        # print("-----------------")
+        # print(e.text)
+        # print(e.label)
+        # print(pred)
+        # print(conf)
+        # print(matched_example)
+        # print("-----------------")
+
     
-    print(pred_id)
-    print(pred_ood)
+    pred_id = np.array(pred_id)
+    pred_id = np.where(pred_id >= 0.5, 1, 0)
+
+    pred_ood = np.array(pred_ood)
+    pred_ood = np.where(pred_ood >= 0.5, 1, 0)
+
+    evaluate_NLI(args, pred_id, pred_ood)
+
 
 
 

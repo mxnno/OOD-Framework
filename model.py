@@ -17,6 +17,7 @@ def set_model(args, bert=None):
     num_labels = get_num_labels(args)
 
     if bert:
+        print("BERT-MODEL!")
         config = None
         model = None
         tokenizer = None
@@ -246,7 +247,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
 
     
     
-    def compute_ood_outputs(self, input_ids=None, attention_mask=None):
+    def compute_ood_outputs(self, input_ids=None, attention_mask=None, labels=None, token_type_ids=None):
 
         outputs = self.roberta(input_ids, attention_mask=attention_mask)
         sequence_output = outputs[0]

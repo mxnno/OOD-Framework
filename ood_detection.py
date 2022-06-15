@@ -256,8 +256,6 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
 
                 if method == "softmax":
                     probs_ = torch.softmax(logits, dim=1)
-                elif method == "energy":
-                    probs_ = torch.logsumexp(logits, dim=-1)
                 elif method == "logits":
                     probs_ = logits
 

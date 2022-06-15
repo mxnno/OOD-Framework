@@ -4,7 +4,7 @@ import warnings
 
 from model import  set_model
 from finetune import finetune_std
-from ood_detection import detect_ood, test_detect_ood
+from ood_detection import detect_ood
 from utils.args import get_args
 from data import preprocess_data
 from utils.utils import set_seed, save_model
@@ -47,19 +47,19 @@ def main():
 
         #Preprocess Data
         print("Preprocess Data...")
-        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
 
         #Pretrain SCL
         print("Pretrain SCL ...")
         args.num_train_epoch = 100
         model.config.loss = 'similarity-contrastive-augm'
-        ft_model =  finetune_std(args, model, train_dataset, dev_dataset, accelerator)
+        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator)
 
         args.num_train_epoch = 3
         #Finetune auf CE oder LMCL + abspeichern
         print("Finetune CE/LMCL...")
         model.config.loss = ''
-        ft_model =  finetune_std(args, model, train_dataset, dev_dataset, accelerator)
+        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator)
         if args.save_path != "debug":
             save_model(ft_model, args)
 

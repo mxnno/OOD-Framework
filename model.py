@@ -157,6 +157,9 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
                 else:
                     #LMCL Loss
                     margin=0.35
+                    print(logits.size())
+                    print(labels.size())
+                    
                     loss = labels * (logits - margin) + (1 - labels) * logits
 
 

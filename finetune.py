@@ -17,7 +17,11 @@ from finetune_TPU import finetune_std_TPU
 warnings.filterwarnings("ignore")
 
 
-def finetune_std(args, model, train_dataloader, dev_dataloader, accelerator):
+def finetune_std(args, model, train_dataloader, dev_dataloader, accelerator, num_epochs_x=None):
+
+    num_epochs = int(args.num_train_epochs)
+    if num_epochs_x:
+        num_epochs = num_epochs_x
 
     best_f1 = 0
     best_model = model
@@ -27,15 +31,17 @@ def finetune_std(args, model, train_dataloader, dev_dataloader, accelerator):
         print("finetune_std_TPU")
         return finetune_std_TPU(args, model, train_dataloader, dev_dataloader, accelerator)
 
-    total_steps = int(len(train_dataloader) * args.num_train_epochs)
+    total_steps = int(len(train_dataloader) * num_epochs)
     warmup_steps = int(total_steps * args.warmup_ratio)
 
     optimizer = get_optimizer_2(args, model)
     scheduler = get_scheduler("linear", optimizer=optimizer,num_warmup_steps=warmup_steps, num_training_steps=total_steps)
-    print(args.num_train_epochs)
     num_steps = 0
     model.train()
-    for epoch in range(int(args.num_train_epochs)):
+
+
+
+    for epoch in range(num_epochs):
         print("Epoche: " + str(epoch))
         model.zero_grad()
         for batch in tqdm(train_dataloader):

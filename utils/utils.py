@@ -71,7 +71,7 @@ def save_model(model, args):
     print("Model saved at: " + path)
 
 def get_save_path(args):
-    return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}_{}'.format(args.model_ID, args.loss, args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed)
+    return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}_{}'.format(args.model_ID, args.loss_std, args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed)
 
 def get_result_path(args):
     return '/content/drive/MyDrive/Masterarbeit/Results/{}/{}_{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot, args.seed)

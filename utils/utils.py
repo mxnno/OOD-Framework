@@ -1,3 +1,4 @@
+from re import I
 import torch
 import random
 import numpy as np
@@ -16,6 +17,8 @@ task_to_labels = {
     'zero': 2,
     'banking': 16,
     'travel': 16,
+    'small_talk': 16,
+    'auto': 16,
     'banking_unlabeled': 2,
     'travel_unlabeled': 2,
     'banking_nli': 2,
@@ -54,8 +57,19 @@ def get_labels(args):
     elif args.id_data == 'travel_nli':
         labels_name = ['ood', 'exchange_rate', 'car_rental', 'vaccines', 'international_visa', 'translate', 'carry_on', 'book_flight', 'timezone', 'flight_status', 'lost_luggage', 'book_hotel', 'plug_type', 'travel_alert', 'travel_notification', 'travel_suggestion']
         labels_id = [0, 38, 40, 52, 59, 61, 62, 63, 66, 80, 113, 116, 120, 128, 146, 149]
+    elif args.id_data == 'small_talk':
+        labels_name = ['ood', 'greeting', 'goodbye', 'tell_joke', 'where_are_you_from', 'how_old_are_you', 'what_is_your_name', 'who_made_you', 'thank_you', 'what_can_i_ask_you', 'what_are_your_hobbies', 'do_you_have_pets', 'are_you_a_bot', 'meaning_of_life', 'who_do_you_work_for', 'fun_fact']
+        labels_id = [0, 20, 114, 36, 77, 99, 75, 96, 124, 115, 15, 34, 117, 22, 57, 129]
+    elif args.id_data == 'small_talk_nli':
+        labels_name = ['ood', 'greeting', 'goodbye', 'tell_joke', 'where_are_you_from', 'how_old_are_you', 'what_is_your_name', 'who_made_you', 'thank_you', 'what_can_i_ask_you', 'what_are_your_hobbies', 'do_you_have_pets', 'are_you_a_bot', 'meaning_of_life', 'who_do_you_work_for', 'fun_fact']
+        labels_id = [0, 20, 114, 36, 77, 99, 75, 96, 124, 115, 15, 34, 117, 22, 57, 129]
+    elif args.id_data == "auto":
+        labels_name = ['ood', 'traffic', 'directions', 'gas', 'gas_type', 'distance', 'current_location', 'mpg', 'oil_change_when', 'oil_change_how', 'jump_start', 'uber', 'schedule_maintenance', 'last_maintenance', 'tire_pressure', 'tire_change']
+        labels_id = [0, 24, 72, 110, 8, 78, 136, 142, 123, 3, 17, 39, 131, 37, 98, 47]
+    elif args.id_data == "auto_nli":
+            labels_name = ['ood', 'traffic', 'directions', 'gas', 'gas_type', 'distance', 'current_location', 'mpg', 'oil_change_when', 'oil_change_how', 'jump_start', 'uber', 'schedule_maintenance', 'last_maintenance', 'tire_pressure', 'tire_change']
+            labels_id = [0, 24, 72, 110, 8, 78, 136, 142, 123, 3, 17, 39, 131, 37, 98, 47]
     
-
     if args.ood_data == "zero":
         return labels_name[1:], labels_id[1:]
     else:
@@ -74,7 +88,7 @@ def get_save_path(args):
     return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}_{}'.format(args.model_ID, args.loss, args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed)
 
 def get_result_path(args):
-    return '/content/drive/MyDrive/Masterarbeit/Results/{}/{}_{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot, args.seed)
+    return '/content/drive/MyDrive/Masterarbeit/Results/{}/{}_{}_{}_{}_{}'.format(args.model_ID, args.loss_std, args.id_data, args.ood_data, args.few_shot, args.seed)
 
 def save_tensor(tensor, path, tesnor_name="Tensor"):
     torch.save(tensor, path)

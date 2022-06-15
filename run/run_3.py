@@ -9,6 +9,8 @@ from utils.args import get_args
 from data import preprocess_data
 from utils.utils import set_seed, save_model
 from accelerate import Accelerator
+from model_temp import ModelWithTemperature
+
 
 warnings.filterwarnings("ignore")
 
@@ -51,15 +53,13 @@ def main():
 
         #Pretrain SCL
         print("Pretrain SCL ...")
-        args.num_train_epoch = 100
         model.config.loss = 'similarity-contrastive-augm'
-        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator)
+        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator, num_epochs_x = 20)
 
-        args.num_train_epoch = 3
         #Finetune auf CE oder LMCL + abspeichern
         print("Finetune CE/LMCL...")
         model.config.loss = ''
-        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator)
+        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator, num_epochs_x = 5)
         if args.save_path != "debug":
             save_model(ft_model, args)
 
@@ -69,22 +69,27 @@ def main():
             print("Bitte einen Pfad angeben, der ein Model enthält!")
             return False
 
+
         #Load Model
         print("Load model...")
         model, config, tokenizer = set_model(args)
 
         #Preprocess Data
-        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        #dev_dataset = train + dev_id
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        
 
-        label_list = []
-        for batch in train_dataset:
-            label_list += list(batch["labels"].cpu().detach().numpy())
+        #Temp für Softmax ermitteln
+        # Now we're going to wrap the model with a decorator that adds temperature scaling
+        temp_model = ModelWithTemperature(model)
 
-        print(label_list)
+        # Tune the model temperature, and save the results
+        best_temp = temp_model.set_temperature(traindev_dataset)
+
+
         #OOD-Detection
-        #print("Start OOD-Detection...")
-        detect_ood(args, model, train_dataset, test_id_dataset, test_ood_dataset)
-        #test_detect_ood(args, model, dev_dataset, test_dataset)
+        print("Start OOD-Detection...")
+        detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
 
 if __name__ == "__main__":
     main()

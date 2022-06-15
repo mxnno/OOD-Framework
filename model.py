@@ -156,11 +156,13 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
                     loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
                 else:
                     #LMCL Loss
+                    # --------------------------- convert label to one-hot ---------------------------
+                    one_hot = torch.zeros_like(logits)
+                    one_hot.scatter_(1, labels.view(-1, 1), 1.0)
                     margin=0.35
-                    print(logits.size())
-                    print(labels.size())
-                    
-                    loss = labels * (logits - margin) + (1 - labels) * logits
+                    logits = one_hot * (logits - margin) + (1 - one_hot) * logits
+                    logits = torch.softmax(logits, dim=1)
+                    loss = torch.sum(torch.mul(-torch.log(logits), one_hot))
 
 
             if self.config.loss == 'margin-contrastive':

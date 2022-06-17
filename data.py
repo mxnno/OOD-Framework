@@ -147,8 +147,8 @@ def load_clinc(args):
 
     ########################################################### Train ###############################################################
     #Trainingsdaten ID/OOD aufteilen + verkleinern
-    train_dataset = datasets_dict['train']
-    train_dataset = train_dataset.map(set_OOD_as_0)
+    train_dataset_new = datasets_dict['train']
+    train_dataset = train_dataset_new.map(set_OOD_as_0)
 
     #ID Daten zufällig shuffeln und reduzieren auf n Few-Shot
     id = train_dataset.filter(lambda example: example['intent'] in label_ids)

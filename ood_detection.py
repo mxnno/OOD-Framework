@@ -323,9 +323,14 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
         # print(matched_example)
         # print("-----------------")
 
+    i = 0
     for e in tqdm(test_ood, desc = 'OOD examples'):
         pred, conf, matched_example = predict_intent(e.text)
         pred_ood.append(conf)
+        i = i + 1
+
+        if i == 500:
+            break
         # print("-----------------")
         # print(e.text)
         # print(e.label)
@@ -341,6 +346,8 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
     pred_ood = np.array(pred_ood)
     pred_ood = np.where(pred_ood >= 0.5, 1, 0)
 
+    print(pred_id)
+    print(pred_ood)
     evaluate_NLI(args, pred_id, pred_ood)
 
 

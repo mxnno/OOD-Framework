@@ -256,8 +256,9 @@ def finetune_DNNC(args, model, tokenizer, train_examples, dev_examples):
         #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
         wandb.log(results, step=num_steps) if args.wandb == "log" else None
 
-        if acc > best_dev_accuracy :
+        if acc >= best_dev_accuracy :
             best_model = model
+            best_dev_accuracy = acc
         
         model.train()
 

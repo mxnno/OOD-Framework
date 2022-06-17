@@ -96,12 +96,13 @@ def load_clinc(args):
 
     #Label Namen + Ids
     num_labels = get_num_labels(args)
-    print(num_labels)
     label_names, label_ids = get_labels(args)
     print(label_names)
-
+    print(label_ids)
     if args.model_ID == 8:
         num_labels = len(label_names)
+
+    print(num_labels)
 
     if args.ood_data == 'zero':
         classlabel = ClassLabel(num_classes=num_labels, names=label_names)
@@ -122,9 +123,6 @@ def load_clinc(args):
 
     def set_label_to_ID(example):
 
-        if args.model_ID == 8:
-            #nichts machen
-            return example 
 
         if num_labels == 2 or num_labels == 1:
             example['intent'] = 1
@@ -144,7 +142,7 @@ def load_clinc(args):
 
 
     #Datensatz laden
-    datasets_dict = load_dataset("clinc_oos", "small")
+    datasets_dict = load_dataset("clinc_oos", "small", keep_in_memory=False)
 
 
     ########################################################### Train ###############################################################
@@ -154,6 +152,7 @@ def load_clinc(args):
 
     #ID Daten zufällig shuffeln und reduzieren auf n Few-Shot
     id = train_dataset.filter(lambda example: example['intent'] in label_ids)
+    print(id)
     id = id.shuffle(seed=args.seed)
     id = id.sort('intent')
     id = id.shard(num_shards=num_shards, index=0)
@@ -226,8 +225,8 @@ def load_clinc(args):
 
     trainval_dataset.cast_column("intent", classlabel)
 
-    val_id.to_csv("val_id_csv")
-    train_dataset.to_csv("train_csv")
+    #val_id.to_csv("val_id_csv")
+    #train_dataset.to_csv("train_csv")
     #trainval_dataset.to_csv("trainval_csv")
 
 
@@ -253,13 +252,13 @@ def load_clinc(args):
     #Test ganz
     test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
 
-
+    
 
 
 
     #???HR PROBLEM: keien OOD Daten -> OOD Test trotzdem auf 0 -> man kann keine "normale" eval machen, sonder muss zwingend ood und id getrennt betrachten bzw über Thresholds arbeiten, da es die klasse ood nicht gibt
 
-    #train_dataset.to_csv('/content/drive/MyDrive/trainas.csv')  
+    train_dataset.to_csv('ichraste.csv')  
 
     #dev_dataset = train + dev_id
     return DatasetDict({'train': train_dataset, 'trainval':  trainval_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})

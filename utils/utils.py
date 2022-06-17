@@ -22,12 +22,17 @@ task_to_labels = {
     'banking_unlabeled': 2,
     'travel_unlabeled': 2,
     'banking_nli': 2,
-    'travel_nli': 2
+    'travel_nli': 2,
+    'auto_nli': 2
 }
 def get_num_labels(args):
-    if args.ood_data == "zero" and args.model_ID != 8:
+    if args.ood_data == "zero":
         #ID 8 DNNC muss 2 Label haben
-        return task_to_labels[args.id_data] - 1
+        if args.model_ID != 8:
+            return task_to_labels[args.id_data] - 1
+        else:
+            return 2
+
     else:
         return task_to_labels[args.id_data]
 
@@ -88,7 +93,10 @@ def get_save_path(args):
     return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}_{}'.format(args.model_ID, args.loss, args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed)
 
 def get_result_path(args):
-    return '/content/drive/MyDrive/Masterarbeit/Results/{}/{}_{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot, args.seed)
+    if args.save_path != "drive":
+        return args.save_path
+    else:
+        return '/content/drive/MyDrive/Masterarbeit/Results/{}/{}_{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot, args.seed)
 
 def save_tensor(tensor, path, tesnor_name="Tensor"):
     torch.save(tensor, path)

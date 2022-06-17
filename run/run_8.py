@@ -2,6 +2,7 @@ import torch
 import wandb
 import warnings
 import time
+import os
 
 from model import  set_model
 from finetune import finetune_std, finetune_ADB, finetune_DNNC
@@ -90,16 +91,23 @@ def main():
         print("Load model...")
         model, config, tokenizer = set_model(args)
 
+        if os.path.exists("test_id_dataset_8.csv"):
+            os.remove("test_id_dataset_8.csv")
+        if os.path.exists("test_od_dataset_8.csv"):
+            os.remove("test_od_dataset_8.csv")
+        if os.path.exists("train_dataset_8.csv"):
+            os.remove("train_dataset_8.csv")
+
         dataset_dict  = load_clinc(args)
         train_dataset = dataset_dict['train']
-        train_dataset.to_csv("train_dataset.csv")
+        train_dataset.to_csv("train_dataset_8.csv")
         test_id = dataset_dict['test_id']
         test_ood = dataset_dict['test_ood']
-        test_id.to_csv("test_id_dataset.csv")
-        test_ood.to_csv("test_od_dataset.csv")
+        test_id.to_csv("test_id_dataset_8.csv")
+        test_ood.to_csv("test_od_dataset_8.csv")
         time.sleep(2)
-        test_data_id, test_data_ood = load_intent_datasets("test_id_dataset.csv", "test_od_dataset.csv", do_lower_case)
-        train_data, _ = load_intent_datasets("train_dataset.csv", "train_dataset.csv", do_lower_case)
+        test_data_id, test_data_ood = load_intent_datasets("test_id_dataset_8.csv", "test_od_dataset_8.csv", do_lower_case)
+        train_data, _ = load_intent_datasets("train_dataset_8.csv", "train_dataset_8.csv", do_lower_case)
         
         #OOD-Detection
         print("Start OOD-Detection...")

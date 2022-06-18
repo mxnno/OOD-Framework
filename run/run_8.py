@@ -91,13 +91,6 @@ def main():
         print("Load model...")
         model, config, tokenizer = set_model(args)
 
-        if os.path.exists("test_id_dataset_8.csv"):
-            os.remove("test_id_dataset_8.csv")
-        if os.path.exists("test_od_dataset_8.csv"):
-            os.remove("test_od_dataset_8.csv")
-        if os.path.exists("train_dataset_8.csv"):
-            os.remove("train_dataset_8.csv")
-
         dataset_dict  = load_clinc(args)
         train_dataset = dataset_dict['train']
         train_dataset.to_csv("train_dataset_8.csv")

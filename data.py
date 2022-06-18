@@ -4,6 +4,7 @@ from datasets import load_dataset, concatenate_datasets, DatasetDict, ClassLabel
 from torch.utils.data import DataLoader
 from transformers import DataCollatorWithPadding, DataCollatorForLanguageModeling
 import re
+import shutil
 from utils.utils import get_labels, get_num_labels
 
 datasets.logging.set_verbosity(datasets.logging.ERROR)
@@ -141,14 +142,16 @@ def load_clinc(args):
         #     example['intent'] = 2
 
 
+    #Cache leeren
+    shutil.rmtree('/root/.cache/huggingface/datasets/clinc_oos/small/')
     #Datensatz laden
     datasets_dict = load_dataset("clinc_oos", "small", keep_in_memory=False)
 
 
     ########################################################### Train ###############################################################
     #Trainingsdaten ID/OOD aufteilen + verkleinern
-    train_dataset_new = datasets_dict['train']
-    train_dataset = train_dataset_new.map(set_OOD_as_0)
+    train_dataset = datasets_dict['train']
+    train_dataset = train_dataset.map(set_OOD_as_0)
 
     #ID Daten zufällig shuffeln und reduzieren auf n Few-Shot
     id = train_dataset.filter(lambda example: example['intent'] in label_ids)

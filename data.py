@@ -6,6 +6,7 @@ from transformers import DataCollatorWithPadding, DataCollatorForLanguageModelin
 import re
 import shutil
 from utils.utils import get_labels, get_num_labels
+from os import path
 
 datasets.logging.set_verbosity(datasets.logging.ERROR)
 
@@ -143,7 +144,8 @@ def load_clinc(args):
 
 
     #Cache leeren
-    shutil.rmtree('/root/.cache/huggingface/datasets/clinc_oos/small/')
+    if path.exists('/root/.cache/huggingface/datasets/clinc_oos/small/'):
+        shutil.rmtree('/root/.cache/huggingface/datasets/clinc_oos/small/')
     #Datensatz laden
     datasets_dict = load_dataset("clinc_oos", "small", keep_in_memory=False)
 

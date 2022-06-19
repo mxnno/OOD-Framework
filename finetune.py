@@ -188,6 +188,7 @@ def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, 
         seed = args.seed,
         evaluation_strategy = "epoch",
         load_best_model_at_end = True,
+        save_total_limit = 10
         # -> https://huggingface.co/docs/transformers/main_classes/trainer#transformers.TrainingArguments.load_best_model_at_end
         #When set to True, the parameters save_strategy needs to be the same as eval_strategy, and in the case it is “steps”, save_steps must be a round multiple of eval_steps.
         )

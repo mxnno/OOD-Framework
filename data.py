@@ -55,7 +55,7 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     tokenized_datasets.set_format("torch")
 
     if no_Dataloader:
-        return tokenized_datasets["train"], tokenized_datasets["validation"], data_collator
+        return tokenized_datasets["train"], tokenized_datasets["val_id"], data_collator
 
     train_dataloader = DataLoader(
         tokenized_datasets["train"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator

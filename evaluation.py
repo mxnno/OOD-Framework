@@ -73,8 +73,6 @@ def evaluate_mit_Treshold(args, scores, name):
         writer.writerow(header)
 
         for score_name in score_list:
-            if score_name == "doc_score":
-                continue
             data = []
             y_pred_in = scores.__dict__[score_name + "_in"]
             y_pred_out = scores.__dict__[score_name + "_out"]

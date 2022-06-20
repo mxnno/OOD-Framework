@@ -136,9 +136,9 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
 
 
     if args.model_ID == 14:
-        detect_ood_adb(args, centroids, delta, all_pool_in, all_pool_out)
-        return
-        #all_logits_train, all_logits_dev, all_logits_in , all_logits_out = detect_ood_adb2(centroids, delta, all_pool_in, all_pool_out, all_pool_dev, all_pool_train)
+        #detect_ood_adb(args, centroids, delta, all_pool_in, all_pool_out)
+        #return
+        all_logits_train, all_logits_dev, all_logits_in , all_logits_out = detect_ood_adb2(centroids, delta, all_pool_in, all_pool_out, all_pool_dev, all_pool_train)
 
 
 #2. Treshold + Scores

@@ -287,14 +287,6 @@ def get_softmax_score_with_temp(logits, temp, full_score=False):
 
 def get_entropy_score(logits):
 
-    #-> hier kein Full_score möglich -> nicht für OCSVM geeignet...
-
-    #Nach ID 11 (Gold)
-    # Input: 
-    # - logits eines batches
-    # Return :
-    # - entropy score
-
     softmax = F.softmax(logits, dim=-1)
     expo = torch.exp(softmax)
     expo = expo.cpu()

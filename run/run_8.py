@@ -9,7 +9,7 @@ from finetune import finetune_std, finetune_ADB, finetune_DNNC
 from ood_detection import detect_ood, detect_ood_DNNC
 from utils.args import get_args
 from data import preprocess_data, load_clinc
-from utils.utils import set_seed, get_num_labels, save_model, save_tensor, get_save_path
+from utils.utils import set_seed, get_num_labels, save_model
 from utils.utils_DNNC import *
 from accelerate import Accelerator
 

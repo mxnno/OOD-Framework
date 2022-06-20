@@ -81,7 +81,7 @@ def main():
         temp_model = ModelWithTemperature(model)
 
         # Tune the model temperature, and save the results
-        best_temp = temp_model.set_temperature(traindev_dataset)
+        best_temp = temp_model.set_temperature(dev_id_dataset)
 
 
         #OOD-Detection

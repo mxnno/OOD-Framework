@@ -61,10 +61,10 @@ def finetune_std(args, model, train_dataloader, dev_dataloader, accelerator, num
                 wandb.log({'cos_loss': cos_loss.item()}, step=num_steps) if args.wandb == "log" else print("Cos-Loss: " + str(loss.item()))
 
         results_dev = evaluate(args, model, dev_dataloader, tag="dev")
-        results_train = evaluate(args, model, train_dataloader, tag="train")
+        #results_train = evaluate(args, model, train_dataloader, tag="train")
         #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
-        wandb.log({**results_dev, **results_train}, step=num_steps) if args.wandb == "log" else None
-    
+        #wandb.log({**results_dev, **results_train}, step=num_steps) if args.wandb == "log" else None
+        wandb.log(results_dev, step=num_steps) if args.wandb == "log" else None
         #bestes Model zurückgeben
         f1 = results_dev['f1_dev']
         if f1 >= best_f1:
@@ -160,7 +160,8 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
         results_dev = evaluate(args, model, dev_dataloader, tag="dev")
         results_train = evaluate(args, model, train_dataloader, tag="train")
         #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
-        wandb.log({**results_dev, **results_train}, step=num_steps) if args.wandb == "log" else None
+        #wandb.log({**results_dev, **results_train}, step=num_steps) if args.wandb == "log" else None
+        wandb.log(results_dev, step=num_steps) if args.wandb == "log" else None
         
         #bestes Model zurückgeben
         f1 = results_dev['f1_dev']

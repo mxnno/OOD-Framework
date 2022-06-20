@@ -14,7 +14,7 @@ def evaluate_metriken_ohne_Treshold(args, scores):
     #Alle mit _ocsvm
     #evtl noch gda
     if args.model_ID == 14:
-        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score']
+        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'maha_score']
     else:
         score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score', 'varianz_score']
 
@@ -58,7 +58,7 @@ def evaluate_metriken_ohne_Treshold(args, scores):
 def evaluate_mit_Treshold(args, scores, name):
 
     if args.model_ID == 14:
-        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'energy_score', 'entropy_score', 'maha_score']
+        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'maha_score']
     else:
         score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'energy_score', 'entropy_score', 'gda_eucl_score', 'gda_maha_score', 'maha_score', 'varianz_score']
 
@@ -107,7 +107,7 @@ def evaluate_mit_Treshold(args, scores, name):
 def evaluate_scores_ohne_Treshold(args, scores):
 
     if args.model_ID == 14:
-        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score']
+        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp','maha_score']
     else:
         score_list = ['lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score', 'varianz_score']
 

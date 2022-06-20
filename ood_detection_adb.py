@@ -211,7 +211,7 @@ def detect_ood_adb(args, centroids, delta, pool_in, pool_out):
         preds.to('cuda:0')
         euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)           
         preds_ones[euc_dis >= delta[preds]] = 0
-        return preds_ones.detach().cpu().numpy()
+        return preds_ones.cpu().detach().numpy()
 
     adb_pred_in = get_adb_score(pool_in, centroids, delta)
     adb_pred_out = get_adb_score(pool_out, centroids, delta)
@@ -243,12 +243,8 @@ def get_model_prediction(logits, full_score=False):
         return logits
 
     pred, label_pred = logits.max(dim = 1)
-    return pred
+    return label_pred
 
-def get_varianz_score(logits):
-
-    var_score = logits.cpu().detach().numpy()
-    return np.var(var_score, axis=1)
 
 def get_softmax_score(logits, full_score=False):
     # Nach ID 2 (=Maxprob)
@@ -263,7 +259,7 @@ def get_softmax_score(logits, full_score=False):
         return softmax
 
     softmax, idx = F.softmax(logits, dim=-1).max(-1)
-    return softmax
+    return idx
 
 
 def get_softmax_score_with_temp(logits, temp, full_score=False):
@@ -283,31 +279,8 @@ def get_softmax_score_with_temp(logits, temp, full_score=False):
 
 
     softmax, idx = F.softmax((logits / temp), dim=-1).max(-1)
-    return softmax
+    return idx
 
-def get_entropy_score(logits):
-
-    softmax = F.softmax(logits, dim=-1)
-    expo = torch.exp(softmax)
-    expo = expo.cpu()
-    return entropy(expo, axis=1)
-
-def get_cosine_score(pooled, norm_bank, full_scores=False):
-    #von ID 2
-    #hier fehlt noch norm_bank
-    norm_pooled = F.normalize(pooled, dim=-1)
-    cosine_score = norm_pooled @ norm_bank.t()
-    if full_scores is True:
-        return cosine_score
-    cosine_score = cosine_score.max(-1)[0]
-    return cosine_score
-
-
-def get_energy_score(logits):
-    #-> hier kein Full_score möglich -> nicht für OCSVM geeignet...
-
-    #von ID 2
-    return torch.logsumexp(logits, dim=-1)
 
 
 def get_maha_score(pooled, all_classes, class_mean, class_var, full_scores=False):
@@ -321,7 +294,7 @@ def get_maha_score(pooled, all_classes, class_mean, class_var, full_scores=False
     maha_score_full = torch.stack(maha_score, dim=-1)
     if full_scores is True:
         return maha_score_full
-    maha_score = maha_score_full.min(-1)[0]
+    maha_score = maha_score_full.min(-1)[1]
     #maha_score = -maha_score
     maha_score = maha_score
     return maha_score
@@ -365,10 +338,6 @@ class Scores():
         self.logits_score_in = 0
         self.logits_score_out = 0
 
-        self.varianz_score_train = 0
-        self.varianz_score_dev = 0
-        self.varianz_score_in = 0
-        self.varianz_score_out = 0
         
         self.softmax_score_in_ocsvm = 0
         self.softmax_score_out_ocsvm = 0
@@ -394,16 +363,6 @@ class Scores():
         self.cosine_score_in = 0
         self.cosine_score_out = 0
 
-        self.energy_score_train = 0
-        self.energy_score_dev = 0
-        self.energy_score_in = 0
-        self.energy_score_out = 0
-
-        self.entropy_score_train = 0
-        self.entropy_score_dev = 0
-        self.entropy_score_in = 0
-        self.entropy_score_out = 0
-
 
         self.maha_score_in_ocsvm = 0
         self.maha_score_out_ocsvm = 0
@@ -423,11 +382,6 @@ class Scores():
         self.logits_score_in = get_model_prediction(self.logits_in, False)
         self.logits_score_out = get_model_prediction(self.logits_out, False)
 
-        ################## VARIANZ #####################
-        self.varianz_score_train = get_varianz_score(self.logits_train)
-        self.varianz_score_dev = get_varianz_score(self.logits_dev)
-        self.varianz_score_in = get_varianz_score(self.logits_in)
-        self.varianz_score_out = get_varianz_score(self.logits_out)
 
         ################## SOFTMAX ########################
         self.softmax_score_train = get_softmax_score(self.logits_train, False)
@@ -441,23 +395,6 @@ class Scores():
         self.softmax_score_temp_in = get_softmax_score_with_temp(self.logits_in, best_temp, False)
         self.softmax_score_temp_out = get_softmax_score_with_temp(self.logits_out, best_temp, False)
 
-        ################# COSINE ##########################
-        self.cosine_score_train = get_cosine_score(self.pooled_train, self.norm_bank, False)
-        self.cosine_score_dev = get_cosine_score(self.pooled_dev, self.norm_bank, False)
-        self.cosine_score_in = get_cosine_score(self.pooled_in, self.norm_bank, False)
-        self.cosine_score_out = get_cosine_score(self.pooled_out, self.norm_bank, False)
-
-        ################### ENERGY #######################
-        self.energy_score_train = get_energy_score(self.logits_train)
-        self.energy_score_dev = get_energy_score(self.logits_dev)
-        self.energy_score_in = get_energy_score(self.logits_in)
-        self.energy_score_out = get_energy_score(self.logits_out)
-
-        ################## ENTROPY ########################
-        self.entropy_score_train = get_entropy_score(self.logits_train)
-        self.entropy_score_dev = get_entropy_score(self.logits_dev)
-        self.entropy_score_in = get_entropy_score(self.logits_in)
-        self.entropy_score_out = get_entropy_score(self.logits_out)
 
 
         ################### MAHA ############################
@@ -470,53 +407,28 @@ class Scores():
     
     def apply_tresholds(self, pooled_in = None, pooled_out = None, centroids = None, delta = None):
 
-        
         self.logits_score_in = adb_treshold(self.logits_score_in, pooled_in, centroids, delta)
         self.logits_score_out = adb_treshold(self.logits_score_out, pooled_out, centroids, delta)
-
-        ################## VARIANZ ########################
-        self.varianz_score_in = adb_treshold(self.varianz_score_in, pooled_in, centroids, delta)
-        self.varianz_score_out = adb_treshold(self.varianz_score_out, pooled_out, centroids, delta)
-
         ################## SOFTMAX ########################
         self.softmax_score_in = adb_treshold(self.softmax_score_in, pooled_in, centroids, delta)
         self.softmax_score_out = adb_treshold(self.softmax_score_out, pooled_out, centroids, delta)
-    
         ################## SOFTMAX TEMP ###########################
         self.softmax_score_temp_in = adb_treshold(self.softmax_score_temp_in, pooled_in, centroids, delta)
         self.softmax_score_temp_out = adb_treshold(self.softmax_score_temp_out, pooled_out, centroids, delta)
-
         ################### MAHA ############################
         self.maha_score_in = adb_treshold(self.maha_score_in, pooled_in, centroids, delta)
         self.maha_score_out = adb_treshold(self.maha_score_out, pooled_out, centroids, delta)
-
-        ################## Entropy ###############
-        self.entropy_score_in = adb_treshold(self.entropy_score_in, pooled_in, centroids, delta)
-        self.entropy_score_out = adb_treshold(self.entropy_score_out, pooled_out, centroids, delta)
-
         ################## Cosine ###############
-        self.cosine_score_in = adb_treshold(self.cosine_score_in, pooled_in, centroids, delta)
-        self.cosine_score_out = adb_treshold(self.cosine_score_out, pooled_out, centroids, delta)
-
-        ################## Energy ###############
-        self.energy_score_in = adb_treshold(self.energy_score_in, pooled_in, centroids, delta)
-        self.energy_score_out = adb_treshold(self.energy_score_out, pooled_out, centroids, delta)
-
-        ################### GDA ###############
-        self.gda_maha_score_in = adb_treshold(self.gda_maha_score_in, pooled_in, centroids, delta)
-        self.gda_maha_score_out = adb_treshold(self.gda_maha_score_out, pooled_out, centroids, delta)
-        self.gda_eucl_score_in = adb_treshold(self.gda_eucl_score_in, pooled_in, centroids, delta)
-        self.gda_eucl_score_out = adb_treshold(self.gda_eucl_score_out, pooled_out, centroids, delta)
-
-
-
+        #self.cosine_score_in = adb_treshold(self.cosine_score_in, pooled_in, centroids, delta)
+        #self.cosine_score_out = adb_treshold(self.cosine_score_out, pooled_out, centroids, delta)
     
-def adb_treshold(self, preds, pooled, centroids, delta):
-    preds = torch.tensor(preds, dtype=torch.long).to('cuda:0')
-    preds_ones = torch.ones_like(preds)
-    euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)           
-    preds_ones[euc_dis >= delta[preds]] = 0
-    return preds_ones.detach().cpu().numpy()
+def adb_treshold(preds, pooled, centroids, delta):
+    a = torch.device('cuda:0')
+    new_preds = preds.to(a, dtype=torch.long)
+    preds_ones = torch.ones_like(new_preds)
+    euc_dis = torch.norm(pooled - centroids[new_preds], 2, 1).view(-1)           
+    preds_ones[euc_dis >= delta[new_preds]] = 0
+    return preds_ones.cpu().detach().numpy()
 
 #- Evaluate
 

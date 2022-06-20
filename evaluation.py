@@ -13,7 +13,11 @@ def evaluate_metriken_ohne_Treshold(args, scores):
 
     #Alle mit _ocsvm
     #evtl noch gda
-    score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score']
+    if args.model_ID == 14:
+        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score']
+    else:
+        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score', 'varianz_score']
+
     header = ['Method', "tnr_at_tpr95", "auroc", "dtacc", "au_in", "au_out"]
     csvPath = get_result_path(args)
     if not os.path.isdir(get_result_path(args)):
@@ -26,6 +30,7 @@ def evaluate_metriken_ohne_Treshold(args, scores):
         writer.writerow(header)
 
         for score_name in score_list:
+            print
             data = []
             # ohne OCSVM
             pred_in = scores.__dict__[score_name + "_in"]
@@ -52,9 +57,11 @@ def evaluate_metriken_ohne_Treshold(args, scores):
 
 def evaluate_mit_Treshold(args, scores, name):
 
-    #
-    score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'energy_score', 'entropy_score', 'gda_eucl_score', 'gda_maha_score', 'maha_score']
-   
+    if args.model_ID == 14:
+        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'energy_score', 'entropy_score', 'maha_score']
+    else:
+        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'energy_score', 'entropy_score', 'gda_eucl_score', 'gda_maha_score', 'maha_score', 'varianz_score']
+
     header = ['Method', "in_acc + out_recall", "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
     csvPath = get_result_path(args)
     if not os.path.isdir(get_result_path(args)):
@@ -100,9 +107,11 @@ def evaluate_mit_Treshold(args, scores, name):
 def evaluate_scores_ohne_Treshold(args, scores):
 
     if args.model_ID == 14:
-        score_list = ['adb_score', 'lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score']
+        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score']
     else:
-        score_list = ['lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score']
+        score_list = ['lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score', 'varianz_score']
+
+    #score_list = ['lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score', 'varianz_score']
 
     header = ['Method', "in_acc + out_recall", "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
     csvPath = get_result_path(args)

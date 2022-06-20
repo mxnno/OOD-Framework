@@ -138,6 +138,8 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     if args.model_ID == 14:
         detect_ood_adb(args, centroids, delta, all_pool_in, all_pool_out)
         return
+        #all_logits_train, all_logits_dev, all_logits_in , all_logits_out = detect_ood_adb2(centroids, delta, all_pool_in, all_pool_out, all_pool_dev, all_pool_train)
+
 
 #2. Treshold + Scores
     
@@ -158,7 +160,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     # --> bei softmax wesentlich schlechtere Erg mit OC-SVM -> softmax mit und ohne OC-SVM Scores in einer Tabelle
     print("Metriken ohne Treshold...")
     scores_ocsvm = deepcopy(scores)
-    scores_ocsvm.apply_ocsvm("scores")
+    scores_ocsvm.apply_ocsvm(args, "scores")
     #-> scores_in bzw. scors_out UND scores_in_ocsvm bzw. scores_out_ocsvm in eval abfragen!
     evaluate_metriken_ohne_Treshold(args, scores_ocsvm)
 
@@ -169,18 +171,18 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     print("Mit Treshold...")
     print("...best...")
     scores_best = deepcopy(scores)
-    thresholds.calculate_tresholds(scores_best, 'best')
-    scores_best.apply_tresholds(thresholds)
+    thresholds.calculate_tresholds(args, scores_best, 'best')
+    scores_best.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
     evaluate_mit_Treshold(args, scores_best, 'best')
     print("...best_dev...")
     scores_best_dev = deepcopy(scores)
-    thresholds.calculate_tresholds(scores_best_dev, 'best_dev')
-    scores_best_dev.apply_tresholds(thresholds)
+    thresholds.calculate_tresholds(args, scores_best_dev, 'best_dev')
+    scores_best_dev.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
     evaluate_mit_Treshold(args, scores_best_dev, 'best_dev')
     print("...avg...")
     scores_avg = deepcopy(scores)
-    thresholds.calculate_tresholds(scores_avg, 'avg')
-    scores_avg.apply_tresholds(thresholds)
+    thresholds.calculate_tresholds(args, scores_avg, 'avg')
+    scores_avg.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
     evaluate_mit_Treshold(args, scores_avg, 'avg')
     
 # 2.2 ohne Treshold zu 0/1
@@ -191,7 +193,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     #für ADB 
     
     scores_ohne_Treshold = deepcopy(scores)
-    scores_ohne_Treshold.apply_ocsvm('predict')
+    scores_ohne_Treshold.apply_ocsvm(args, 'predict')
     evaluate_scores_ohne_Treshold(args, scores_ohne_Treshold)
 
 
@@ -205,17 +207,28 @@ def detect_ood_adb(args, centroids, delta, pool_in, pool_out):
         #qwert
         #Kann ich die logits rausnehmen für anderen Methoden???
         # -> heir ja nur Softmax
-        probs, preds = F.softmax(logits_adb.detach(), dim = 1).max(dim = 1)
+        #probs, preds = F.softmax(logits_adb.detach(), dim = 1).max(dim = 1)
+        
+        probs, preds = logits_adb.max(dim = 1)
         preds_ones = torch.ones_like(preds)
         preds.to('cuda:0')
         euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)           
         preds_ones[euc_dis >= delta[preds]] = 0
-        return preds_ones
+        return preds_ones.detach().cpu().numpy()
 
     adb_pred_in = get_adb_score(pool_in, centroids, delta)
     adb_pred_out = get_adb_score(pool_out, centroids, delta)
 
     evaluate_ADB(args, adb_pred_in, adb_pred_out)
+
+def detect_ood_adb2(centroids, delta, pool_in, pool_out, pool_dev, pool_train):
+
+    logits_train = euclidean_metric(pool_train, centroids)
+    logits_dev = euclidean_metric(pool_dev, centroids)
+    logits_in = euclidean_metric(pool_in, centroids)
+    logits_out = euclidean_metric(pool_out, centroids)
+
+    return logits_train, logits_dev, logits_in, logits_out
 
 
 
@@ -777,11 +790,12 @@ class Scores():
 
         ################### GDA ############################
         # ist maha und euclid
-        self.gda_maha_score_train_ocsvm, self.gda_maha_score_dev_ocsvm, self.gda_maha_score_in_ocsvm , self.gda_maha_score_out_ocsvm = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "maha", True)
-        self.gda_maha_score_train, self.gda_maha_score_dev, self.gda_maha_score_in , self.gda_maha_score_out = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "maha", False)
-        
-        self.gda_eucl_score_train_ocsvm, self.gda_eucl_score_dev_ocsvm, self.gda_eucl_score_in_ocsvm , self.gda_eucl_score_out_ocsvm = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "euclidean", True)
-        self.gda_eucl_score_train, self.gda_eucl_score_dev, self.gda_eucl_score_in , self.gda_eucl_score_out = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "euclidean", False)
+        if args.model_ID != 14:
+            self.gda_maha_score_train_ocsvm, self.gda_maha_score_dev_ocsvm, self.gda_maha_score_in_ocsvm , self.gda_maha_score_out_ocsvm = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "maha", True)
+            self.gda_maha_score_train, self.gda_maha_score_dev, self.gda_maha_score_in , self.gda_maha_score_out = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "maha", False)
+            
+            self.gda_eucl_score_train_ocsvm, self.gda_eucl_score_dev_ocsvm, self.gda_eucl_score_in_ocsvm , self.gda_eucl_score_out_ocsvm = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "euclidean", True)
+            self.gda_eucl_score_train, self.gda_eucl_score_dev, self.gda_eucl_score_in , self.gda_eucl_score_out = get_gda_score(self.logits_train, self.logits_in, self.logits_out, self.logits_dev, self.train_labels, "euclidean", False)
         
         ################### MAHA ############################
         self.maha_score_in_ocsvm = get_maha_score(self.pooled_in, self.all_classes, self.class_mean, self.class_var, True)
@@ -803,7 +817,7 @@ class Scores():
         self.doc_score_in = get_doc_score(self.logits_train, self.train_labels, self.logits_in, self.all_classes)
         self.doc_score_out = get_doc_score(self.logits_train, self.train_labels, self.logits_out, self.all_classes)
 
-    def apply_ocsvm(self, method):
+    def apply_ocsvm(self, args, method):
 
         def get_ocsvm_scores(ocsvm_train, ocsvm_in, ocsvm_out):
             
@@ -876,48 +890,89 @@ class Scores():
         ################## Cosine ###############
         self.cosine_score_in_ocsvm, self.cosine_score_out_ocsvm = get_ocsvm_scores(self.cosine_score_dev_ocsvm, self.cosine_score_in_ocsvm, self.cosine_score_out_ocsvm)
         ################### GDA ###############
-        self.gda_maha_score_in_ocsvm, self.gda_maha_score_out_ocsvm = get_ocsvm_scores(self.gda_maha_score_train_ocsvm, self.gda_maha_score_in_ocsvm, self.gda_maha_score_out_ocsvm)
-        self.gda_eucl_score_in_ocsvm, self.gda_eucl_score_out_ocsvm = get_ocsvm_scores(self.gda_eucl_score_dev_ocsvm, self.gda_eucl_score_in_ocsvm, self.gda_eucl_score_out_ocsvm)
+        if args.model_ID != 14:
+            self.gda_maha_score_in_ocsvm, self.gda_maha_score_out_ocsvm = get_ocsvm_scores(self.gda_maha_score_train_ocsvm, self.gda_maha_score_in_ocsvm, self.gda_maha_score_out_ocsvm)
+            self.gda_eucl_score_in_ocsvm, self.gda_eucl_score_out_ocsvm = get_ocsvm_scores(self.gda_eucl_score_dev_ocsvm, self.gda_eucl_score_in_ocsvm, self.gda_eucl_score_out_ocsvm)
 
-    def apply_tresholds(self, tresholds):
+    def apply_tresholds(self, args, tresholds, pooled_in = None, pooled_out = None, centroids = None, delta = None):
 
-        ################## LOGITS ########################
-        self.logits_score_in = np.where(self.logits_score_in >= tresholds.logits_t, 1, 0)
-        self.logits_score_out = np.where(self.logits_score_out >= tresholds.logits_t, 1, 0)
+        if args.model_ID != 14:
+            ################## LOGITS ########################
+            self.logits_score_in = np.where(self.logits_score_in >= tresholds.logits_t, 1, 0)
+            self.logits_score_out = np.where(self.logits_score_out >= tresholds.logits_t, 1, 0)
 
-        ################## VARIANZ ########################
-        self.varianz_score_in = np.where(self.varianz_score_in >= tresholds.varianz_t, 1, 0)
-        self.varianz_score_out = np.where(self.varianz_score_out >= tresholds.varianz_t, 1, 0)
+            ################## VARIANZ ########################
+            self.varianz_score_in = np.where(self.varianz_score_in >= tresholds.varianz_t, 1, 0)
+            self.varianz_score_out = np.where(self.varianz_score_out >= tresholds.varianz_t, 1, 0)
 
-        ################## SOFTMAX ########################
-        self.softmax_score_in = np.where(self.softmax_score_in >= tresholds.softmax_t, 1, 0)
-        self.softmax_score_out = np.where(self.softmax_score_out >= tresholds.softmax_t, 1, 0)
-    
-        ################## SOFTMAX TEMP ###########################
-        self.softmax_score_temp_in = np.where(self.softmax_score_temp_in >= tresholds.sofmtax_temp_t, 1, 0)
-        self.softmax_score_temp_out = np.where(self.softmax_score_temp_out >= tresholds.sofmtax_temp_t, 1, 0)
+            ################## SOFTMAX ########################
+            self.softmax_score_in = np.where(self.softmax_score_in >= tresholds.softmax_t, 1, 0)
+            self.softmax_score_out = np.where(self.softmax_score_out >= tresholds.softmax_t, 1, 0)
+        
+            ################## SOFTMAX TEMP ###########################
+            self.softmax_score_temp_in = np.where(self.softmax_score_temp_in >= tresholds.sofmtax_temp_t, 1, 0)
+            self.softmax_score_temp_out = np.where(self.softmax_score_temp_out >= tresholds.sofmtax_temp_t, 1, 0)
 
-        ################### MAHA ############################
-        self.maha_score_in = np.where(self.maha_score_in <= tresholds.maha_t, 1, 0)
-        self.maha_score_out = np.where(self.maha_score_out <= tresholds.maha_t, 1, 0)
+            ################### MAHA ############################
+            self.maha_score_in = np.where(self.maha_score_in <= tresholds.maha_t, 1, 0)
+            self.maha_score_out = np.where(self.maha_score_out <= tresholds.maha_t, 1, 0)
 
-        ################## Entropy ###############
-        self.entropy_score_in = np.where(self.entropy_score_in <= tresholds.entropy_t, 1, 0)
-        self.entropy_score_out = np.where(self.entropy_score_out <= tresholds.entropy_t, 1, 0)
+            ################## Entropy ###############
+            self.entropy_score_in = np.where(self.entropy_score_in <= tresholds.entropy_t, 1, 0)
+            self.entropy_score_out = np.where(self.entropy_score_out <= tresholds.entropy_t, 1, 0)
 
-        ################## Cosine ###############
-        self.cosine_score_in = np.where(self.cosine_score_in >= tresholds.cosine_t, 1, 0)
-        self.cosine_score_out = np.where(self.cosine_score_out >= tresholds.cosine_t, 1, 0)
+            ################## Cosine ###############
+            self.cosine_score_in = np.where(self.cosine_score_in >= tresholds.cosine_t, 1, 0)
+            self.cosine_score_out = np.where(self.cosine_score_out >= tresholds.cosine_t, 1, 0)
 
-        ################## Energy ###############
-        self.energy_score_in = np.where(self.energy_score_in >= tresholds.energy_t, 1, 0)
-        self.energy_score_out = np.where(self.energy_score_out >= tresholds.energy_t, 1, 0)
+            ################## Energy ###############
+            self.energy_score_in = np.where(self.energy_score_in >= tresholds.energy_t, 1, 0)
+            self.energy_score_out = np.where(self.energy_score_out >= tresholds.energy_t, 1, 0)
 
-        ################### GDA ###############
-        self.gda_maha_score_in = np.where(self.gda_maha_score_in <= tresholds.gda_maha_t, 1, 0)
-        self.gda_maha_score_out = np.where(self.gda_maha_score_out <= tresholds.gda_maha_t, 1, 0)
-        self.gda_eucl_score_in = np.where(self.gda_eucl_score_in <= tresholds.gda_eucl_t, 1, 0)
-        self.gda_eucl_score_out = np.where(self.gda_eucl_score_out <= tresholds.gda_eucl_t, 1, 0)
+            if args.model_ID != 14:
+                ################### GDA ###############
+                self.gda_maha_score_in = np.where(self.gda_maha_score_in <= tresholds.gda_maha_t, 1, 0)
+                self.gda_maha_score_out = np.where(self.gda_maha_score_out <= tresholds.gda_maha_t, 1, 0)
+                self.gda_eucl_score_in = np.where(self.gda_eucl_score_in <= tresholds.gda_eucl_t, 1, 0)
+                self.gda_eucl_score_out = np.where(self.gda_eucl_score_out <= tresholds.gda_eucl_t, 1, 0)
+
+        else:
+            self.logits_score_in = tresholds.adb_treshold(self.logits_score_in, pooled_in, centroids, delta)
+            self.logits_score_out = tresholds.adb_treshold(self.logits_score_out, pooled_out, centroids, delta)
+
+            ################## VARIANZ ########################
+            self.varianz_score_in = tresholds.adb_treshold(self.varianz_score_in, pooled_in, centroids, delta)
+            self.varianz_score_out = tresholds.adb_treshold(self.varianz_score_out, pooled_out, centroids, delta)
+
+            ################## SOFTMAX ########################
+            self.softmax_score_in = tresholds.adb_treshold(self.softmax_score_in, pooled_in, centroids, delta)
+            self.softmax_score_out = tresholds.adb_treshold(self.softmax_score_out, pooled_out, centroids, delta)
+        
+            ################## SOFTMAX TEMP ###########################
+            self.softmax_score_temp_in = tresholds.adb_treshold(self.softmax_score_temp_in, pooled_in, centroids, delta)
+            self.softmax_score_temp_out = tresholds.adb_treshold(self.softmax_score_temp_out, pooled_out, centroids, delta)
+
+            ################### MAHA ############################
+            self.maha_score_in = tresholds.adb_treshold(self.maha_score_in, pooled_in, centroids, delta)
+            self.maha_score_out = tresholds.adb_treshold(self.maha_score_out, pooled_out, centroids, delta)
+
+            ################## Entropy ###############
+            self.entropy_score_in = tresholds.adb_treshold(self.entropy_score_in, pooled_in, centroids, delta)
+            self.entropy_score_out = tresholds.adb_treshold(self.entropy_score_out, pooled_out, centroids, delta)
+
+            ################## Cosine ###############
+            self.cosine_score_in = tresholds.adb_treshold(self.cosine_score_in, pooled_in, centroids, delta)
+            self.cosine_score_out = tresholds.adb_treshold(self.cosine_score_out, pooled_out, centroids, delta)
+
+            ################## Energy ###############
+            self.energy_score_in = tresholds.adb_treshold(self.energy_score_in, pooled_in, centroids, delta)
+            self.energy_score_out = tresholds.adb_treshold(self.energy_score_out, pooled_out, centroids, delta)
+
+            ################### GDA ###############
+            self.gda_maha_score_in = tresholds.adb_treshold(self.gda_maha_score_in, pooled_in, centroids, delta)
+            self.gda_maha_score_out = tresholds.adb_treshold(self.gda_maha_score_out, pooled_out, centroids, delta)
+            self.gda_eucl_score_in = tresholds.adb_treshold(self.gda_eucl_score_in, pooled_in, centroids, delta)
+            self.gda_eucl_score_out = tresholds.adb_treshold(self.gda_eucl_score_out, pooled_out, centroids, delta)
 
 
 
@@ -1058,7 +1113,7 @@ class Tresholds():
             return threshold
 
 
-    def calculate_tresholds(self, scores, method):
+    def calculate_tresholds(self, args, scores, method):
 
         #Todo: hier anhand von dev oder Train???
 
@@ -1085,11 +1140,17 @@ class Tresholds():
         ################## Energy ###############
         self.energy_t = self.treshold_picker(method, scores.energy_score_dev, scores.energy_score_in, scores.energy_score_out, np.min(scores.energy_score_out), max(scores.energy_score_in), 500, min=False)
         
-        ################### GDA ###############
-        self.gda_eucl_t = self.treshold_picker(method, scores.gda_eucl_score_dev, scores.gda_eucl_score_in, scores.gda_eucl_score_out, np.min(scores.gda_eucl_score_in), max(scores.gda_eucl_score_out), 500, min=True)
-        self.gda_maha_t = self.treshold_picker(method, scores.gda_maha_score_dev, scores.gda_maha_score_in, scores.gda_maha_score_out, np.min(scores.gda_maha_score_in), max(scores.gda_maha_score_out), 500, min=True)
+        if args.model_ID != 14:
+            ################### GDA ###############
+            self.gda_eucl_t = self.treshold_picker(method, scores.gda_eucl_score_dev, scores.gda_eucl_score_in, scores.gda_eucl_score_out, np.min(scores.gda_eucl_score_in), max(scores.gda_eucl_score_out), 500, min=True)
+            self.gda_maha_t = self.treshold_picker(method, scores.gda_maha_score_dev, scores.gda_maha_score_in, scores.gda_maha_score_out, np.min(scores.gda_maha_score_in), max(scores.gda_maha_score_out), 500, min=True)
 
-
+    def adb_treshold(self, preds, pooled, centroids, delta):
+        preds = torch.tensor(preds, dtype=torch.long).to('cuda:0')
+        preds_ones = torch.ones_like(preds)
+        euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)           
+        preds_ones[euc_dis >= delta[preds]] = 0
+        return preds_ones.detach().cpu().numpy()
 
 #- Evaluate
 

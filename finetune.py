@@ -83,6 +83,10 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
     delta_points = []
     delta_points.append(delta)
 
+    best_f1 = 0
+    best_model = model
+    best_epoch = 0
+
     #evtl parser.add_argument("--lr_boundary", type=float, default=0.05, help="The learning rate of the decision boundary.")
     optimizer = torch.optim.Adam(criterion_boundary.parameters(), lr = 0.05)
 
@@ -120,7 +124,6 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
 
     centroids = centroids_cal(args, train_dataloader)
     num_steps = 0
-    best_eval_score = 0
 
     for epoch in range(int(args.num_train_epochs)):
         model.train()
@@ -152,24 +155,29 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
         #plot_curve(delta_points)
 
         loss = tr_loss / nb_tr_steps
-        print('train_loss',loss)
         
-        eval_score = evaluate(args, model, dev_dataloader, tag="dev")
-        f1_score = eval_score['f1']
-        wandb.log(eval_score, step=num_steps) if args.wandb == "log" else print("results:" + eval_score)
-        print('eval_score',f1_score)
+
+        results_dev = evaluate(args, model, dev_dataloader, tag="dev")
+        results_train = evaluate(args, model, train_dataloader, tag="train")
+        #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
+        wandb.log({**results_dev, **results_train}, step=num_steps) if args.wandb == "log" else None
         
-        if f1_score >= best_eval_score:
-            best_eval_score = f1_score
-            best_delta = delta
+        #bestes Model zurückgeben
+        f1 = results_dev['f1_dev']
+        if f1 >= best_f1:
+            best_model = model
             best_centroids = centroids
+            best_delta = delta
+            f1 = best_f1
+            best_epoch = epoch
     
 
     #EVTL IST DIE save_results METHODE INTERESSANT (PLOTS!) -> ist aber nicht hier -> im Orginalcode
     #ToDo: bestes Model speichern
         
+    print("Best model from epoch: " + str(best_epoch))
 
-    return model, best_centroids, best_delta
+    return best_model, best_centroids, best_delta
 
 def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, tokenizer ):
 

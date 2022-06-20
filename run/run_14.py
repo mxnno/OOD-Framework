@@ -56,8 +56,8 @@ def main():
         # learn intent representation mit softmax loss
         print("Finetune...")
         ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator)
-        if args.save_path != "debug":
-            save_model(ft_model, args)
+        #if args.save_path != "debug":
+        #    save_model(ft_model, args)
 
         #Finetune ADB + abspeichern
         print("Finetune ADB...")
@@ -95,11 +95,11 @@ def main():
         temp_model = ModelWithTemperature(model)
 
         # Tune the model temperature, and save the results
-        best_temp = temp_model.set_temperature(dev_id_dataset)
+        best_temp = temp_model.set_temperature(traindev_dataset)
 
         #OOD-Detection
         print("Start OOD-Detection...")
-        detect_ood(args, model, dev_id_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
+        detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp, centroids=centroids, delta=delta)
 
 if __name__ == "__main__":
     main()

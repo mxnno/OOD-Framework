@@ -9,6 +9,8 @@ from utils.args import get_args
 from data import preprocess_data
 from accelerate import Accelerator
 from utils.utils import set_seed, get_num_labels, save_model, save_tensor, get_save_path
+from model_temp import ModelWithTemperature
+
 
 warnings.filterwarnings("ignore")
 
@@ -48,25 +50,25 @@ def main():
 
         #Preprocess Data
         print("Preprocess Data...")
-        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
 
         #Finetune Std + abspeichern
         # learn intent representation mit softmax loss
         print("Finetune...")
-        ft_model =  finetune_std(args, model, train_dataset, dev_dataset, accelerator)
+        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator)
         if args.save_path != "debug":
             save_model(ft_model, args)
 
         #Finetune ADB + abspeichern
         print("Finetune ADB...")
-        ft_model, centroids, delta = finetune_ADB(args, ft_model, train_dataset, dev_dataset)
+        ft_model, centroids, delta = finetune_ADB(args, ft_model, train_dataset, dev_id_dataset)
         if args.save_path != "debug":
             args.save_path = get_save_path(args)
             save_model(ft_model, args)
-            save_tensor(centroids, args.save_path + "/centroids.pt")
-            save_tensor(delta, args.save_path + "/delta.pt")
+            save_tensor(args, centroids, "/centroids.pt")
+            save_tensor(args, delta, "/delta.pt")
         else:
-            detect_ood(args, ft_model, dev_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
+            detect_ood(args, ft_model, dev_id_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
 
 
     elif args.task == "ood_detection":
@@ -84,12 +86,20 @@ def main():
         #delta holen
         delta = torch.load(args.model_name_or_path + "/delta.pt")
 
+
         #Preprocess Data
-        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+
+        #Temp für Softmax ermitteln
+        # Now we're going to wrap the model with a decorator that adds temperature scaling
+        temp_model = ModelWithTemperature(model)
+
+        # Tune the model temperature, and save the results
+        best_temp = temp_model.set_temperature(dev_id_dataset)
 
         #OOD-Detection
         print("Start OOD-Detection...")
-        detect_ood(args, model, dev_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
+        detect_ood(args, model, dev_id_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
 
 if __name__ == "__main__":
     main()

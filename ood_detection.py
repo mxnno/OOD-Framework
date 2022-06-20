@@ -14,7 +14,7 @@ from sklearn import svm
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from functools import reduce
-from evaluation import evaluate_metriken_ohne_Treshold, evaluate_mit_Treshold, evaluate_scores_ohne_Treshold, evaluate_NLI
+from evaluation import evaluate_metriken_ohne_Treshold, evaluate_mit_Treshold, evaluate_scores_ohne_Treshold, evaluate_NLI, evaluate_ADB
 from scipy.stats import chi2
 from model import  set_model
 
@@ -135,6 +135,9 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     model.all_pool = []
 
 
+    if args.model_ID == 14:
+        detect_ood_adb(args, centroids, delta, all_pool_in, all_pool_out)
+        return
 
 #2. Treshold + Scores
     
@@ -186,8 +189,6 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     # - LOF (logits+pool) -> geht nur für alleine
     print("Scores ohne Treshold...")
     #für ADB 
-    if args.model_ID == 14:
-        detect_ood_adb(args, scores, all_pool_in, all_pool_out)
     
     scores_ohne_Treshold = deepcopy(scores)
     scores_ohne_Treshold.apply_ocsvm('predict')
@@ -195,12 +196,9 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
 
 
    
-def detect_ood_adb(scores, centroids, delta, pool_in, pool_out):
+def detect_ood_adb(args, centroids, delta, pool_in, pool_out):
 
-    scores.adb_score_in = get_adb_score(pool_in, centroids, delta)
-    scores.adb_score_out = get_adb_score(pool_out, centroids, delta)
-
-
+    
     def get_adb_score(pooled, centroids, delta):
 
         logits_adb = euclidean_metric(pooled, centroids)
@@ -213,6 +211,11 @@ def detect_ood_adb(scores, centroids, delta, pool_in, pool_out):
         euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)           
         preds_ones[euc_dis >= delta[preds]] = 0
         return preds_ones
+
+    adb_pred_in = get_adb_score(pool_in, centroids, delta)
+    adb_pred_out = get_adb_score(pool_out, centroids, delta)
+
+    evaluate_ADB(args, adb_pred_in, adb_pred_out)
 
 
 

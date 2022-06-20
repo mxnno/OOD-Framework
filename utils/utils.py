@@ -90,7 +90,8 @@ def save_model(model, args):
     print("Model saved at: " + path)
 
 def get_save_path(args):
-    return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}_{}'.format(args.model_ID, args.loss, args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed)
+    #return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}_{}'.format(args.model_ID, args.loss, args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed)
+    return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed)
 
 def get_result_path(args):
     if args.save_path != "drive":
@@ -98,9 +99,10 @@ def get_result_path(args):
     else:
         return '/content/drive/MyDrive/Masterarbeit/Results/{}/{}_{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot, args.seed)
 
-def save_tensor(tensor, path, tesnor_name="Tensor"):
+def save_tensor(args, tensor, tensor_name):
+    path = get_save_path(args) + tensor_name
     torch.save(tensor, path)
-    print(tesnor_name + " saved at: " + path)
+    print(tensor_name + " saved at: " + path)
 
 def save_logits(logits, name):
     logit_dict = {}

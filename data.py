@@ -88,7 +88,7 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     #for batch in eval_dataloader:
         #print({k: v.shape for k, v in batch.items()})
 
-    return train_dataloader, trainval_dataloader, val_id_dataloader, val_ood_dataloader, test_dataloader, test_id_dataloader, test_ood_dataloader, val_test_ood_dataloader, val_test_id_dataloader 
+    return train_dataloader, trainval_dataloader, val_id_dataloader, val_ood_dataloader, test_dataloader, test_id_dataloader, test_ood_dataloader, val_test_id_dataloader, val_test_ood_dataloader
 
 
 def load_clinc(args):
@@ -98,7 +98,7 @@ def load_clinc(args):
     ood_data = args.ood_data
     num_shards = int(100/(args.few_shot*2))
 
-    ood_original = False
+    ood_original = True
     
     #ic = label_ids[1] #Das muss noch überarbeitet werdne ???
 
@@ -270,15 +270,13 @@ def load_clinc(args):
     test_id_help = test_id_help.sort('intent')
     test_id_help = test_id_help.shard(num_shards=10, index=0)
 
-    test_ood_help = test_ood_help
+    test_ood_help = test_ood_dataset
     test_ood_help = test_ood_help.shuffle(seed=args.seed)
     test_ood_help = test_ood_help.sort('intent')
     test_ood_help = test_ood_help.shard(num_shards=20, index=0)
     
-
-
-    train_dataset.to_csv('ichraste.csv')  
-
+    test_id_help.to_csv("test_id")
+    test_ood_help.to_csv("test_ood")
     #dev_dataset = train + dev_id
     return DatasetDict({'train': train_dataset, 'trainval':  trainval_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset, 'val_test_id': test_id_help, 'val_test_ood': test_ood_help})
 

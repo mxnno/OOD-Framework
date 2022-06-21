@@ -286,6 +286,8 @@ def evaluate(args, model, eval_id, eval_ood, tag=""):
 
     logits_score_in = np.where(logits_score_in >= t, 1, 0)
     logits_score_out = np.where(logits_score_out >= t, 1, 0)
+    print(logits_score_in)
+    print(logits_score_out)
 
     labels_in = np.ones_like(logits_score_in).astype(np.int64)
     labels_out = np.zeros_like(logits_score_out).astype(np.int64)

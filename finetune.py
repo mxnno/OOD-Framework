@@ -23,7 +23,7 @@ def finetune_std(args, model, train_dataloader, dev_id, dev_ood, accelerator, nu
     if num_epochs_x:
         num_epochs = num_epochs_x
 
-    best_acc = 0
+    best_acc = 0.0
     best_model = model
     best_epoch = 0
     counter_early = 0
@@ -68,19 +68,22 @@ def finetune_std(args, model, train_dataloader, dev_id, dev_ood, accelerator, nu
         wandb.log(results_dev, step=num_steps) if args.wandb == "log" else None
         #bestes Model zurückgeben
         acc = results_dev['acc']
-        if acc >= best_acc:
+        print("Acc_in + Acc_out: " + str(acc))
+        if acc > best_acc:
+            print("acc:" + str(acc) + "   best_acc: " + str(best_acc))
             counter_early = 0
             best_model = model
-            acc = best_acc
+            best_acc = acc
             best_epoch = epoch
         else:
+            print("counter_early: " + str(counter_early))
             counter_early +=1
             if counter_early == 4:
                 print("Best model from epoch: " + str(best_epoch))
                 print("Current epoch: " + str(epoch))
-                return best_model
+                return best_model, best_epoch
     print("Best model from epoch: " + str(best_epoch))
-    return best_model
+    return best_model, best_epoch
 
 
 def finetune_ADB(args, model, train_dataloader, eval_id, eval_ood):

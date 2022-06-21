@@ -50,14 +50,14 @@ def main():
 
         #Pretrain SCL
         print("Pretrain SCL (margin/similarity) ...")
-        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator)
+        ft_model, best_epoch =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator)
 
         #Finetune auf CE oder LMCL + abspeichern
         print("Finetune CE/LMCL...")
         #model.config.loss = ''
         #ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator)
         if args.save_path != "debug":
-            save_model(ft_model, args)
+            save_model(ft_model, args, best_epoch)
 
 
     elif args.task == "ood_detection":

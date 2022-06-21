@@ -80,18 +80,18 @@ def get_labels(args):
     else:
         return labels_name, labels_id
 
-def save_model(model, args):
+def save_model(model, args, best_epoch):
 
     if args.save_path == "drive":
-        path = get_save_path(args)
+        path = get_save_path(args, best_epoch)
     else:
         path = args.save_path
     model.save_pretrained(path)
     print("Model saved at: " + path)
 
-def get_save_path(args):
+def get_save_path(args, best_epoch):
     #return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}_{}'.format(args.model_ID, args.loss, args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed)
-    return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed)
+    return '/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/{}/{}_{}_{}_{}_{}'.format(args.model_ID, args.id_data, args.ood_data, args.few_shot, best_epoch, args.seed)
 
 def get_result_path(args):
     if args.save_path != "drive":

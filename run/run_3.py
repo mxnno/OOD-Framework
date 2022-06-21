@@ -51,14 +51,28 @@ def main():
         print("Preprocess Data...")
         train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
 
+
+        #### Ablauf:
+        # 1. similarity-contrastive-augm mit ce -> 20
+        # 2. normales loss mit ce -> 1
+        # 3. normales loss mit lmcl -> 19 
+
+        # Die Anzahl der Epochen noch testen!
+
         #Pretrain SCL
         print("Pretrain SCL ...")
         model.config.loss = 'similarity-contrastive-augm'
+        model.config.loss_std = "lmcl_1"
         ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator, num_epochs_x = 20)
 
+        
         #Finetune auf CE oder LMCL + abspeichern
         print("Finetune CE/LMCL...")
+        #eine epoche mit lmcl, dann ce
         model.config.loss = ''
+        model.config.loss_std = "lmcl_1"
+        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator, num_epochs_x = 1)
+        model.config.loss_std = "lmcl_2"
         ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator, num_epochs_x = 5)
         if args.save_path != "debug":
             save_model(ft_model, args)

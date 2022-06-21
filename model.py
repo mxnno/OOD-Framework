@@ -156,13 +156,20 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
                     loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
                 else:
                     #LMCL Loss
-                    # --------------------------- convert label to one-hot ---------------------------
-                    one_hot = torch.zeros_like(logits)
-                    one_hot.scatter_(1, labels.view(-1, 1), 1.0)
-                    margin=0.35
-                    logits = one_hot * (logits - margin) + (1 - one_hot) * logits
-                    logits = torch.softmax(logits, dim=1)
-                    loss = torch.sum(torch.mul(-torch.log(logits), one_hot))
+                    if self.config.loss_std == "lmcl_1":
+                        probs = torch.softmax(logits, dim=1)
+                    elif self.config.loss_std == "lmcl_2":
+                        # --------------------------- convert label to one-hot ---------------------------
+                        one_hot = torch.zeros_like(logits)
+                        one_hot.scatter_(1, labels.view(-1, 1), 1.0)
+                        margin=0.35
+                        logits = one_hot * (logits - margin) + (1 - one_hot) * logits
+                        probs = torch.softmax(logits, dim=1)
+                    else:
+                        raise NotImplementedError
+                    
+                   
+                    loss = torch.sum(torch.mul(-torch.log(probs), one_hot))
 
 
             if self.config.loss == 'margin-contrastive':

@@ -28,6 +28,8 @@ def finetune_std(args, model, train_dataloader, dev_id, dev_ood, accelerator, nu
     best_epoch = 0
     counter_early = 0
 
+    earlystop = 9 if args.few_shot == 5 else 4
+
     if accelerator is not None:
         print("finetune_std_TPU")
         return finetune_std_TPU(args, model, train_dataloader, dev_id, accelerator)
@@ -78,7 +80,7 @@ def finetune_std(args, model, train_dataloader, dev_id, dev_ood, accelerator, nu
         else:
             print("counter_early: " + str(counter_early))
             counter_early +=1
-            if counter_early == 4:
+            if counter_early == earlystop:
                 print("Best model from epoch: " + str(best_epoch))
                 print("Current epoch: " + str(epoch))
                 return best_model, best_epoch

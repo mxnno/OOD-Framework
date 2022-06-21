@@ -60,25 +60,27 @@ def main():
         trainer.save_model(save_path)
 
 
-        # ##################### BCAD ###############################
-        # #Load Model for BCAD (args.model_name_or_path wurde geändert)
-        # print("Load model for BCAD...")
-        # model, config, tokenizer = set_model(args)
-        
-        # #Preprocess Data
-        # print("Preprocess Data for IMLM...")
-        # args.dataset = "clinc150_AUG"
-        # train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
-        
-        # #Finetune BCAD + abspeichern
-        # print("Finetune BCAD...")
-        # ft_model = finetune_std(args, model, train_dataset, dev_dataset, accelerator)
-        # args.save_path = get_save_path(args).replace("/1/", "/1/IMLM_BCAD/")
+        ##### WICHTIG: Verhältniss Epochen BCAD=2 zu IMLM=10 
 
-        # #save finetuned model
-        # #Model speichern
-        # if args.save_path != "debug":
-        #     save_model(ft_model, args)
+        ##################### BCAD ###############################
+        #Load Model for BCAD (args.model_name_or_path wurde geändert)
+        print("Load model for BCAD...")
+        model, config, tokenizer = set_model(args)
+        
+        #Preprocess Data
+        print("Preprocess Data for IMLM...")
+        args.dataset = "clinc150_AUG"
+        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        
+        #Finetune BCAD + abspeichern
+        print("Finetune BCAD...")
+        ft_model = finetune_std(args, model, train_dataset, dev_dataset, accelerator)
+        args.save_path = get_save_path(args).replace("/1/", "/1/IMLM_BCAD/")
+
+        #save finetuned model
+        #Model speichern
+        if args.save_path != "debug":
+            save_model(ft_model, args)
 
 
 

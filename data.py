@@ -78,11 +78,17 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     test_id_dataloader = DataLoader(
         tokenized_datasets["test_id"], batch_size=args.batch_size, collate_fn=data_collator
     )
+    val_test_ood_dataloader = DataLoader(
+        tokenized_datasets["val_test_ood"], batch_size=args.batch_size, collate_fn=data_collator
+    )
+    val_test_id_dataloader = DataLoader(
+        tokenized_datasets["val_test_id"], batch_size=args.batch_size, collate_fn=data_collator
+    )
 
     #for batch in eval_dataloader:
         #print({k: v.shape for k, v in batch.items()})
 
-    return train_dataloader, trainval_dataloader, val_id_dataloader, val_ood_dataloader, test_dataloader, test_id_dataloader, test_ood_dataloader
+    return train_dataloader, trainval_dataloader, val_id_dataloader, val_ood_dataloader, test_dataloader, test_id_dataloader, test_ood_dataloader, val_test_ood_dataloader, val_test_id_dataloader 
 
 
 def load_clinc(args):
@@ -254,19 +260,27 @@ def load_clinc(args):
     test_id_dataset = test_id_dataset.map(set_label_to_ID)
     test_id_dataset = test_id_dataset.cast_column("intent", classlabel)
 
-    #Test ganz
     test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
 
+
+    #Testdaten für Evaluation 
+    # pro Klasse 3 ID Daten = 45 ID und 50 OOD Daten 
+    test_id_help = test_id_dataset
+    test_id_help = test_id_help.shuffle(seed=args.seed)
+    test_id_help = test_id_help.sort('intent')
+    test_id_help = test_id_help.shard(num_shards=10, index=0)
+
+    test_ood_help = test_ood_help
+    test_ood_help = test_ood_help.shuffle(seed=args.seed)
+    test_ood_help = test_ood_help.sort('intent')
+    test_ood_help = test_ood_help.shard(num_shards=20, index=0)
     
 
-
-
-    #???HR PROBLEM: keien OOD Daten -> OOD Test trotzdem auf 0 -> man kann keine "normale" eval machen, sonder muss zwingend ood und id getrennt betrachten bzw über Thresholds arbeiten, da es die klasse ood nicht gibt
 
     train_dataset.to_csv('ichraste.csv')  
 
     #dev_dataset = train + dev_id
-    return DatasetDict({'train': train_dataset, 'trainval':  trainval_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset})
+    return DatasetDict({'train': train_dataset, 'trainval':  trainval_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset, 'val_test_id': test_id_help, 'val_test_ood': test_ood_help})
 
 
 def load_clinc_with_ID_Augmentation(args):

@@ -50,18 +50,18 @@ def main():
 
         #Preprocess Data
         print("Preprocess Data...")
-        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
 
         #Finetune Std + abspeichern
         # learn intent representation mit softmax loss
         print("Finetune...")
-        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator)
+        ft_model =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator)
         #if args.save_path != "debug":
         #    save_model(ft_model, args)
 
         #Finetune ADB + abspeichern
         print("Finetune ADB...")
-        ft_model, centroids, delta = finetune_ADB(args, ft_model, train_dataset, dev_id_dataset)
+        ft_model, centroids, delta = finetune_ADB(args, ft_model, eval_id, eval_ood, dev_id_dataset)
         if args.save_path != "debug":
             args.save_path = get_save_path(args)
             save_model(ft_model, args)
@@ -88,7 +88,7 @@ def main():
 
 
         #Preprocess Data
-        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
 
         #Temp für Softmax ermitteln
         # Now we're going to wrap the model with a decorator that adds temperature scaling

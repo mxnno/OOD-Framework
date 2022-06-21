@@ -17,19 +17,20 @@ from finetune_TPU import finetune_std_TPU
 warnings.filterwarnings("ignore")
 
 
-def finetune_std(args, model, train_dataloader, dev_dataloader, accelerator, num_epochs_x=None):
+def finetune_std(args, model, train_dataloader, dev_id, dev_ood, accelerator, num_epochs_x=None):
 
     num_epochs = int(args.num_train_epochs)
     if num_epochs_x:
         num_epochs = num_epochs_x
 
-    best_f1 = 0
+    best_acc = 0
     best_model = model
     best_epoch = 0
+    counter_early = 0
 
     if accelerator is not None:
         print("finetune_std_TPU")
-        return finetune_std_TPU(args, model, train_dataloader, dev_dataloader, accelerator)
+        return finetune_std_TPU(args, model, train_dataloader, dev_id, accelerator)
 
     total_steps = int(len(train_dataloader) * num_epochs)
     warmup_steps = int(total_steps * args.warmup_ratio)
@@ -60,23 +61,29 @@ def finetune_std(args, model, train_dataloader, dev_dataloader, accelerator, num
             if cos_loss:
                 wandb.log({'cos_loss': cos_loss.item()}, step=num_steps) if args.wandb == "log" else print("Cos-Loss: " + str(loss.item()))
 
-        results_dev = evaluate(args, model, dev_dataloader, tag="dev")
+        results_dev = evaluate(args, model, dev_id, dev_ood, tag="dev")
         #results_train = evaluate(args, model, train_dataloader, tag="train")
         #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
         #wandb.log({**results_dev, **results_train}, step=num_steps) if args.wandb == "log" else None
         wandb.log(results_dev, step=num_steps) if args.wandb == "log" else None
         #bestes Model zurückgeben
-        f1 = results_dev['f1_dev']
-        if f1 >= best_f1:
+        acc = results_dev['acc']
+        if acc >= best_acc:
+            counter_early = 0
             best_model = model
-            f1 = best_f1
+            acc = best_acc
             best_epoch = epoch
-
+        else:
+            counter_early +=1
+            if counter_early == 4:
+                print("Best model from epoch: " + str(best_epoch))
+                print("Current epoch: " + str(epoch))
+                return best_model
     print("Best model from epoch: " + str(best_epoch))
     return best_model
 
 
-def finetune_ADB(args, model, train_dataloader, dev_dataloader):
+def finetune_ADB(args, model, train_dataloader, eval_id, eval_ood):
 
     criterion_boundary = BoundaryLoss(num_labels = model.num_labels, feat_dim = args.feat_dim)
     delta = F.softplus(criterion_boundary.delta)
@@ -157,10 +164,8 @@ def finetune_ADB(args, model, train_dataloader, dev_dataloader):
         loss = tr_loss / nb_tr_steps
         
 
-        results_dev = evaluate(args, model, dev_dataloader, tag="dev")
-        results_train = evaluate(args, model, train_dataloader, tag="train")
-        #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
-        #wandb.log({**results_dev, **results_train}, step=num_steps) if args.wandb == "log" else None
+        results_dev = evaluate(args, model, eval_id, eval_ood, tag="dev")
+
         wandb.log(results_dev, step=num_steps) if args.wandb == "log" else None
         
         #bestes Model zurückgeben

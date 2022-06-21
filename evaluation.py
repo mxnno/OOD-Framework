@@ -1,3 +1,4 @@
+from gc import get_threshold
 import numpy as np
 from sklearn.metrics import roc_auc_score, accuracy_score, recall_score, f1_score
 from datasets import load_metric
@@ -7,6 +8,8 @@ from utils.utils_DNNC import convert_examples_to_features, get_eval_dataloader
 from utils.utils import get_result_path
 import csv
 import os
+import torch
+from functools import reduce
 
 
 def evaluate_metriken_ohne_Treshold(args, scores):
@@ -41,14 +44,15 @@ def evaluate_metriken_ohne_Treshold(args, scores):
 
             writer.writerow([score_name.replace("_score", ""),] + data)
 
-            # mit OCSVM 
-            pred_in = scores.__dict__[score_name + "_in_ocsvm"]
-            pred_out = scores.__dict__[score_name + "_out_ocsvm"]
-            tnr_at_tpr95, auroc, dtacc, au_in, au_out = get_metriken_ohne_Treshold(pred_in, pred_out)
+            if score_name != 'varianz_score':
+                # mit OCSVM 
+                pred_in = scores.__dict__[score_name + "_in_ocsvm"]
+                pred_out = scores.__dict__[score_name + "_out_ocsvm"]
+                tnr_at_tpr95, auroc, dtacc, au_in, au_out = get_metriken_ohne_Treshold(pred_in, pred_out)
 
-            data = [tnr_at_tpr95, auroc, dtacc, au_in, au_out]
+                data = [tnr_at_tpr95, auroc, dtacc, au_in, au_out]
 
-            writer.writerow([score_name.replace("_score", "_ocsvm"),] + data)
+                writer.writerow([score_name.replace("_score", "_ocsvm"),] + data)
 
     print("Result file saved at: " + csvPath)
 
@@ -107,7 +111,7 @@ def evaluate_scores_ohne_Treshold(args, scores):
     if args.model_ID == 14:
         score_list = ['logits_score', 'softmax_score', 'softmax_score_temp','maha_score']
     else:
-        score_list = ['lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score', 'varianz_score']
+        score_list = ['lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score']
 
     #score_list = ['lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score', 'varianz_score']
 
@@ -239,57 +243,111 @@ def evaluate_ADB(args, y_pred_in, y_pred_out):
     print("Result file saved at: " + csvPath)
 ##############################################################################################################################################################
 
+def evaluate(args, model, eval_id, eval_ood, tag=""):
 
-def evaluate(args, model, eval_dataset, tag=""):
-    
-    #F1
-    metric = load_metric("accuracy")
-
-    def compute_metrics(preds, labels):
-        preds = np.argmax(preds, axis=1)
-        result = metric.compute(predictions=preds, references=labels, )
-        if len(result) > 1:
-            result["score"] = np.mean(list(result.values())).item()
-        return result
-
-
-    label_list, logit_list = [], []
-    for batch in tqdm(eval_dataset):
+    #Test-ID:
+    for batch in tqdm(eval_id):
         model.eval()
+        batch = {key: value.to(args.device) for key, value in batch.items()}
+        with torch.no_grad():
+            model.compute_ood_outputs(**batch)
         
-        if args.model_ID == 8:
-            for input_ids, input_mask, segment_ids, label_ids in tqdm(eval_dataset, desc="Evaluating"):
-                input_ids = input_ids.to(args.device)
-                input_mask = input_mask.to(args.device)
-                segment_ids = segment_ids.to(args.device)
-
-            outputs = model(input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids)
-            labels = label_ids.numpy()
-        else:
-            labels = batch["labels"].detach().cpu().numpy()
-            batch = {key: value.to(args.device) for key, value in batch.items()}
-            batch["labels"] = None
-            outputs = model(**batch)
-
-        logits_2 = outputs[0]
-        logits = logits_2.detach().cpu().numpy()
-        label_list.append(labels)
-        logit_list.append(logits)
+    all_logits_in = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
 
 
-    preds = np.concatenate(logit_list, axis=0)
+    #zum Abspeichern der logits und pools
+    #save_logits(all_logits_in, '1305_traindev_id_logits.pt')
+    #save_logits(all_pool_in, '/content/drive/MyDrive/Masterarbeit/Results/1305_dev_id_pool.pt')
+    model.all_logits = []
+    model.all_pool = []
+    
+    #Test-OOD:
+    for batch in tqdm(eval_ood):
+        model.eval()
+        batch = {key: value.to(args.device) for key, value in batch.items()}
+        with torch.no_grad():
+            model.compute_ood_outputs(**batch)
+           
+    all_logits_out = reduce(lambda x,y: torch.cat((x,y)), model.all_logits[::])
+    #zum Abspeichern der logits und pools
+    #save_logits(all_logits_out, '1305_traindev_ood_logits.pt')
+    #save_logits(all_pool_out, '/content/drive/MyDrive/Masterarbeit/Results/1305_dev_ood_pool.pt')
+    model.all_logits = []
+    model.all_pool = []
 
-    labels = np.concatenate(label_list, axis=0)
-    results = compute_metrics(preds, labels)
 
 
-    preds1 = np.argmax(preds, axis=1)
-    acc, f1 = get_acc_and_f1(preds1, labels, model.num_labels)
-    print("acc_" + tag + ": " + str(acc))
-    print("f1_" + tag + ": " + str(f1))
+    logits_score_in = all_logits_in.max(dim = 1)[0]
+    logits_score_in = logits_score_in.cpu().detach().numpy()
+    logits_score_out = all_logits_out.max(dim = 1)[0]
+    logits_score_out = logits_score_out.cpu().detach().numpy()
 
-    results = {"accuracy_" + tag: acc, "f1_" + tag: f1}
+    t = get_treshold_eval(logits_score_in, logits_score_out, np.min(logits_score_out), max(logits_score_in), 500, min=False)
+
+    logits_score_in = np.where(logits_score_in >= t, 1, 0)
+    logits_score_out = np.where(logits_score_out >= t, 1, 0)
+
+    labels_in = np.ones_like(logits_score_in).astype(np.int64)
+    labels_out = np.zeros_like(logits_score_out).astype(np.int64)
+
+    in_acc = accuracy_score(labels_in, logits_score_in)
+    out_acc = accuracy_score(labels_out, logits_score_out)
+
+    results = {"acc": in_acc + out_acc}
     return results
+
+
+
+# def evaluate(args, model, eval_dataset, tag=""):
+    
+#     #F1
+#     metric = load_metric("accuracy")
+
+#     def compute_metrics(preds, labels):
+#         preds = np.argmax(preds, axis=1)
+#         result = metric.compute(predictions=preds, references=labels, )
+#         if len(result) > 1:
+#             result["score"] = np.mean(list(result.values())).item()
+#         return result
+
+
+#     label_list, logit_list = [], []
+#     for batch in tqdm(eval_dataset):
+#         model.eval()
+        
+#         if args.model_ID == 8:
+#             for input_ids, input_mask, segment_ids, label_ids in tqdm(eval_dataset, desc="Evaluating"):
+#                 input_ids = input_ids.to(args.device)
+#                 input_mask = input_mask.to(args.device)
+#                 segment_ids = segment_ids.to(args.device)
+
+#             outputs = model(input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids)
+#             labels = label_ids.numpy()
+#         else:
+#             labels = batch["labels"].detach().cpu().numpy()
+#             batch = {key: value.to(args.device) for key, value in batch.items()}
+#             batch["labels"] = None
+#             outputs = model(**batch)
+
+#         logits_2 = outputs[0]
+#         logits = logits_2.detach().cpu().numpy()
+#         label_list.append(labels)
+#         logit_list.append(logits)
+
+
+#     preds = np.concatenate(logit_list, axis=0)
+
+#     labels = np.concatenate(label_list, axis=0)
+#     results = compute_metrics(preds, labels)
+
+
+#     preds1 = np.argmax(preds, axis=1)
+#     acc, f1 = get_acc_and_f1(preds1, labels, model.num_labels)
+#     print("acc_" + tag + ": " + str(acc))
+#     print("f1_" + tag + ": " + str(f1))
+
+#     results = {"accuracy_" + tag: acc, "f1_" + tag: f1}
+#     return results
 
 def evaluate_DNNC(args, model, tokenizer, eval_dataset):
 
@@ -466,6 +524,35 @@ def get_metriken_ohne_Treshold (scores_in, scores_out):
 
 
     return tnr_at_tpr95, auroc, dtacc, auin, auout
+
+
+
+def get_treshold_eval(pred_in, pred_out, f, t, step, min):
+    threshold = 0
+    best_acc = 0
+    labels_in = np.ones_like(pred_in).astype(np.int64)
+    labels_out = np.zeros_like(pred_out).astype(np.int64)
+
+    steps = np.linspace(f,t,step)
+    for i in steps:
+
+        t_pred = np.concatenate((pred_in, pred_out), axis=-1)
+        if min is True:
+            t_pred = np.where(t_pred <= i, 1, 0)
+            t_pred_in =  np.where(pred_in <= i, 1, 0)
+            t_pred_out = np.where(pred_out <= i, 1, 0) 
+        else:
+            t_pred_in =  np.where(pred_in > i, 1, 0)
+            t_pred_out = np.where(pred_out > i, 1, 0)
+        acc = accuracy_score(labels_in, t_pred_in)
+        rec = recall_score(labels_out, t_pred_out, pos_label=0)
+
+        if acc+rec > best_acc:
+            best_acc = acc+rec
+            threshold = i
+            
+
+    return threshold
 
 
 

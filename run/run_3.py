@@ -49,7 +49,7 @@ def main():
 
         #Preprocess Data
         print("Preprocess Data...")
-        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
 
         #Pretrain SCL
         print("Pretrain SCL ...")
@@ -76,7 +76,7 @@ def main():
 
         #Preprocess Data
         #dev_dataset = train + dev_id
-        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
         
 
         #Temp für Softmax ermitteln

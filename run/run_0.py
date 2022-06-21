@@ -49,7 +49,7 @@ def main():
 
         #Preprocess Data
         print("Preprocess Data...")
-        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
 
         
 
@@ -77,7 +77,7 @@ def main():
         model, config, tokenizer = set_model(args, bert=True)
         
         #Preprocess Data
-        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
 
         #Temp für Softmax ermitteln
         # Now we're going to wrap the model with a decorator that adds temperature scaling

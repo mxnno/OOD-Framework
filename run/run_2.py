@@ -45,7 +45,7 @@ def main():
 
         #Preprocess Data
         print("Preprocess Data...")
-        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
         
 
         #Pretrain SCL
@@ -54,8 +54,8 @@ def main():
 
         #Finetune auf CE oder LMCL + abspeichern
         print("Finetune CE/LMCL...")
-        model.config.loss = ''
-        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator)
+        #model.config.loss = ''
+        #ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator)
         if args.save_path != "debug":
             save_model(ft_model, args)
 
@@ -73,7 +73,7 @@ def main():
 
         #Preprocess Data
         #dev_dataset = train + dev_id
-        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
         
 
         #Temp für Softmax ermitteln

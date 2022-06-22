@@ -63,7 +63,7 @@ def main():
         print("Pretrain SCL ...")
         model.config.loss = 'similarity-contrastive-augm'
         model.config.loss_std = "lmcl_1"
-        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator, num_epochs_x = 20)
+        ft_model, best_epoch =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator, num_epochs_x = 20)
 
         
         #Finetune auf CE oder LMCL + abspeichern
@@ -71,11 +71,11 @@ def main():
         #eine epoche mit lmcl, dann ce
         model.config.loss = ''
         model.config.loss_std = "lmcl_1"
-        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator, num_epochs_x = 1)
+        ft_model, best_epoch =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator, num_epochs_x = 1)
         model.config.loss_std = "lmcl_2"
-        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator, num_epochs_x = 20)
+        ft_model, best_epoch =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator, num_epochs_x = 20)
         if args.save_path != "debug":
-            save_model(ft_model, args)
+            save_model(ft_model, args, best_epoch)
 
     elif args.task == "ood_detection":
         

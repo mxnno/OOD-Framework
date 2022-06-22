@@ -55,7 +55,7 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     tokenized_datasets.set_format("torch")
 
     if no_Dataloader:
-        return tokenized_datasets["train"], tokenized_datasets["val_id"], data_collator
+        return tokenized_datasets["train"], tokenized_datasets["test"], data_collator
 
     train_dataloader = DataLoader(
         tokenized_datasets["train"], shuffle=True, batch_size=args.batch_size, collate_fn=data_collator
@@ -260,8 +260,8 @@ def load_clinc(args):
     test_id_dataset = test_id_dataset.map(set_label_to_ID)
     test_id_dataset = test_id_dataset.cast_column("intent", classlabel)
 
-    test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
-
+    #test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
+    
 
     #Testdaten für Evaluation 
     # pro Klasse 3 ID Daten = 45 ID und 50 OOD Daten 
@@ -277,6 +277,8 @@ def load_clinc(args):
     
     test_id_help.to_csv("test_id")
     test_ood_help.to_csv("test_ood")
+
+    test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
     #dev_dataset = train + dev_id
     return DatasetDict({'train': train_dataset, 'trainval':  trainval_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset, 'val_test_id': test_id_help, 'val_test_ood': test_ood_help})
 

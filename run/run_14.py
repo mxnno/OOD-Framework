@@ -55,20 +55,18 @@ def main():
         #Finetune Std + abspeichern
         # learn intent representation mit softmax loss
         print("Finetune...")
-        ft_model =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator)
+        ft_model, _ =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator)
         #if args.save_path != "debug":
         #    save_model(ft_model, args)
 
         #Finetune ADB + abspeichern
         print("Finetune ADB...")
-        ft_model, centroids, delta = finetune_ADB(args, ft_model, eval_id, eval_ood, dev_id_dataset)
+        ft_model, best_epoch, centroids, delta = finetune_ADB(args, ft_model, eval_id, eval_ood, dev_id_dataset)
         if args.save_path != "debug":
-            args.save_path = get_save_path(args)
-            save_model(ft_model, args)
-            save_tensor(args, centroids, "/centroids.pt")
-            save_tensor(args, delta, "/delta.pt")
-        else:
-            detect_ood(args, ft_model, dev_id_dataset, test_id_dataset, test_ood_dataset, centroids=centroids, delta=delta)
+            save_model(ft_model, args, best_epoch)
+            save_tensor(args, centroids, "/centroids.pt", best_epoch)
+            save_tensor(args, delta, "/delta.pt", best_epoch)
+
 
 
     elif args.task == "ood_detection":

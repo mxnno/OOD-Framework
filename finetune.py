@@ -100,9 +100,17 @@ def finetune_ADB(args, model, train_dataloader, eval_id, eval_ood):
     delta_points = []
     delta_points.append(delta)
 
-    best_f1 = 0
+    best_acc = 0.0
     best_model = model
     best_epoch = 0
+    counter_early = 0
+
+    if args.few_shot == 5:
+        earlystop = 9 
+    elif args.few_shot == 20:
+        earlystop = 6
+    else:
+        earlystop = 4
 
     #evtl parser.add_argument("--lr_boundary", type=float, default=0.05, help="The learning rate of the decision boundary.")
     optimizer = torch.optim.Adam(criterion_boundary.parameters(), lr = 0.05)
@@ -173,27 +181,32 @@ def finetune_ADB(args, model, train_dataloader, eval_id, eval_ood):
 
         loss = tr_loss / nb_tr_steps
         
-
-        results_dev = evaluate(args, model, eval_id, eval_ood, tag="dev")
-
+        results_dev = evaluate(args, model, eval_id, eval_ood, centroids=centroids, delta=delta)
         wandb.log(results_dev, step=num_steps) if args.wandb == "log" else None
         
         #bestes Model zurückgeben
-        f1 = results_dev['f1_dev']
-        if f1 >= best_f1:
+        acc = results_dev['acc']
+        print("Acc_in + Acc_out: " + str(acc))
+        if acc > best_acc:
+            print("acc:" + str(acc) + "   best_acc: " + str(best_acc))
+            counter_early = 0
             best_model = model
-            best_centroids = centroids
-            best_delta = delta
-            f1 = best_f1
+            best_acc = acc
             best_epoch = epoch
+        else:
+            print("counter_early: " + str(counter_early))
+            counter_early +=1
+            if counter_early == earlystop:
+                print("Best model from epoch: " + str(best_epoch))
+                print("Current epoch: " + str(epoch))
+                return best_model, best_epoch
+    print("Best model from epoch: " + str(best_epoch))
+    return best_model, best_epoch, best_centroids, best_delta
     
 
     #EVTL IST DIE save_results METHODE INTERESSANT (PLOTS!) -> ist aber nicht hier -> im Orginalcode
     #ToDo: bestes Model speichern
         
-    print("Best model from epoch: " + str(best_epoch))
-
-    return best_model, best_centroids, best_delta
 
 def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, tokenizer ):
 

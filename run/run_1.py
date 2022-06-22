@@ -55,7 +55,7 @@ def main():
         #Finetune IMLM + abspeichern
         print("Finetune IMLM...")
         trainer = finetune_imlm(args, model, train_dataset, dev_id_dataset, datacollector, tokenizer)
-        save_path = get_save_path(args).replace("/1/", "/1/IMLM/")
+        save_path = get_save_path(args, 0).replace("/1/", "/1/IMLM/")
         #args.model_name_or_path = save_path
         trainer.save_model(save_path)
 
@@ -96,15 +96,16 @@ def main():
 
         #Preprocess Data
         #dev_dataset = train + dev_id
-        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
 
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
         
+
         #Temp für Softmax ermitteln
         # Now we're going to wrap the model with a decorator that adds temperature scaling
         temp_model = ModelWithTemperature(model)
 
         # Tune the model temperature, and save the results
-        best_temp = temp_model.set_temperature(traindev_dataset)
+        best_temp = temp_model.set_temperature(dev_id_dataset)
 
 
         #OOD-Detection

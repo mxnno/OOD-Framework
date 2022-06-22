@@ -73,7 +73,7 @@ def main():
         model.config.loss_std = "lmcl_1"
         ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator, num_epochs_x = 1)
         model.config.loss_std = "lmcl_2"
-        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator, num_epochs_x = 5)
+        ft_model =  finetune_std(args, model, train_dataset, dev_id_dataset, accelerator, num_epochs_x = 20)
         if args.save_path != "debug":
             save_model(ft_model, args)
 

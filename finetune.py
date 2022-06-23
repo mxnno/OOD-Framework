@@ -29,7 +29,7 @@ def finetune_std(args, model, train_dataloader, dev_id, dev_ood, accelerator, nu
     counter_early = 0
 
     if args.few_shot == 5:
-        earlystop = 19 
+        earlystop = 9
     elif args.few_shot == 20:
         earlystop = 6
     else:
@@ -251,11 +251,13 @@ def finetune_imlm(args, model, train_dataloader, dev_dataloader, data_collator, 
 
     return trainer
     
-def finetune_DNNC(args, model, tokenizer, train_examples, dev_examples):
+def finetune_DNNC(args, model, tokenizer, train_examples, train_eval, test_id_eval, test_ood_eval):
+
+    num_epochs = int(args.num_train_epochs)
 
     train_batch_size = int(args.batch_size / args.gradient_accumulation_steps)
 
-    num_train_steps = int(len(train_examples) / train_batch_size / args.gradient_accumulation_steps * args.num_train_epochs)
+    num_train_steps = int(len(train_examples) / train_batch_size / args.gradient_accumulation_steps * num_epochs)
 
 
     train_features, label_distribution = convert_examples_to_features(args, train_examples, tokenizer, train = True)
@@ -265,15 +267,22 @@ def finetune_DNNC(args, model, tokenizer, train_examples, dev_examples):
     optimizer = get_optimizer_2(args, model)
     scheduler = get_scheduler("linear", optimizer=optimizer,num_warmup_steps=int(num_train_steps * args.warmup_ratio), num_training_steps=num_train_steps)
 
-    best_dev_accuracy = -1.0
+    best_acc = 0.0
+    best_model = model
+    best_epoch = 0
+    counter_early = 0
+    if args.few_shot == 5:
+        earlystop = 9 
+    elif args.few_shot == 20:
+        earlystop = 6
+    else:
+        earlystop = 4
 
     model.zero_grad()
     model.train()
-
-    best_model = model
     num_steps = 0
 
-    for _ in trange(int(args.num_train_epochs), desc="Epoch"):
+    for epoch in trange(num_epochs, desc="Epoch"):
         
         for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration")):
 
@@ -297,18 +306,30 @@ def finetune_DNNC(args, model, tokenizer, train_examples, dev_examples):
 
             wandb.log({'loss': loss.item()}, step=num_steps) if args.wandb == "log" else print("Loss: " + str(loss.item()))
 
-        results = evaluate_DNNC(args, model, tokenizer, dev_examples)
-        acc = results['accuracy_dev']
-        #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
+        results = evaluate_DNNC(args, model, tokenizer, train_eval, test_id_eval, test_ood_eval)
+        acc = results['acc']
         wandb.log(results, step=num_steps) if args.wandb == "log" else None
 
-        if acc >= best_dev_accuracy :
-            best_model = model
-            best_dev_accuracy = acc
-        
-        model.train()
-
-    return best_model
+    # #bestes Model zurückgeben
+    acc = results['acc']
+    print("Acc_in + Acc_out: " + str(acc))
+    if acc > best_acc:
+        print("acc:" + str(acc) + "   best_acc: " + str(best_acc))
+        counter_early = 0
+        best_model = model
+        best_acc = acc
+        best_epoch = epoch
+    else:
+        print("counter_early: " + str(counter_early))
+        counter_early +=1
+        if counter_early == earlystop:
+            print("Best model from epoch: " + str(best_epoch))
+            print("Current epoch: " + str(epoch))
+            return best_model, best_epoch
+    
+    print("Best model from epoch: " + str(best_epoch))
+    return best_model, best_epoch
+    
 
 
     

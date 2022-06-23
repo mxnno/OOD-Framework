@@ -61,9 +61,9 @@ def main():
 
         #Finetune ADB + abspeichern
         #
-        if args.num_train_epochs == 5:
+        if args.few_shot == 5:
             best_epoch = 30
-        elif args.num_train_epochs == 20:
+        elif args.few_shot == 20:
             best_epoch = 3 # oder 4
         else:
             best_epoch = 2

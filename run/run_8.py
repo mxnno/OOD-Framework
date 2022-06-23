@@ -63,25 +63,34 @@ def main():
         dataset_dict  = load_clinc(args)
         train_dataset = dataset_dict['train']
         train_dataset.to_csv("train_dataset.csv")
-        val_dataset = dataset_dict['val_id']
-        val_dataset.to_csv("val_dataset.csv")
-        time.sleep(2)
+        
 
         #load_intent_datasets -> list with examples e
-        train_data, val_data = load_intent_datasets("train_dataset.csv", "val_dataset.csv", do_lower_case)
+        train_data, _ = load_intent_datasets("train_dataset.csv", "train_dataset.csv", do_lower_case)
+        
+        #Eval
+        eval_id_dataset = dataset_dict['val_test_id_dataloader']
+        eval_ood_dataset = dataset_dict['val_test_ood_dataloader']
+        eval_id_dataset.to_csv("eval_id.csv")
+        eval_ood_dataset.to_csv("eval_ood.csv")
+        eval_id, eval_ood = load_intent_datasets("eval_id.csv", "eval_ood.csv", do_lower_case)
+
+        #Test
         test_id = dataset_dict['test_id']
         test_ood = dataset_dict['test_ood']
         test_id.to_csv("test_id_dataset.csv")
         test_ood.to_csv("test_od_dataset.csv")
         test_data_id, test_data_ood = load_intent_datasets("test_id_dataset.csv", "test_od_dataset.csv", do_lower_case)
 
+        time.sleep(2)
+
         # NLI Examples erstellen
-        nli_train, nli_dev = create_nli_examples(args, train_data, val_data)
+        nli_train, nli_dev = create_nli_examples(args, train_data)
 
         # Tokenization passiert in finetune Methode
         #Finetune:
         print("Finetune DNNC...")
-        ft_model = finetune_DNNC(args, model, tokenizer, nli_train, nli_dev)
+        ft_model = finetune_DNNC(args, model, tokenizer, nli_train, train_data, eval_id, eval_ood)
 
         if args.save_path != "debug":
             save_model(ft_model, args)

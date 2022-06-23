@@ -4,7 +4,7 @@ from sklearn.metrics import roc_auc_score, accuracy_score, recall_score, f1_scor
 from datasets import load_metric
 from tqdm import tqdm
 import torch.nn.functional as F
-from utils.utils_DNNC import convert_examples_to_features, get_eval_dataloader
+from utils.utils_DNNC import *
 from utils.utils import get_result_path
 import csv
 import os
@@ -394,38 +394,138 @@ def evaluate(args, model, eval_id, eval_ood, centroids=None, delta=None, tag=Non
 #     results = {"accuracy_" + tag: acc, "f1_" + tag: f1}
 #     return results
 
-def evaluate_DNNC(args, model, tokenizer, eval_dataset):
-
-    if len(eval_dataset) == 0:
-            return None
-
-    eval_features = convert_examples_to_features(args, eval_dataset, tokenizer, train = False)
-    eval_dataloader = get_eval_dataloader(eval_features, args.batch_size)
-
-    return evaluate(args, model, eval_dataloader,"dev")
     
-    # model.eval()
-    # eval_accuracy = 0
-    # nb_eval_examples = 0
+def evaluate_DNNC(args, model, tokenizer, train, test_id, test_ood):
 
-    # for input_ids, input_mask, segment_ids, label_ids in tqdm(eval_dataloader, desc="Evaluating"):
-    #     input_ids = input_ids.to(args.device)
-    #     input_mask = input_mask.to(args.device)
-    #     segment_ids = segment_ids.to(args.device)
+    def model_predict(data, method="logits"):
 
-    #     with torch.no_grad():
-    #         outputs = model(input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids)
-    #         logits = outputs[0]
+        model.eval()
 
-    #     logits = logits.detach().cpu().numpy()
-    #     label_ids = label_ids.numpy()
-    #     tmp_eval_accuracy = get_accuracy_DNNC(logits, label_ids)
+        input = [InputExample(premise, hypothesis) for (premise, hypothesis) in data]
 
-    #     eval_accuracy += tmp_eval_accuracy
-    #     nb_eval_examples += input_ids.size(0)
+        eval_features = convert_examples_to_features(args, input, tokenizer, train = False)
+        input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
+        input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
+        segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
 
-    # eval_accuracy = eval_accuracy / nb_eval_examples
-    # return {"accuracy": eval_accuracy}
+        max_len = input_mask.sum(dim=1).max().item()
+        input_ids = input_ids[:, :max_len]
+        input_mask = input_mask[:, :max_len]
+        segment_ids = segment_ids[:, :max_len]
+
+        CHUNK = 500
+        EXAMPLE_NUM = input_ids.size(0)
+        #label_list = ["non_entailment", "entailment"]
+        label_list = ["entailment", "non_entailment"]
+        labels = []
+        probs = None
+        start_index = 0
+
+        while start_index < EXAMPLE_NUM:
+            end_index = min(start_index+CHUNK, EXAMPLE_NUM)
+            
+            input_ids_ = input_ids[start_index:end_index, :].to(args.device)
+            input_mask_ = input_mask[start_index:end_index, :].to(args.device)
+            segment_ids_ = segment_ids[start_index:end_index, :].to(args.device)
+
+            with torch.no_grad():
+                outputs = model(input_ids=input_ids_, attention_mask=input_mask_, token_type_ids=segment_ids_)
+                logits = outputs[0]
+
+
+                if method == "softmax":
+                    probs_ = torch.softmax(logits, dim=1)
+                elif method == "logits":
+                    probs_ = logits
+
+            probs_ = probs_.detach().cpu()
+            if probs is None:
+                probs = probs_
+            else:
+                probs = torch.cat((probs, probs_), dim = 0)
+
+                #50/50 Entscheidung ob non_etailment oder entailemnt
+                # was anderes als Softmax möglich?
+            labels += [label_list[torch.max(probs_[i], dim=0)[1].item()] for i in range(probs_.size(0))]
+            start_index = end_index
+
+        assert len(labels) == EXAMPLE_NUM
+        assert probs.size(0) == EXAMPLE_NUM
+        
+        # return labgel liste für das eine Beispiel kombiniert mit allen Trainingsdaten ['non_entailment', 'entailment', 'non_entailment'...]
+        # return probs für die Labels für die beiden Klassen: [[0.9804, 0.0196],[0.9804, 0.0196],...]
+        return labels, probs
+
+    def predict_intent(text):
+
+        sampled_train = sample_example(train)
+
+        nli_input = []
+        for t in sampled_train:
+            for e in t['examples']:
+                nli_input.append((text, e)) #Satz, der zu predicten ist, mit allen anderen Trainierten Sätzen kreuzen (text, trained_text)
+
+        assert len(nli_input) > 0
+
+        results = model_predict(nli_input)
+        #results[1] = [[0.9804, 0.0196],[0.9804, 0.0196],...] -> linke Seite wsl für non_ent., rechts entailment
+        #-> maxScore, maxIndex = results[1][:, 1].max(dim = 0) # -> non entail max
+        maxScore, maxIndex = results[1][:, 0].max(dim = 0) # -> entail max
+
+        maxScore = maxScore.item()
+        maxIndex = maxIndex.item()
+
+        index = -1
+        for t in sampled_train:
+            for e in t['examples']:
+                index += 1
+
+                if index == maxIndex:
+                    intent = t['task']
+                    matched_example = e
+
+        return intent, maxScore, matched_example
+
+    #for e in tqdm(test_id, desc = 'Intent examples')
+    pred_id = []
+    pred_ood = []
+
+    counter = 0
+    
+    for e in tqdm(test_id, desc = 'ID examples'):
+        
+        pred, conf, matched_example = predict_intent(e.text)
+        pred_id.append(conf)
+
+        counter += 1
+        if args.few_shot == 50 and counter >= 25:
+            break
+    
+    for e in tqdm(test_ood, desc = 'OOD examples'):
+        
+        pred, conf, matched_example = predict_intent(e.text)
+        pred_ood.append(conf)
+
+        counter +=1
+        if args.few_shot == 50 and counter >= 25:
+            break
+
+    pred_id = np.array(pred_id)
+    pred_id = np.where(pred_id >= 0.5, 1, 0)
+
+    pred_ood = np.array(pred_ood)
+    pred_ood = np.where(pred_ood >= 0.5, 1, 0)
+
+    print(pred_id)
+    print(pred_ood)
+    labels_in = np.ones_like(pred_id).astype(np.int64)
+    labels_out = np.zeros_like(pred_ood).astype(np.int64)
+
+    in_acc = accuracy_score(labels_in, pred_id)
+    out_acc = accuracy_score(labels_out, pred_ood)
+
+    results = {"acc": in_acc + out_acc}
+    return results
     
 
 

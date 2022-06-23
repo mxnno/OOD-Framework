@@ -195,7 +195,7 @@ def sample_example(train_data):
     return sampled_examples
 
 
-def create_nli_examples(args, train_data, val_data):
+def create_nli_examples(args, train_data):
 
     tasks = sample_example(train_data)
     all_entailment_examples = []

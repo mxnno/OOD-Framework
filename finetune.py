@@ -272,11 +272,11 @@ def finetune_DNNC(args, model, tokenizer, train_examples, train_eval, test_id_ev
     best_epoch = 0
     counter_early = 0
     if args.few_shot == 5:
-        earlystop = 9 
+        earlystop = 19 
     elif args.few_shot == 20:
-        earlystop = 6
-    else:
         earlystop = 4
+    else:
+        earlystop = 2
 
     model.zero_grad()
     model.train()
@@ -284,7 +284,7 @@ def finetune_DNNC(args, model, tokenizer, train_examples, train_eval, test_id_ev
 
     for epoch in trange(num_epochs, desc="Epoch"):
         
-        for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration")):
+        for step, batch in enumerate(range(train_dataloader)):
 
             input_ids, input_mask, segment_ids, label_ids = process_train_batch(batch, args.device)
             outputs = model(input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids)

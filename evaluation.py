@@ -490,30 +490,20 @@ def evaluate_DNNC(args, model, tokenizer, train, test_id, test_ood):
     pred_id = []
     pred_ood = []
 
-    counter = 0
     
     for e in tqdm(test_id, desc = 'ID examples'):
         
-        if args.few_shot == 50 and counter == 1:
-            counter = 0
-            continue
 
         pred, conf, matched_example = predict_intent(e.text)
         pred_id.append(conf)
 
-        counter += 1
-        
     
     for e in tqdm(test_ood, desc = 'OOD examples'):
         
-        if args.few_shot == 50 and counter == 1:
-            counter = 0
-            continue
 
         pred, conf, matched_example = predict_intent(e.text)
         pred_ood.append(conf)
 
-        counter +=1
 
     pred_id = np.array(pred_id)
     pred_id = np.where(pred_id >= 0.5, 1, 0)

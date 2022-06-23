@@ -310,22 +310,22 @@ def finetune_DNNC(args, model, tokenizer, train_examples, train_eval, test_id_ev
         acc = results['acc']
         wandb.log(results, step=num_steps) if args.wandb == "log" else None
 
-    # #bestes Model zurückgeben
-    acc = results['acc']
-    print("Acc_in + Acc_out: " + str(acc))
-    if acc > best_acc:
-        print("acc:" + str(acc) + "   best_acc: " + str(best_acc))
-        counter_early = 0
-        best_model = model
-        best_acc = acc
-        best_epoch = epoch
-    else:
-        print("counter_early: " + str(counter_early))
-        counter_early +=1
-        if counter_early == earlystop:
-            print("Best model from epoch: " + str(best_epoch))
-            print("Current epoch: " + str(epoch))
-            return best_model, best_epoch
+        # #bestes Model zurückgeben
+        acc = results['acc']
+        print("Acc_in + Acc_out: " + str(acc))
+        if acc > best_acc:
+            print("acc:" + str(acc) + "   best_acc: " + str(best_acc))
+            counter_early = 0
+            best_model = model
+            best_acc = acc
+            best_epoch = epoch
+        else:
+            print("counter_early: " + str(counter_early))
+            counter_early +=1
+            if counter_early == earlystop:
+                print("Best model from epoch: " + str(best_epoch))
+                print("Current epoch: " + str(epoch))
+                return best_model, best_epoch
     
     print("Best model from epoch: " + str(best_epoch))
     return best_model, best_epoch

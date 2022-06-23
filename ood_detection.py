@@ -358,8 +358,6 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
     pred_ood = np.array(pred_ood)
     pred_ood = np.where(pred_ood >= 0.5, 1, 0)
 
-    print(pred_id)
-    print(pred_ood)
     evaluate_NLI(args, pred_id, pred_ood)
 
 

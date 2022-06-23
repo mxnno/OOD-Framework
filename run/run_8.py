@@ -69,8 +69,8 @@ def main():
         train_data, _ = load_intent_datasets("train_dataset.csv", "train_dataset.csv", do_lower_case)
         
         #Eval
-        eval_id_dataset = dataset_dict['val_test_id_dataloader']
-        eval_ood_dataset = dataset_dict['val_test_ood_dataloader']
+        eval_id_dataset = dataset_dict['val_test_id']
+        eval_ood_dataset = dataset_dict['val_test_ood']
         eval_id_dataset.to_csv("eval_id.csv")
         eval_ood_dataset.to_csv("eval_ood.csv")
         eval_id, eval_ood = load_intent_datasets("eval_id.csv", "eval_ood.csv", do_lower_case)
@@ -90,10 +90,10 @@ def main():
         # Tokenization passiert in finetune Methode
         #Finetune:
         print("Finetune DNNC...")
-        ft_model = finetune_DNNC(args, model, tokenizer, nli_train, train_data, eval_id, eval_ood)
+        ft_model, best_epoch = finetune_DNNC(args, model, tokenizer, nli_train, train_data, eval_id, eval_ood)
 
         if args.save_path != "debug":
-            save_model(ft_model, args)
+            save_model(ft_model, args, best_epoch)
 
     elif args.task == "ood_detection":
         #Load Model

@@ -55,11 +55,19 @@ def main():
         #Finetune Std + abspeichern
         # learn intent representation mit softmax loss
         print("Finetune...")
-        ft_model, best_epoch =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator)
+        ft_model, best_epoch =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator, do_early_stop=True)
         #if args.save_path != "debug":
         #    save_model(ft_model, args)
 
         #Finetune ADB + abspeichern
+        #
+        if args.num_train_epochs == 5:
+            best_epoch = 30
+        elif args.num_train_epochs == 20:
+            best_epoch = 3 # oder 4
+        else:
+            best_epoch = 2
+            
         print("Finetune ADB...")
         ft_model, best_epoch, centroids, delta = finetune_ADB(args, ft_model, train_dataset, eval_id, eval_ood, best_epoch)
         if args.save_path != "debug":

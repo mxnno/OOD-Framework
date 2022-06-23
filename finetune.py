@@ -17,7 +17,7 @@ from finetune_TPU import finetune_std_TPU
 warnings.filterwarnings("ignore")
 
 
-def finetune_std(args, model, train_dataloader, dev_id, dev_ood, accelerator, num_epochs_x=None):
+def finetune_std(args, model, train_dataloader, dev_id, dev_ood, accelerator, num_epochs_x=None, do_early_stop=True):
 
     num_epochs = int(args.num_train_epochs)
     if num_epochs_x:
@@ -68,29 +68,35 @@ def finetune_std(args, model, train_dataloader, dev_id, dev_ood, accelerator, nu
             if cos_loss:
                 wandb.log({'cos_loss': cos_loss.item()}, step=num_steps) if args.wandb == "log" else print("Cos-Loss: " + str(loss.item()))
 
-        results_dev = evaluate(args, model, dev_id, dev_ood, tag="dev")
-        #results_train = evaluate(args, model, train_dataloader, tag="train")
-        #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
-        #wandb.log({**results_dev, **results_train}, step=num_steps) if args.wandb == "log" else None
-        wandb.log(results_dev, step=num_steps) if args.wandb == "log" else None
-        #bestes Model zurückgeben
-        acc = results_dev['acc']
-        print("Acc_in + Acc_out: " + str(acc))
-        if acc > best_acc:
-            print("acc:" + str(acc) + "   best_acc: " + str(best_acc))
-            counter_early = 0
-            best_model = model
-            best_acc = acc
-            best_epoch = epoch
-        else:
-            print("counter_early: " + str(counter_early))
-            counter_early +=1
-            if counter_early == earlystop:
-                print("Best model from epoch: " + str(best_epoch))
-                print("Current epoch: " + str(epoch))
-                return best_model, best_epoch
+
+        if do_early_stop is True:
+            results_dev = evaluate(args, model, dev_id, dev_ood, tag="dev")
+            #results_train = evaluate(args, model, train_dataloader, tag="train")
+            #wandb.log(results, step=num_steps) if args.wandb == "log" else print("results:" + results)
+            #wandb.log({**results_dev, **results_train}, step=num_steps) if args.wandb == "log" else None
+            wandb.log(results_dev, step=num_steps) if args.wandb == "log" else None
+            #bestes Model zurückgeben
+            acc = results_dev['acc']
+            print("Acc_in + Acc_out: " + str(acc))
+            if acc > best_acc:
+                print("acc:" + str(acc) + "   best_acc: " + str(best_acc))
+                counter_early = 0
+                best_model = model
+                best_acc = acc
+                best_epoch = epoch
+            else:
+                print("counter_early: " + str(counter_early))
+                counter_early +=1
+                if counter_early == earlystop:
+                    print("Best model from epoch: " + str(best_epoch))
+                    print("Current epoch: " + str(epoch))
+                    return best_model, best_epoch
     print("Best model from epoch: " + str(best_epoch))
-    return best_model, best_epoch
+    
+    if do_early_stop is True:
+        return best_model, best_epoch
+    else:
+        return model, num_epochs 
 
 
 def finetune_ADB(args, model, train_dataloader, eval_id, eval_ood, epochs):

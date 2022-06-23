@@ -245,7 +245,7 @@ def evaluate_ADB(args, y_pred_in, y_pred_out):
     print("Result file saved at: " + csvPath)
 ##############################################################################################################################################################
 
-def evaluate(args, model, eval_id, eval_ood, centroids=None, delta=None):
+def evaluate(args, model, eval_id, eval_ood, centroids=None, delta=None, tag=None):
 
     #Test-ID:
     for batch in tqdm(eval_id):
@@ -280,46 +280,57 @@ def evaluate(args, model, eval_id, eval_ood, centroids=None, delta=None):
     model.all_logits = []
     model.all_pool = []
 
-    if args.model_ID == 14:
+    # if args.model_ID == 15 and centroids is not None:
 
-        def get_adb_score(pooled, centroids, delta):
+    #     def get_adb_score(pooled, centroids, delta):
 
-            logits_adb = euclidean_metric(pooled, centroids)
-            #qwert
-            #Kann ich die logits rausnehmen für anderen Methoden???
-            # -> heir ja nur Softmax
-            #probs, preds = F.softmax(logits_adb.detach(), dim = 1).max(dim = 1)
+    #         logits_adb = euclidean_metric(pooled, centroids)
+    #         #qwert
+    #         #Kann ich die logits rausnehmen für anderen Methoden???
+    #         # -> heir ja nur Softmax
+    #         probs, preds = F.softmax(logits_adb.detach(), dim = 1).max(dim = 1)
             
-            probs, preds = logits_adb.max(dim = 1)
-            preds_ones = torch.ones_like(preds)
-            preds.to('cuda:0')
-            euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)           
-            preds_ones[euc_dis >= delta[preds]] = 0
-            return preds_ones.detach().cpu().numpy()
+    #         #probs, preds = logits_adb.max(dim = 1)
+    #         preds_ones = torch.ones_like(preds)
+    #         preds.to('cuda:0')
+    #         euc_dis = torch.norm(pooled - centroids[preds], 2, 1).view(-1)           
+    #         preds_ones[euc_dis >= delta[preds]] = 0
+    #         return preds_ones.detach().cpu().numpy()
 
-        logits_score_in = get_adb_score(all_pool_in, centroids, delta)
-        logits_score_out = get_adb_score(all_pool_out, centroids, delta)
-        print(logits_score_in)
-        print(logits_score_out)
+    #     #logits_score_in = get_adb_score(all_pool_in, centroids, delta)
+    #     #logits_score_out = get_adb_score(all_pool_out, centroids, delta)
+    #     #print(logits_score_in)
+    #     #print(logits_score_out)
 
-        #_, _, all_logits_in , all_logits_out = detect_ood_adb2(centroids, delta, all_pool_in, all_pool_out, all_pool_dev, all_pool_train)
+    #     #_, _, all_logits_in , all_logits_out = detect_ood_adb2(centroids, delta, all_pool_in, all_pool_out, all_pool_dev, all_pool_train)
         
-        #Das aus dem else Fall muss auch noch mit ausgeführt werden!
-        #all_logits_in = euclidean_metric(all_pool_in, centroids)
-        #all_logits_out = euclidean_metric(all_pool_out, centroids)
-    else:
-        
-        logits_score_in = all_logits_in.max(dim = 1)[0]
-        logits_score_in = logits_score_in.cpu().detach().numpy()
-        logits_score_out = all_logits_out.max(dim = 1)[0]
-        logits_score_out = logits_score_out.cpu().detach().numpy()
+    #     #Das aus dem else Fall muss auch noch mit ausgeführt werden!
+    #     all_logits_in = euclidean_metric(all_pool_in, centroids)
+    #     all_logits_out = euclidean_metric(all_pool_out, centroids)
 
-        t = get_treshold_eval(logits_score_in, logits_score_out, np.min(logits_score_out), max(logits_score_in), 500, min=False)
+    #     logits_score_in = all_logits_in.max(dim = 1)[0]
+    #     logits_score_in = logits_score_in.cpu().detach().numpy()
+    #     logits_score_out = all_logits_out.max(dim = 1)[0]
+    #     logits_score_out = logits_score_out.cpu().detach().numpy()
 
-        logits_score_in = np.where(logits_score_in >= t, 1, 0)
-        logits_score_out = np.where(logits_score_out >= t, 1, 0)
-        print(logits_score_in)
-        print(logits_score_out)
+    #     t = get_treshold_eval(logits_score_in, logits_score_out, np.min(logits_score_out), max(logits_score_in), 500, min=False)
+
+    #     logits_score_in = np.where(logits_score_in >= t, 1, 0)
+    #     logits_score_out = np.where(logits_score_out >= t, 1, 0)
+    #     print(logits_score_in)
+    #     print(logits_score_out)
+
+    logits_score_in = all_logits_in.max(dim = 1)[0]
+    logits_score_in = logits_score_in.cpu().detach().numpy()
+    logits_score_out = all_logits_out.max(dim = 1)[0]
+    logits_score_out = logits_score_out.cpu().detach().numpy()
+
+    t = get_treshold_eval(logits_score_in, logits_score_out, np.min(logits_score_out), max(logits_score_in), 500, min=False)
+
+    logits_score_in = np.where(logits_score_in >= t, 1, 0)
+    logits_score_out = np.where(logits_score_out >= t, 1, 0)
+    print(logits_score_in)
+    print(logits_score_out)
 
     labels_in = np.ones_like(logits_score_in).astype(np.int64)
     labels_out = np.zeros_like(logits_score_out).astype(np.int64)

@@ -29,7 +29,7 @@ def finetune_std(args, model, train_dataloader, dev_id, dev_ood, accelerator, nu
     counter_early = 0
 
     if args.few_shot == 5:
-        earlystop = 9 
+        earlystop = 19 
     elif args.few_shot == 20:
         earlystop = 6
     else:
@@ -93,7 +93,7 @@ def finetune_std(args, model, train_dataloader, dev_id, dev_ood, accelerator, nu
     return best_model, best_epoch
 
 
-def finetune_ADB(args, model, train_dataloader, eval_id, eval_ood):
+def finetune_ADB(args, model, train_dataloader, eval_id, eval_ood, epochs):
 
     criterion_boundary = BoundaryLoss(num_labels = model.num_labels, feat_dim = args.feat_dim)
     delta = F.softplus(criterion_boundary.delta)
@@ -104,6 +104,7 @@ def finetune_ADB(args, model, train_dataloader, eval_id, eval_ood):
     best_model = model
     best_epoch = 0
     counter_early = 0
+    best_delta = 0
 
     if args.few_shot == 5:
         earlystop = 9 
@@ -150,7 +151,7 @@ def finetune_ADB(args, model, train_dataloader, eval_id, eval_ood):
     centroids = centroids_cal(args, train_dataloader)
     num_steps = 0
 
-    for epoch in range(int(args.num_train_epochs)):
+    for epoch in range(epochs):
         model.train()
         tr_loss = 0
         nb_tr_examples, nb_tr_steps = 0, 0
@@ -184,24 +185,25 @@ def finetune_ADB(args, model, train_dataloader, eval_id, eval_ood):
         results_dev = evaluate(args, model, eval_id, eval_ood, centroids=centroids, delta=delta)
         wandb.log(results_dev, step=num_steps) if args.wandb == "log" else None
         
-        #bestes Model zurückgeben
-        acc = results_dev['acc']
-        print("Acc_in + Acc_out: " + str(acc))
-        if acc > best_acc:
-            print("acc:" + str(acc) + "   best_acc: " + str(best_acc))
-            counter_early = 0
-            best_model = model
-            best_acc = acc
-            best_epoch = epoch
-        else:
-            print("counter_early: " + str(counter_early))
-            counter_early +=1
-            if counter_early == earlystop:
-                print("Best model from epoch: " + str(best_epoch))
-                print("Current epoch: " + str(epoch))
-                return best_model, best_epoch
-    print("Best model from epoch: " + str(best_epoch))
-    return best_model, best_epoch, best_centroids, best_delta
+        # #bestes Model zurückgeben
+        # acc = results_dev['acc']
+        # print("Acc_in + Acc_out: " + str(acc))
+        # if acc > best_acc:
+        #     print("acc:" + str(acc) + "   best_acc: " + str(best_acc))
+        #     counter_early = 0
+        #     best_model = model
+        #     best_acc = acc
+        #     best_epoch = epoch
+        #     best_delta = delta
+        # else:
+        #     print("counter_early: " + str(counter_early))
+        #     counter_early +=1
+        #     if counter_early == 100:
+        #         print("Best model from epoch: " + str(best_epoch))
+        #         print("Current epoch: " + str(epoch))
+        #         return best_model, best_epoch, centroids, best_delta
+    #print("Best model from epoch: " + str(best_epoch))
+    return model, epochs, centroids, delta
     
 
     #EVTL IST DIE save_results METHODE INTERESSANT (PLOTS!) -> ist aber nicht hier -> im Orginalcode

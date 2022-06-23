@@ -55,13 +55,13 @@ def main():
         #Finetune Std + abspeichern
         # learn intent representation mit softmax loss
         print("Finetune...")
-        ft_model, _ =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator)
+        ft_model, best_epoch =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator)
         #if args.save_path != "debug":
         #    save_model(ft_model, args)
 
         #Finetune ADB + abspeichern
         print("Finetune ADB...")
-        ft_model, best_epoch, centroids, delta = finetune_ADB(args, ft_model, eval_id, eval_ood, dev_id_dataset)
+        ft_model, best_epoch, centroids, delta = finetune_ADB(args, ft_model, train_dataset, eval_id, eval_ood, best_epoch)
         if args.save_path != "debug":
             save_model(ft_model, args, best_epoch)
             save_tensor(args, centroids, "/centroids.pt", best_epoch)

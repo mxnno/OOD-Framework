@@ -84,6 +84,8 @@ def save_model(model, args, best_epoch):
 
     if args.save_path == "drive":
         path = get_save_path(args, best_epoch)
+        if args.model_ID == 1:
+            path = path.replace("/1/", "/1/IMLM_BCAD/")
     else:
         path = args.save_path
     model.save_pretrained(path)

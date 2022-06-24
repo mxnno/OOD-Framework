@@ -69,18 +69,16 @@ def main():
         
         #Preprocess Data
         print("Preprocess Data for IMLM...")
-        args.dataset = "clinc150_AUG"
-        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
-        
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer, special_dataset="clinc150_AUG")
+
         #Finetune BCAD + abspeichern
         print("Finetune BCAD...")
-        ft_model = finetune_std(args, model, train_dataset, dev_dataset, accelerator)
-        args.save_path = get_save_path(args).replace("/1/", "/1/IMLM_BCAD/")
+        ft_model, best_epoch = finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator)
 
         #save finetuned model
         #Model speichern
         if args.save_path != "debug":
-            save_model(ft_model, args)
+            save_model(ft_model, args, best_epoch)
 
 
 

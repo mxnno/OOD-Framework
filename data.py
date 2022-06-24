@@ -11,19 +11,23 @@ from os import path
 datasets.logging.set_verbosity(datasets.logging.ERROR)
 
 
-def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceClassification"):
+def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceClassification", special_dataset=None):
 
-    print("Dataset: " + args.dataset)
-    if args.dataset == 'clinc150':
+    target_data = args.dataset
+    if special_dataset:
+        target_data = special_dataset
+
+    print("Dataset: " + target_data)
+    if target_data == 'clinc150':
         raw_datasets = load_clinc(args)
-    elif args.dataset == 'clinc150_AUG':
+    elif target_data == 'clinc150_AUG':
         raw_datasets = load_clinc_with_Augmentation(args)
-    elif args.dataset == 'clinc150_AUG_ID':
+    elif target_data == 'clinc150_AUG_ID':
         raw_datasets = load_clinc_with_ID_Augmentation(args)
-    elif args.dataset == 'test_eval':
+    elif target_data == 'test_eval':
         raw_datasets = test_evaluation_dataset()
     else:
-        print ("Nicht gefunden: " + args.dataset)
+        print ("Nicht gefunden: " + target_data)
         raise NotImplementedError
 
 
@@ -170,7 +174,7 @@ def load_clinc(args):
     id = id.map(set_label_to_ID)
 
     #Falls OOD:
-    if ood_data != 'zero':
+    if ood_data != 'zero' and ood_data != 'augm':
         #OOD Daten zufällig shuffeln und reduzieren auf 10*n Few-Shot
 
         if ood_original is True:
@@ -213,7 +217,7 @@ def load_clinc(args):
     val_id.cast_column("intent", classlabel)
 
     #Falls OOD:
-    if ood_data != 'zero':
+    if ood_data != 'zero'and ood_data != 'augm':
         #OOD Daten zufällig shuffeln und reduzieren auf 10*n Few-Shot
 
         #OOD Daten zufällig shuffeln und reduzieren auf 3*n Few-Shot
@@ -296,13 +300,12 @@ def load_clinc_with_Augmentation(args):
     
     clinc_DatasetDict = load_clinc(args)
 
-    #für ohne OOD-Daten
-    return clinc_DatasetDict
 
     def prepare_txt(example):
 
         #index und /t vor dem Satz entfernen
         example['text'] = re.sub(r'^.*?/t', '', example['text'])
+        #example['text'] = example['text'].split(" ")[1]
         #. und ? als Satzzeichen entfernen
         example['text'] = example['text'].strip(".?")
         
@@ -313,6 +316,34 @@ def load_clinc_with_Augmentation(args):
 
     for datafile in ['/content/OOD-Framework/data/Augmentation/wiki.txt', '/content/OOD-Framework/data/Augmentation/subset_books.txt']:
 
+        if datafile is '/content/OOD-Framework/data/Augmentation/wiki.txt':
+            #genauso viele wie ID
+            if args.few_shot == 5:
+                num_shards = 910
+            elif args.few_shot == 20:
+                num_shards = 227
+            else:
+                num_shards = 91
+
+            #doppelte
+            #num_shards = num_shards / 2
+
+            #feste Anzahl -> zb 1k
+            #num_shards = 68
+        else:
+             #genauso viele wie ID
+            if args.few_shot == 5:
+                num_shards = 2081
+            elif args.few_shot == 20:
+                num_shards = 520
+            else:
+                num_shards = 208
+
+            #doppelte
+            #num_shards = num_shards / 2
+
+            #feste Anzahl -> zb 1k
+            #num_shards = 156
         num_labels = get_num_labels(args)
 
         label_names, label_ids = get_labels(args)
@@ -320,13 +351,24 @@ def load_clinc_with_Augmentation(args):
         data_dict = load_dataset('text', data_files={'train': datafile})
         train_dataset = data_dict['train']
         train_dataset = train_dataset.shuffle(seed=args.seed)
-        train_dataset = train_dataset.shard(num_shards=70, index=0)
+
+        #Todo: hier rausfinden, wie viele OOD Trainignsdaten gut isnd (wiki 80k, subset 150k )
+        #Orginal: 7500 Train, 1000 Val, 2000 Test -> Trainingsdaten
+
+        #- 1. entweder selbe Anzahl wie ID, dh. few_shot * 15
+        #- oder feste Anzahl wie z.B. 1k oder 2k
+
+        train_dataset = train_dataset.shard(num_shards=num_shards, index=0)
         train_dataset = train_dataset.map(prepare_txt)
         classlabel = ClassLabel(num_classes = num_labels, names = label_names)
         train_dataset = train_dataset.cast_column("intent", classlabel)
 
+        train_dataset.to_csv("train_ood_augm.csv")
+
         clinc_DatasetDict['train'] = concatenate_datasets([clinc_DatasetDict['train'], train_dataset])
 
+    
+    clinc_DatasetDict['train'].to_csv("train_ood_augm.csv")
     return clinc_DatasetDict
     
 

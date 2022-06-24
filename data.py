@@ -115,11 +115,12 @@ def load_clinc(args):
         num_labels = len(label_names)
 
     print(num_labels)
-
-    if args.ood_data == 'zero':
-        classlabel = ClassLabel(num_classes=num_labels, names=label_names)
-    else:
-        classlabel = ClassLabel(num_classes=num_labels + 1, names=['ood'] + label_names)
+    classlabel = ClassLabel(num_classes=num_labels, names=label_names)
+    #wird schon in get_labels gemacht
+    # if args.ood_data == 'zero':
+    #     classlabel = ClassLabel(num_classes=num_labels, names=label_names)
+    # else:
+    #     classlabel = ClassLabel(num_classes=num_labels + 1, names=['ood'] + label_names)
 
     def set_OOD_as_0(example):
         #OOD = label 0
@@ -166,7 +167,10 @@ def load_clinc(args):
     train_dataset = train_dataset.map(set_OOD_as_0)
 
     #ID Daten zufällig shuffeln und reduzieren auf n Few-Shot
-    id = train_dataset.filter(lambda example: example['intent'] in label_ids)
+    if ood_data == 'zero':
+        id = train_dataset.filter(lambda example: example['intent'] in label_ids)
+    else:
+        id = train_dataset.filter(lambda example: example['intent'] in label_ids[1:])
     print(id)
     id = id.shuffle(seed=args.seed)
     id = id.sort('intent')
@@ -176,6 +180,9 @@ def load_clinc(args):
     #Falls OOD:
     if ood_data != 'zero' and ood_data != 'augm':
         #OOD Daten zufällig shuffeln und reduzieren auf 10*n Few-Shot
+
+        print("????????????????????????????")
+        print(ood_data)
 
         if ood_original is True:
             #wenn OOD nur original OOD
@@ -304,13 +311,15 @@ def load_clinc_with_Augmentation(args):
     def prepare_txt(example):
 
         #index und /t vor dem Satz entfernen
-        example['text'] = re.sub(r'^.*?/t', '', example['text'])
-        #example['text'] = example['text'].split(" ")[1]
+        help = re.sub(r'^.*?/t', '', example['text'])
+
+        split_list = help.split(" ")
+        help2 = " ".join(split_list[1:])
         #. und ? als Satzzeichen entfernen
-        example['text'] = example['text'].strip(".?")
+        example['text'] = help2.strip(".?")
         
         # label hinzufügen (sind alle OOD)
-        example['intent'] = 0
+        example['intent'] = 1
 
         return example
 
@@ -362,13 +371,12 @@ def load_clinc_with_Augmentation(args):
         train_dataset = train_dataset.map(prepare_txt)
         classlabel = ClassLabel(num_classes = num_labels, names = label_names)
         train_dataset = train_dataset.cast_column("intent", classlabel)
-
         train_dataset.to_csv("train_ood_augm.csv")
 
         clinc_DatasetDict['train'] = concatenate_datasets([clinc_DatasetDict['train'], train_dataset])
 
     
-    clinc_DatasetDict['train'].to_csv("train_ood_augm.csv")
+    clinc_DatasetDict['train'].to_csv("train_ood_augm_gesamt.csv")
     return clinc_DatasetDict
     
 

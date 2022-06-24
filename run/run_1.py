@@ -50,6 +50,7 @@ def main():
 
         #Preprocess Data
         print("Preprocess Data for IMLM...")
+        args.ood_data = 'zero'
         train_dataset, dev_id_dataset, datacollector = preprocess_data(args, tokenizer, no_Dataloader=True, model_type='LanguageModeling')
 
         #Finetune IMLM + abspeichern
@@ -68,7 +69,8 @@ def main():
         model, config, tokenizer = set_model(args)
         
         #Preprocess Data
-        print("Preprocess Data for IMLM...")
+        print("Preprocess Data for BCAD...")
+        args.ood_data = "augm"
         train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer, special_dataset="clinc150_AUG")
 
         #Finetune BCAD + abspeichern

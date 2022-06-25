@@ -319,13 +319,13 @@ def load_clinc_with_Augmentation(args):
         example['text'] = help2.strip(".?")
         
         # label hinzufügen (sind alle OOD)
-        example['intent'] = 1
+        example['intent'] = 0
 
         return example
 
     for datafile in ['/content/OOD-Framework/data/Augmentation/wiki.txt', '/content/OOD-Framework/data/Augmentation/subset_books.txt']:
 
-        if datafile is '/content/OOD-Framework/data/Augmentation/wiki.txt':
+        if datafile == '/content/OOD-Framework/data/Augmentation/wiki.txt':
             #genauso viele wie ID
             if args.few_shot == 5:
                 num_shards = 910
@@ -342,7 +342,7 @@ def load_clinc_with_Augmentation(args):
         else:
              #genauso viele wie ID
             if args.few_shot == 5:
-                num_shards = 2081
+                num_shards = 2400
             elif args.few_shot == 20:
                 num_shards = 520
             else:
@@ -356,6 +356,12 @@ def load_clinc_with_Augmentation(args):
         num_labels = get_num_labels(args)
 
         label_names, label_ids = get_labels(args)
+
+
+        #löschen vom cache
+        
+        if path.exists('/root/.cache/huggingface/datasets/text/'):
+            shutil.rmtree('/root/.cache/huggingface/datasets/text/')
 
         data_dict = load_dataset('text', data_files={'train': datafile})
         train_dataset = data_dict['train']

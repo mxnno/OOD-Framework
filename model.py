@@ -12,7 +12,7 @@ from utils.utils import get_num_labels
 from scipy.stats import entropy
 
 
-def set_model(args, bert=None):
+def set_model(args, bert=None, path=None):
 
     num_labels = get_num_labels(args)
 
@@ -37,7 +37,7 @@ def set_model(args, bert=None):
     if args.model_ID == 1:
 
         
-        if args.model_name_or_path.startswith("roberta"):
+        if path is None:
             #erst IMLM Finetuning mit Roberta + MaskedLM
             config = RobertaConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
             config.gradient_checkpointing = True
@@ -53,7 +53,7 @@ def set_model(args, bert=None):
             config.alpha = args.alpha
             config.loss = args.loss
             config.loss_std = args.loss_std
-            model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
+            model = RobertaForSequenceClassification.from_pretrained(path, config=config)
             tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
         model.to(args.device)
 

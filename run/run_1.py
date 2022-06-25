@@ -50,6 +50,12 @@ def main():
 
         #Preprocess Data
         print("Preprocess Data for IMLM...")
+
+        ##PROBLEM:
+        ##IMLM mit zero OOD -> nur 1 Klasse
+        # entweder zweite alibi klasse machen oder 14 Klassen??
+
+
         args.ood_data = 'zero'
         train_dataset, dev_id_dataset, datacollector = preprocess_data(args, tokenizer, no_Dataloader=True, model_type='LanguageModeling')
 
@@ -60,17 +66,17 @@ def main():
         #args.model_name_or_path = save_path
         trainer.save_model(save_path)
 
-
+        print(save_path)
         ##### WICHTIG: Verhältniss Epochen BCAD=2 zu IMLM=10 
 
         ##################### BCAD ###############################
         #Load Model for BCAD (args.model_name_or_path wurde geändert)
         print("Load model for BCAD...")
-        model, config, tokenizer = set_model(args)
+        args.ood_data = "augm"
+        model, config, tokenizer = set_model(args, path=save_path)
         
         #Preprocess Data
         print("Preprocess Data for BCAD...")
-        args.ood_data = "augm"
         train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer, special_dataset="clinc150_AUG")
 
         #Finetune BCAD + abspeichern

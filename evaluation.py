@@ -320,26 +320,53 @@ def evaluate(args, model, eval_id, eval_ood, centroids=None, delta=None, tag=Non
     #     print(logits_score_in)
     #     print(logits_score_out)
 
-    logits_score_in = all_logits_in.max(dim = 1)[0]
-    logits_score_in = logits_score_in.cpu().detach().numpy()
-    logits_score_out = all_logits_out.max(dim = 1)[0]
-    logits_score_out = logits_score_out.cpu().detach().numpy()
+    if args.ood_data == 'zero':
+        print("00000")
+        logits_score_in = all_logits_in.max(dim = 1)[0]
+        logits_score_in = logits_score_in.cpu().detach().numpy()
+        logits_score_out = all_logits_out.max(dim = 1)[0]
+        logits_score_out = logits_score_out.cpu().detach().numpy()
 
-    t = get_treshold_eval(logits_score_in, logits_score_out, np.min(logits_score_out), max(logits_score_in), 500, min=False)
+        t = get_treshold_eval(logits_score_in, logits_score_out, np.min(logits_score_out), max(logits_score_in), 500, min=False)
 
-    logits_score_in = np.where(logits_score_in >= t, 1, 0)
-    logits_score_out = np.where(logits_score_out >= t, 1, 0)
-    print(logits_score_in)
-    print(logits_score_out)
+        logits_score_in = np.where(logits_score_in >= t, 1, 0)
+        logits_score_out = np.where(logits_score_out >= t, 1, 0)
+        print(logits_score_in)
+        print(logits_score_out)
 
-    labels_in = np.ones_like(logits_score_in).astype(np.int64)
-    labels_out = np.zeros_like(logits_score_out).astype(np.int64)
+        labels_in = np.ones_like(logits_score_in).astype(np.int64)
+        labels_out = np.zeros_like(logits_score_out).astype(np.int64)
 
-    in_acc = accuracy_score(labels_in, logits_score_in)
-    out_acc = accuracy_score(labels_out, logits_score_out)
+        in_acc = accuracy_score(labels_in, logits_score_in)
+        out_acc = accuracy_score(labels_out, logits_score_out)
 
-    results = {"acc": in_acc + out_acc}
-    return results
+        results = {"acc": in_acc + out_acc}
+        return results
+    else:
+        print("11111")
+        #Idee bei OOD Trainignsdaten: schauen ob in Klasse 0 oder nicht
+        idx_in= all_logits_in.max(dim = 1)[1]
+        idx_in = idx_in.cpu().detach().numpy()
+
+        idx_out = all_logits_out.max(dim = 1)[1]
+        idx_out = idx_out.cpu().detach().numpy()
+
+
+        logits_score_in = np.where(idx_in > 0, 1, 0)
+        logits_score_out = np.where(idx_out > 0, 1, 0)
+        print(logits_score_in)
+        print(logits_score_out)
+
+        labels_in = np.ones_like(logits_score_in).astype(np.int64)
+        labels_out = np.zeros_like(logits_score_out).astype(np.int64)
+
+        in_acc = accuracy_score(labels_in, logits_score_in)
+        out_acc = accuracy_score(labels_out, logits_score_out)
+
+        results = {"acc": in_acc + out_acc}
+        return results
+
+    
 
 
 

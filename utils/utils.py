@@ -30,6 +30,7 @@ def get_num_labels(args):
         #ID 8 DNNC muss 2 Label haben
         if args.model_ID != 8:
             return task_to_labels[args.id_data] - 1
+
         else:
             return 2
 

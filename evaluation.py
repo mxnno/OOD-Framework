@@ -328,6 +328,7 @@ def evaluate(args, model, eval_id, eval_ood, centroids=None, delta=None, tag=Non
         logits_score_out = logits_score_out.cpu().detach().numpy()
 
         t = get_treshold_eval(logits_score_in, logits_score_out, np.min(logits_score_out), max(logits_score_in), 500, min=False)
+        print(t)
 
         logits_score_in = np.where(logits_score_in >= t, 1, 0)
         logits_score_out = np.where(logits_score_out >= t, 1, 0)
@@ -345,27 +346,86 @@ def evaluate(args, model, eval_id, eval_ood, centroids=None, delta=None, tag=Non
     else:
         print("11111")
         #Idee bei OOD Trainignsdaten: schauen ob in Klasse 0 oder nicht
-        idx_in= all_logits_in.max(dim = 1)[1]
-        idx_in = idx_in.cpu().detach().numpy()
+        # idx_in= all_logits_in.max(dim = 1)[0]
+        # idx_in = idx_in.cpu().detach().numpy()
 
-        idx_out = all_logits_out.max(dim = 1)[1]
-        idx_out = idx_out.cpu().detach().numpy()
+        # idx_out = all_logits_out.max(dim = 1)[0]
+        # idx_out = idx_out.cpu().detach().numpy()
 
 
-        logits_score_in = np.where(idx_in > 0, 1, 0)
-        logits_score_out = np.where(idx_out > 0, 1, 0)
-        print(logits_score_in)
-        print(logits_score_out)
+        # logits_score_in = np.where(idx_in > 0, 1, 0)
+        # logits_score_out = np.where(idx_out > 0, 1, 0)
+        # print(logits_score_in)
+        # print(logits_score_out)
 
-        labels_in = np.ones_like(logits_score_in).astype(np.int64)
-        labels_out = np.zeros_like(logits_score_out).astype(np.int64)
+        # labels_in = np.ones_like(logits_score_in).astype(np.int64)
+        # labels_out = np.zeros_like(logits_score_out).astype(np.int64)
 
-        in_acc = accuracy_score(labels_in, logits_score_in)
-        out_acc = accuracy_score(labels_out, logits_score_out)
+        # in_acc = accuracy_score(labels_in, logits_score_in)
+        # out_acc = accuracy_score(labels_out, logits_score_out)
 
-        results = {"acc": in_acc + out_acc}
+        # results = {"acc": in_acc + out_acc}
+        # return results
+
+        #logits_score_in = all_logits_in.max(dim = 1)[0]
+        logits_score_in = all_logits_in.cpu().detach().numpy()
+        logits_score_out = all_logits_out.cpu().detach().numpy()
+
+
+        #Variante 1: 0 > 1
+        idx_in = logits_score_in.argmax(axis = -1)
+        idx_out = logits_score_out.argmax(axis = -1)
+
+        pred_in = np.where(idx_in > 0, 1, 0)
+        pred_out = np.where(idx_out > 0, 1, 0)
+
+        labels_in = np.ones_like(pred_in).astype(np.int64)
+        labels_out = np.zeros_like(pred_out).astype(np.int64)
+
+        in_acc = accuracy_score(labels_in, pred_in)
+        out_acc = accuracy_score(labels_out, pred_out)
+
+        v1 = in_acc + out_acc
+        print("V_org: " + str(v1))
+
+        #Variante 2: treshold ID
+
+        t_2 = get_trehsold_with_ood_id(logits_score_in, logits_score_out, 500, False)
+
+        #labeled:
+        pred_in =  np.where(logits_score_in[:,1:].max(axis = 1) > t_2, 1, 0)
+        pred_out =  np.where(logits_score_out[:,1:].max(axis = 1) > t_2, 1, 0)
+
+        labels_in = np.ones_like(pred_in).astype(np.int64)
+        labels_out = np.zeros_like(pred_out).astype(np.int64)
+
+        in_acc = accuracy_score(labels_in, pred_in)
+        out_acc = accuracy_score(labels_out, pred_out)
+
+        v2 = in_acc + out_acc
+        print("V_T_ID: " + str(v2))
+
+        #Variante 3: treshold OOD
+
+        t_3 = get_trehsold_with_ood_ood(logits_score_in, logits_score_out, 500, False)
+    
+        #labeled:
+        pred_in =  np.where(logits_score_in[:,0] > t_3, 0, 1)
+        pred_out =  np.where(logits_score_out[:,0] > t_3, 0, 1)
+
+        #Validation
+        labels_in = np.ones_like(pred_in).astype(np.int64)
+        labels_out = np.zeros_like(pred_out).astype(np.int64)
+
+        #labeled:
+        in_acc = accuracy_score(labels_in, pred_in)
+        out_acc = accuracy_score(labels_out, pred_out)
+
+        v3 = in_acc + out_acc
+        print("V_T_OOD: " + str(v3))
+
+        results = {"acc": max(v1, v2, v3)}
         return results
-
     
 
 
@@ -721,5 +781,63 @@ def get_treshold_eval(pred_in, pred_out, f, t, step, min):
 
     return threshold
 
+def get_trehsold_with_ood_ood(logits_in, logits_out, step, min):
+    
+    t = logits_out[:,0].max()
+    f = logits_in[:,0].min()
+    threshold = 0
+    best_acc = 0
+    labels_in = np.ones_like(logits_in.max(axis = 1)).astype(np.int64)
+    labels_out = np.zeros_like(logits_out.max(axis = 1)).astype(np.int64)
+
+    steps = np.linspace(f,t,step)
+    for i in steps:
+
+        if min is True:
+            t_pred_in =  np.where(logits_in[:,0] <= i, 0, 1)
+            t_pred_out = np.where(logits_out[:,0] <= i, 0, 1) 
+        else:
+            t_pred_in =  np.where(logits_in[:,0] > i, 0, 1)
+            t_pred_out = np.where(logits_out[:,0] > i, 0, 1)
+
+        acc = accuracy_score(labels_in, t_pred_in)
+        rec = recall_score(labels_out, t_pred_out, pos_label=0)
+
+        if acc+rec > best_acc:
+            best_acc = acc+rec
+            threshold = i
+            
+
+    return threshold
+
+def get_trehsold_with_ood_id(logits_in, logits_out, step, min):
+    
+    t = logits_in[:,1:].max()
+    f = logits_out[:,1:].min()
+    threshold = 0
+    best_acc = 0
+    labels_in = np.ones_like(logits_in.max(axis = 1)).astype(np.int64)
+    labels_out = np.zeros_like(logits_out.max(axis = 1)).astype(np.int64)
+
+    steps = np.linspace(f,t,step)
+    for i in steps:
+
+        if min is True:
+            t_pred_in =  np.where(logits_in[:,1:].max(axis = 1) <= i, 1, 0)
+            t_pred_out = np.where(logits_out[:,1:].max(axis = 1) <= i, 1, 0)
+        else:
+            t_pred_in =  np.where(logits_in[:,1:].max(axis = 1) > i,1, 0)
+            t_pred_out = np.where(logits_out[:,1:].max(axis = 1) > i, 1, 0)
+
+        acc = accuracy_score(labels_in, t_pred_in)
+        rec = recall_score(labels_out, t_pred_out, pos_label=0)
+
+
+        if acc+rec > best_acc:
+            best_acc = acc+rec
+            threshold = i
+            
+
+    return threshold
 
 

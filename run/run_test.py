@@ -3,13 +3,13 @@ import wandb
 import warnings
 
 from model import  set_model
-from finetune import finetune_std, finetune_ADB
-from ood_detection import detect_ood, test_detect_ood
+from finetune import finetune_std
+from ood_detection import detect_ood
 from utils.args import get_args
 from data import preprocess_data
-from utils.utils import set_seed, get_num_labels, save_model, save_tensor
+from utils.utils import set_seed, save_model
 from accelerate import Accelerator
-
+from model_temp import ModelWithTemperature
 warnings.filterwarnings("ignore")
 
 ## ID 2
@@ -18,11 +18,6 @@ def main():
 
     #get args
     args = get_args()
-
-
-    #init WandB
-    if args.wandb == "log":
-        wandb.init(project=args.project_name, name=str(args.model_ID) + '-' + str(args.alpha) + "_" + args.loss)
 
     #Accelerator
     if args.tpu == "tpu":
@@ -37,10 +32,12 @@ def main():
         set_seed(args)
         #Todo: set seeds?
 
-    #get num_labels
-    num_labels = get_num_labels(args)
 
     if args.task == "finetune":
+
+        #init WandB
+        if args.wandb == "log":
+            wandb.init(project=str(args.model_ID), name='{}_{}_{}_{}_{}'.format(args.id_data, args.ood_data, args.few_shot, int(args.num_train_epochs), args.seed))
 
         #Load Model
         print("Load model...")
@@ -48,8 +45,44 @@ def main():
 
         #Preprocess Data
         print("Preprocess Data...")
-        train_dataset, dev_dataset, test_dataset, test_id_dataset, test_ood_dataset = preprocess_data(args, tokenizer)
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
+        
 
+        #Pretrain SCL
+        print("Pretrain SCL (margin/similarity) ...")
+        ft_model, best_epoch =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator)
+
+        if args.save_path != "debug":
+            save_model(ft_model, args, best_epoch)
+
+
+    elif args.task == "ood_detection":
+        
+        if not args.save_path:
+            print("Bitte einen Pfad angeben, der ein Model enthält!")
+            return False
+
+
+        #Load Model
+        print("Load model...")
+        model, config, tokenizer = set_model(args)
+
+        #Preprocess Data
+        #dev_dataset = train + dev_id
+        train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
+        
+
+        #Temp für Softmax ermitteln
+        # Now we're going to wrap the model with a decorator that adds temperature scaling
+        temp_model = ModelWithTemperature(model)
+
+        # Tune the model temperature, and save the results
+        best_temp = temp_model.set_temperature(dev_id_dataset)
+
+
+        #OOD-Detection
+        print("Start OOD-Detection...")
+        detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
 
 if __name__ == "__main__":
     main()

@@ -4,7 +4,7 @@ import warnings
 
 from model import  set_model
 from finetune import finetune_imlm, finetune_std
-from ood_detection import detect_ood
+from ood_detection_ood import detect_ood
 from utils.args import get_args
 from data import preprocess_data
 from utils.utils import set_seed, get_num_labels, save_model, get_save_path
@@ -55,8 +55,11 @@ def main():
         ##IMLM mit zero OOD -> nur 1 Klasse
         # entweder zweite alibi klasse machen oder 14 Klassen??
 
+        id_data_backup = args.id_data
+
 
         args.ood_data = 'zero'
+        args.id_data = 'travel'
         train_dataset, dev_id_dataset, datacollector = preprocess_data(args, tokenizer, no_Dataloader=True, model_type='LanguageModeling')
 
         #Finetune IMLM + abspeichern
@@ -73,6 +76,7 @@ def main():
         #Load Model for BCAD (args.model_name_or_path wurde geändert)
         print("Load model for BCAD...")
         args.ood_data = "augm"
+        args.id_data = id_data_backup
         model, config, tokenizer = set_model(args, path=save_path)
         
         #Preprocess Data
@@ -98,7 +102,7 @@ def main():
 
         #Load Model
         print("Load model...")
-        model, config, tokenizer = set_model(args)
+        model, config, tokenizer = set_model(args, path = args.model_name_or_path)
 
         #Preprocess Data
         #dev_dataset = train + dev_id
@@ -111,12 +115,11 @@ def main():
         temp_model = ModelWithTemperature(model)
 
         # Tune the model temperature, and save the results
-        best_temp = temp_model.set_temperature(dev_id_dataset)
-
+        #best_temp = temp_model.set_temperature(dev_id_dataset)
+        best_temp = 1.5
 
         #OOD-Detection
         print("Start OOD-Detection...")
         detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
-
 if __name__ == "__main__":
     main()

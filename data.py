@@ -101,6 +101,7 @@ def load_clinc(args):
     #ood_data: 'zero' -> nur ID, sonst ID + OOD
     ood_data = args.ood_data
     num_shards = int(100/(args.few_shot*2))
+    num_shards_ood = 2 #num_shards * 2
 
     ood_original = True
     
@@ -181,12 +182,13 @@ def load_clinc(args):
     if ood_data != 'zero' and ood_data != 'augm':
         #OOD Daten zufällig shuffeln und reduzieren auf 10*n Few-Shot
 
-        print("????????????????????????????")
-        print(ood_data)
 
         if ood_original is True:
             #wenn OOD nur original OOD
             ood = train_dataset.filter(lambda example: example['intent']==0)
+            ood = ood.shuffle(seed=args.seed)
+            ood = ood.sort('intent')
+            ood = ood.shard(num_shards=num_shards_ood, index=0)
         else:
 
             #wenn OOD alle bis auf Domain
@@ -204,7 +206,7 @@ def load_clinc(args):
     
     #train_dataset = train_dataset.shuffle(seed=args.seed)
     train_dataset = train_dataset.cast_column("intent", classlabel)
-    #train_dataset.to_csv('training.csv')
+    train_dataset.to_csv('training.csv')
 
 
     ########################################################### Validation ###############################################################
@@ -216,7 +218,10 @@ def load_clinc(args):
     val_dataset = val_dataset.map(set_OOD_as_0)
 
     #ID Daten zufällig shuffeln und reduzieren auf n Few-Shot
-    val_id = val_dataset.filter(lambda example: example['intent'] in label_ids)
+    if ood_data == 'zero':
+        val_id = val_dataset.filter(lambda example: example['intent'] in label_ids)
+    else:
+        val_id = val_dataset.filter(lambda example: example['intent'] in label_ids[1:])
     val_id = val_id.shuffle(seed=args.seed)
     val_id = val_id.sort('intent')
     val_id = val_id.shard(num_shards=num_shards, index=0)
@@ -231,6 +236,9 @@ def load_clinc(args):
         if ood_original is True:
             #wenn OOD nur original OOD
             val_ood = val_dataset.filter(lambda example: example['intent']==0)
+            val_ood = val_ood.shuffle(seed=args.seed)
+            val_ood = val_ood.sort('intent')
+            val_ood = val_ood.shard(num_shards=20, index=0)
         else:
             val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids)
             val_ood = val_ood.shuffle(seed=args.seed)
@@ -238,8 +246,8 @@ def load_clinc(args):
             val_ood = val_ood.shard(num_shards=num_shards*3, index=0)
             val_ood = val_ood.map(set_label_to_OOD)
 
-            trainval_dataset = concatenate_datasets([val_ood, val_id, id])
-            val_ood = concatenate_datasets([val_ood, val_id])
+        trainval_dataset = concatenate_datasets([val_ood, val_id, id])
+        val_ood = concatenate_datasets([val_ood, val_id])
 
     else:
         trainval_dataset = concatenate_datasets([id, val_id])
@@ -267,7 +275,10 @@ def load_clinc(args):
     test_ood_dataset = test_ood_dataset.cast_column("intent", classlabel)
 
     #Test ID
-    test_id_dataset = test_dataset.filter(lambda example: example['intent'] in label_ids)
+    if ood_data == 'zero':
+        test_id_dataset = test_dataset.filter(lambda example: example['intent'] in label_ids)
+    else:
+        test_id_dataset = test_dataset.filter(lambda example: example['intent'] in label_ids[1:])
     test_id_dataset = test_id_dataset.map(set_label_to_ID)
     test_id_dataset = test_id_dataset.cast_column("intent", classlabel)
 
@@ -279,12 +290,12 @@ def load_clinc(args):
     test_id_help = test_id_dataset
     test_id_help = test_id_help.shuffle(seed=args.seed)
     test_id_help = test_id_help.sort('intent')
-    test_id_help = test_id_help.shard(num_shards=10, index=0)
+    test_id_help = test_id_help.shard(num_shards=10, index=0) #10
 
     test_ood_help = test_ood_dataset
     test_ood_help = test_ood_help.shuffle(seed=args.seed)
     test_ood_help = test_ood_help.sort('intent')
-    test_ood_help = test_ood_help.shard(num_shards=20, index=0)
+    test_ood_help = test_ood_help.shard(num_shards=20, index=0) #20 normal
     
     test_id_help.to_csv("test_id")
     test_ood_help.to_csv("test_ood")

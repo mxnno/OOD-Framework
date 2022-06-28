@@ -77,12 +77,18 @@ def main():
         temp_model = ModelWithTemperature(model)
 
         # Tune the model temperature, and save the results
-        best_temp = temp_model.set_temperature(dev_id_dataset)
+        best_temp = temp_model.set_temperature(dev_ood_dataset)
+
+
+        if args.ood_data == "full":
+            val_dataset = dev_ood_dataset
+        else:
+            val_dataset = dev_id_dataset
 
 
         #OOD-Detection
         print("Start OOD-Detection...")
-        detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
+        detect_ood(args, model, train_dataset, traindev_dataset, val_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
 
 if __name__ == "__main__":
     main()

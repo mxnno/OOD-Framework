@@ -14,7 +14,7 @@ from sklearn import svm
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from functools import reduce
-from evaluation import evaluate_metriken_ohne_Treshold, evaluate_mit_Treshold, evaluate_scores_ohne_Treshold, evaluate_NLI, evaluate_ADB
+from evaluation import evaluate_metriken_ohne_Treshold, evaluate_mit_Treshold, evaluate_scores_ohne_Treshold, evaluate_NLI, evaluate_ADB, evaluate_mit_OOD
 from scipy.stats import chi2
 from model import  set_model
 
@@ -25,40 +25,16 @@ from model import  set_model
 def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None, best_temp=None):
     
 
-    #OOD Detection + Eval in 3 Schritten
-    # 1. Model prediction (BATCH SIZE = 1 !!)
-    # ToDo: - Varianz + OC-SVM Score (z.B. nach Mahascore zusätzlich) hinzufügen -> Anhand 1-2 Beispielen testen, ob Mehrwert oder nicht
-    # 2. Threshold anwenden -> 0 oder 1
-    # **************************
-    # * - Tresholdunabhängige Metriken -> wichtig: Maha geht nur in Kombi mit OC-SVM, Softmax nicht
-    # * - best Treshold (-> um zu vergleichen, falls man irgendwie auf den Treshold kommen kann) (wie z.B. DNNC oder clinc)
-    # * - OC-SVM (alleine nicht so gut wie optimale Treshold )
-    # * - DOC -> kein Treshold notwendig
-    # * - avg Treshold (über Train/Dev und z.B. über Mean) -> hier nur evtl. gibt gaaanz viele Möglichkeiten (falls noch Zeit Extra Kapitel)
-    # *************************
-    # WICHTIG: wie komme ich auf T
-    #       1. Über Testdaten selber -> besten Treshold picken 
-    #       2. Über DEV-Daten (min, mittelwert-Varianz...)
-    #       3. Über SVM, log.Regression (geht wsl nicht)
-    #       4. DOC anschauen, da braucht man keine Tresholds, UNK -> LOF (https://github.com/thuiar/TEXTOIR/blob/main/open_intent_detection/methods/DeepUnk/manager.py#L146)
-    #       5. ID3 Methode (was ist unseen und seen?) mit testID vs TestOOD kommen gleiche ergebnisse wie bei mir raus.. evtl train vs dev oder schauen, dass man tp und fp aus den anderen mehtoden ohne Trehsold bekommt -> aber wsl viel zu hoher Treshold
-    # 3. Metriken berechnen
-    # - mit T
-    # - ohne T (auroc-score (ID1 hier schon vorhanden), tnr_at_tpr95 (ID2), + weitere -> siehe unter tnr_at_tpr95 Evaluation)
-    #   WICHTIG: Prüfen ob DTACC mit Treshold .5 * ...
+    #DETECT OOD wenn es OOD Trainingsdaten gibt
+
+    #1. konservativer Ansatz -> normale Klassifizierung, man nimmt die Klasse mit höchster Prediction
+
+    #2. mit Treshold für ID Daten
+    #   - anhand der ID Scores wird ein Treshold gebildet
+    #   - Treshold wird auch nur auf ID angewender (np.where(x[:, 1:] > t, 1, 0))
+    #   - Idee: falls Modell OOD predicted, dann sind die ID Werte unter dem Treshold und es wird 0 gewählt
 
 
-
-    #Paper
-    #Idee: 3 besten Kombinieren (001) -> 0 und (101) -> 1
-    #bzw. nicht nur die 3 besten, sondern starke und schwache(d.h. wenn 0.3 in_acc und 0.996 out_rec --> ID sagt, dann sicher ID, wenn nicht dann mit weniger starken weitermachen)
-
-    #Paper
-    #Idee: Maha -> SVM -> Treshold: mit optimalem Treshold keine besseren Ergebnisse als ohne SVM(vlt für softmax etc anders? -> nochmal testen)
-
-
-    #Wichtig:
-    #bei Maha muss prepare und Trehsold predriction auf unterschiedlichen Daten ausgeführt werden, d.h. z.B. prepare mit Training und Treshold mit dev -> sonst kommen immer die gleiche Werte raus (15 oder 90 für alle Maha Predictions)
     model.prepare_ood(train_dataset)
 
 
@@ -135,100 +111,87 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     model.all_pool = []
 
 
-    softmax_in = get_softmax_score(all_logits_in, full_score=True)
-    softmax_out = get_softmax_score(all_logits_out, full_score=True)
-    softmax_in = softmax_in.cpu().detach().numpy()
-    softmax_out = softmax_out.cpu().detach().numpy()
+#2. Treshold + Scores
+    
+    #scores_dev = Scores(thresholds, all_logits_dev, all_logits_out, all_pool_dev, all_pool_out, all_logits_train, all_pool_train, model.norm_bank, model.all_classes, train_labels, dev_labels, model.class_mean, model.class_var)
+    #scores_dev.calculate_scores(best_temp)
+    #
 
-    all_logits_in = all_logits_in.cpu().detach().numpy()
-    all_logits_out = all_logits_out.cpu().detach().numpy()
-
-
-    print("###### LOGITS ######")
-    v1(all_logits_in, all_logits_out)
-    v2(all_logits_in, all_logits_out)
-    v3(all_logits_in, all_logits_out)
-
-    print("###### SOFTMAX ######")
-    v1(softmax_in, softmax_out)
-    v2(softmax_in, softmax_out)
-    v3(softmax_in, softmax_out)
+    thresholds = Tresholds()
+    scores = Scores(all_logits_in, all_logits_out, all_pool_in, all_pool_out, all_logits_train, all_pool_train, all_logits_dev, all_pool_dev, model.norm_bank, model.all_classes, train_labels, dev_labels, model.class_mean, model.class_var)
+    print("Calculate all scores...")
+    scores.calculate_scores(best_temp, args)
 
 
+    #Einfach Klassifizierung falls OOD Daten vorhanden -> höchste Klasse gewinnt
+    # nur für logits, softmax und maha, da es eh nicht so gut ist -> weniger Aufwand
+    scores_ood = deepcopy(scores)
+    scores_ood.ood_classification()
+    evaluate_mit_OOD(scores_ood)
+    
+    
+    # (muss als erstes)
+# 2.1 Metriken ohne Treshold -> man braucht die Scores, nicht 0,1 ...
+    # -> nicht für LOF und DOC möglich
+    # -> Maha nur in Kombi mit OC-SVM-Scores
+    # --> bei softmax wesentlich schlechtere Erg mit OC-SVM -> softmax mit und ohne OC-SVM Scores in einer Tabelle
+    print("Metriken ohne Treshold...")
+    scores_ocsvm = deepcopy(scores)
+    scores_ocsvm.apply_ocsvm(args, "scores")
+    #-> scores_in bzw. scors_out UND scores_in_ocsvm bzw. scores_out_ocsvm in eval abfragen!
+    evaluate_metriken_ohne_Treshold(args, scores_ocsvm)
 
-def v1(logits_score_in, logits_score_out):
-    #Variante 1: 0 > 1
-    idx_in = logits_score_in.argmax(axis = -1)
-    idx_out = logits_score_out.argmax(axis = -1)
-
-    pred_in = np.where(idx_in > 0, 1, 0)
-    pred_out = np.where(idx_out > 0, 1, 0)
-
-    labels_in = np.ones_like(pred_in).astype(np.int64)
-    labels_out = np.zeros_like(pred_out).astype(np.int64)
-
-    in_acc = accuracy_score(labels_in, pred_in)
-    out_acc = accuracy_score(labels_out, pred_out)
-
-    v1 = in_acc + out_acc
-    print("V_org: " + str(v1))
 
 
-def v2(logits_score_in, logits_score_out):
+# 2.2 mit Treshold (best. avg)
 
-    #Variante 2: treshold ID
+    print("Mit Treshold...")
+    print("...best...")
+    scores_best = deepcopy(scores)
+    thresholds.calculate_tresholds(args, scores_best, 'best')
+    scores_best.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
+    evaluate_mit_Treshold(args, scores_best, 'best')
+    print("...avg...")
+    scores_avg = deepcopy(scores)
+    thresholds.calculate_tresholds(args, scores_avg, 'avg')
+    scores_avg.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
+    evaluate_mit_Treshold(args, scores_avg, 'avg')
+    
+# 2.2 ohne Treshold zu 0/1
+    # - OCSVM Predict (logits, softmax ...)
+    # - DOC (logits) -> geht nur für alleine
+    # - LOF (logits+pool) -> geht nur für alleine
+    print("Scores ohne Treshold...")
+    #für ADB 
+    
+    scores_ohne_Treshold = deepcopy(scores)
+    scores_ohne_Treshold.apply_ocsvm(args, 'predict')
+    evaluate_scores_ohne_Treshold(args, scores_ohne_Treshold)
 
-    t_2 = get_trehsold_with_ood_id(logits_score_in, logits_score_out, 500, False)
-
-    #labeled:
-    pred_in =  np.where(logits_score_in[:,1:].max(axis = 1) > t_2, 1, 0)
-    pred_out =  np.where(logits_score_out[:,1:].max(axis = 1) > t_2, 1, 0)
-
-    labels_in = np.ones_like(pred_in).astype(np.int64)
-    labels_out = np.zeros_like(pred_out).astype(np.int64)
-
-    in_acc = accuracy_score(labels_in, pred_in)
-    out_acc = accuracy_score(labels_out, pred_out)
-
-    v2 = in_acc + out_acc
-    print("V_T_ID: " + str(v2))
-
-def v3(logits_score_in, logits_score_out):
-    #Variante 3: treshold OOD
-
-    t_3 = get_trehsold_with_ood_ood(logits_score_in, logits_score_out, 500, False)
-
-    #labeled:
-    pred_in =  np.where(logits_score_in[:,0] > t_3, 0, 1)
-    pred_out =  np.where(logits_score_out[:,0] > t_3, 0, 1)
-
-    #Validation
-    labels_in = np.ones_like(pred_in).astype(np.int64)
-    labels_out = np.zeros_like(pred_out).astype(np.int64)
-
-    #labeled:
-    in_acc = accuracy_score(labels_in, pred_in)
-    out_acc = accuracy_score(labels_out, pred_out)
-
-    v3 = in_acc + out_acc
-    print("V_T_OOD: " + str(v3))
 
 
 #################################################### METHODEN ####################################################
 
 
 
-def get_model_prediction(logits, full_score=False):
+def get_model_prediction(logits, full_score=False, idx=False):
     #return label_pred des Models
     if full_score:
         return logits
 
     pred, label_pred = logits.max(dim = 1)
-    return label_pred.cpu().detach().numpy()
+
+    if idx:
+        return label_pred.cpu().detach().numpy()
+    else:
+        pred = pred[:,1:]
+        return pred.cpu().detach().numpy()
+
 
 def get_varianz_score(logits):
 
     var_score = logits.cpu().detach().numpy()
+    var_score = var_score[:,1:]
     return np.var(var_score, axis=1)
 
 def get_softmax_score(logits, full_score=False):
@@ -244,10 +207,11 @@ def get_softmax_score(logits, full_score=False):
         return softmax
 
     softmax, idx = F.softmax(logits, dim=-1).max(-1)
-    return idx.cpu().detach().numpy()
+    softmax = softmax[:,1:]
+    return softmax.cpu().detach().numpy()
 
 
-def get_softmax_score_with_temp(logits, temp, full_score=False):
+def get_softmax_score_with_temp(logits, temp, full_score=False, idx=False):
     # Nach Odin: https://openreview.net/pdf?id=H1VGkIxRZ
     # Input: 
     # - logits eines batches
@@ -262,9 +226,13 @@ def get_softmax_score_with_temp(logits, temp, full_score=False):
         softmax = F.softmax((logits / temp), dim=-1)
         return softmax
 
-
     softmax, idx = F.softmax((logits / temp), dim=-1).max(-1)
-    return idx.cpu().detach().numpy()
+
+    if idx:
+        return idx.cpu().detach().numpy()
+    else:
+        softmax = softmax[:,1:]
+        return softmax.cpu().detach().numpy()
 
 def get_entropy_score(logits):
 
@@ -279,27 +247,34 @@ def get_entropy_score(logits):
     softmax = F.softmax(logits, dim=-1)
     expo = torch.exp(softmax)
     expo = expo.cpu()
-    return entropy(expo, axis=1)
+    entro = entropy(expo, axis=1)
+    return entro[:,1:]
 
-def get_cosine_score(pooled, norm_bank, full_scores=False):
+def get_cosine_score(pooled, norm_bank, full_scores=False, idx=False):
     #von ID 2
     #hier fehlt noch norm_bank
     norm_pooled = F.normalize(pooled, dim=-1)
     cosine_score = norm_pooled @ norm_bank.t()
     if full_scores is True:
         return cosine_score
-    cosine_score = cosine_score.max(-1)[1]
-    return cosine_score.cpu().detach().numpy()
+    
+    if idx:
+        idx = cosine_score.max(-1)[1]
+        return idx.cpu().detach().numpy()
+    else:
+        cosine_score = cosine_score.max(-1)[0]
+        cosine_score.cpu().detach().numpy()
+        return cosine_score[:,1:]
 
 
 def get_energy_score(logits):
     #-> hier kein Full_score möglich -> nicht für OCSVM geeignet...
-
+    energy = torch.logsumexp(logits, dim=-1).cpu().detach().numpy()
     #von ID 2
-    return torch.logsumexp(logits, dim=-1).cpu().detach().numpy()
+    return energy[:,1:]
 
 
-def get_maha_score(pooled, all_classes, class_mean, class_var, full_scores=False):
+def get_maha_score(pooled, all_classes, class_mean, class_var, full_scores=False, idx=False):
 
     #ID 2:
     maha_score = []
@@ -310,214 +285,421 @@ def get_maha_score(pooled, all_classes, class_mean, class_var, full_scores=False
     maha_score_full = torch.stack(maha_score, dim=-1)
     if full_scores is True:
         return maha_score_full
-    maha_score = maha_score_full.min(-1)[1]
-    #maha_score = -maha_score
-    maha_score = maha_score.cpu().detach().numpy()
-    return maha_score
+
+    if idx:
+        idx = maha_score_full.min(-1)[1]
+        return idx.cpu().detach().numpy()
+    else:
+        maha_score = maha_score_full.min(-1)[0]
+        maha_score.cpu().detach().numpy()
+        return maha_score[:,1:]
     #https://www.statology.org/mahalanobis-distance-python/
     # aus distanz ein p-Value berechnen -> outlier
 
 
 
-def get_gda_score(train_logits, test_logits_in, test_logits_out, dev_logits, train_labels, distance_type, full_scores):
 
-    #andere Methode um Means und Varianz zu bekommen -> ansonsten genauso wie maha
+class Scores():
 
-    def gda_help(prob_test, means, distance_type, cov):
-        num_samples = prob_test.shape[0]
-        num_features = prob_test.shape[1]
-        num_classes = means.shape[0]
-        if distance_type == "euclidean":
-            cov = np.identity(num_features)
-        features = prob_test.reshape(num_samples, 1, num_features).repeat(num_classes,axis=1)  # (num_samples, num_classes, num_features)
-        means = means.reshape(1, num_classes, num_features).repeat(num_samples, axis=0)  # (num_samples, num_classes, num_features)
-        vectors = features - means  # (num_samples, num_classes, num_features)
-        cov_inv = np.linalg.inv(cov)
-        bef_sqrt = np.matmul(np.matmul(vectors.reshape(num_samples, num_classes, 1, num_features), cov_inv),
-                              vectors.reshape(num_samples, num_classes, num_features, 1)).squeeze()
-        result = np.sqrt(bef_sqrt)
-        result[np.isnan(result)] = 1e12  # solve nan
-        if full_scores:
-            return result
-        result = result.min(axis=1)
+    def __init__(self, logits_in, logits_out, pooled_in, pooled_out, logits_train, pooled_train, logits_dev, pooled_dev, norm_bank, all_classes, train_labels, dev_labels, class_mean, class_var):
 
-        return result
+        #Logits & Pooled
+        self.logits_train = logits_train
+        self.pooled_train = pooled_train
 
-  #= Maha oder Eucliien mit anderer Methode
-  #ID 3+4 machen es so mit LinearDiscriminantAnalysis: https://github.com/pris-nlp/Generative_distance-based_OOD/blob/main/experiment.py#L248
+        self.logits_dev = logits_dev
+        self.pooled_dev = pooled_dev
 
-    prob_train = F.softmax(train_logits, dim=-1)
-    prob_train = prob_train.cpu().detach().numpy()
-    prob_dev = F.softmax(dev_logits, dim=-1)
-    prob_dev = prob_dev.cpu().detach().numpy()
-
-    prob_test_in = F.softmax(test_logits_in, dim=-1)
-    prob_test_in = prob_test_in.cpu().detach().numpy()
-    prob_test_out = F.softmax(test_logits_out, dim=-1)
-    prob_test_out = prob_test_out.cpu().detach().numpy()
-
-    
-    #solver {‘svd’, ‘lsqr’, ‘eigen’}
-    gda = LinearDiscriminantAnalysis(solver="lsqr", shrinkage=None, store_covariance=True)
-    train_labels.cpu().detach().numpy()
-    gda.fit(prob_train, train_labels)
-
-    means =  gda.means_
-    cov = gda.covariance_
-
-    results_train = gda_help(prob_train, means, distance_type, cov)
-    results_dev = gda_help(prob_dev, means, distance_type, cov)
-    results_in = gda_help(prob_test_in, means, distance_type, cov)
-    results_out = gda_help(prob_test_out, means, distance_type, cov)
-    
-    return results_train, results_dev, results_in, results_out
-
-
-def get_lof_score(logits_in, logits_out, pooled_in, pooled_out, train_pooled, args=None):
-    #Falls es OOD_Trainingsdaten gibt -> Outlier, sosnt Novelety -> novelty=True setzen
-    # Logits sind nicht batchweise sonder alle !
-    #aus: https://github.com/thuiar/TEXTOIR/blob/main/open_intent_detection/methods/DeepUnk/manager.py
-    #Org paper: https://arxiv.org/pdf/1906.00434.pdf
-
-    #https://github.com/pris-nlp/Generative_distance-based_OOD/blob/main/experiment.py#L227
-    #https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.LocalOutlierFactor.html
-
-    #ein großer Tensor mit allen Train Pooling Daten
-    train_feats = train_pooled.cpu().numpy()
-
-
-    #wir brauchen aber die predicteten label des Models
-    _, pred_labels_in = logits_in.max(dim = 1)
-    _, pred_labels_out = logits_out.max(dim = 1)
-    pred_labels_in = pred_labels_in.cpu().numpy()
-    pred_labels_out = pred_labels_out.cpu().numpy()
-    #ein großer Tensor für Pooling 
-    pooled_in = pooled_in.cpu().numpy()
-    pooled_out = pooled_out.cpu().numpy()
-
-
-    #lof = LocalOutlierFactor(n_neighbors=20, metric = "mahalanobis", metric_params={'VI': np.cov(train_feats, rowvar= False)},   novelty=True, n_jobs=-1)
-    lof = LocalOutlierFactor(n_neighbors=args.few_shot, contamination = 0.5, n_jobs=-1)
-    lof.fit(train_feats)
-    #predict() -> -1 OOD, 1 ID
-    y_pred_lof_in = lof.predict(pooled_in)
-    pred_labels_in = np.ones_like(y_pred_lof_in)
-    pred_labels_in[y_pred_lof_in == -1] = 0
-
-    #pooled out: [1000*768] 1000 wegen 1000 Testdaten
-    y_pred_lof_out = lof.predict(pooled_out)
-    pred_labels_out = np.ones_like(y_pred_lof_out)
-    pred_labels_out[y_pred_lof_out == -1] = 0
-
-    # Orginal: geben preds (pred_labels) zurück und setzen das Label der OOD auf data.unseen_label_id
-    #preds[y_pred_lof[y_pred_lof == -1].index] = data.unseen_label_id
-    return pred_labels_in, pred_labels_out
-  
-
-
-
-def get_doc_score(train_logits, train_labels, logits_predict, all_classes):
-    #bzw DOC ID 12/13
-
-    if not isinstance(train_logits, np.ndarray):
-        train_logits = train_logits.cpu().detach().numpy()
-    if not isinstance(logits_predict, np.ndarray):
-        logits_predict = logits_predict.cpu().detach().numpy()
-
-    def mu_fit(prob_pos_X):
-        prob_pos = [p for p in prob_pos_X] + [2 - p for p in prob_pos_X]
-        pos_mu, pos_std = dist_model.fit(prob_pos)
-        return pos_mu, pos_std
-
-    mu_stds = []
-    for i in range(len(all_classes)):
-        index_list = [y for y, x in enumerate(train_labels) if x == i]
-        pos_mu, pos_std = mu_fit(train_logits[index_list, i])
-        mu_stds.append([pos_mu, pos_std])
-    
-    thresholds = np.empty([len(all_classes)])
-    for col in range(len(all_classes)):
-        threshold = mu_stds[col][1]
-        label = all_classes[col]
-        thresholds[label] = threshold
-    thresholds = np.array(thresholds)
-    #treshold = np.mean(thresholds) + np.var(thresholds)
-    threshold = np.max(thresholds)
-    threshold = np.mean(thresholds)
-
-    y_pred = []
-    for p in logits_predict:
-        max_class = np.argmax(p)
-        max_value = np.max(p)
+        self.logits_in = logits_in
+        self.logits_out = logits_out
+        self.pooled_in = pooled_in
+        self.pooled_out = pooled_out
         
-        #threshold = max(0.5, 1 - 0.3 * mu_stds[max_class][1])
-        #threshold = mu_stds[max_class][1]
-        if max_value > threshold:
-            #y_pred.append(max_class)
-            y_pred.append(1)
-        else:
-            #y_pred.append(data.unseen_label_id)
-            y_pred.append(0)
+        #sonstiges
+        
+        self.norm_bank = norm_bank
+        self.all_classes = all_classes # all_classes = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+        self.train_labels = train_labels # labels aller Trainingsdaten: [1, 11, 3, 1, 14, ...]
+        self.dev_labels = dev_labels
+        self.class_mean = class_mean
+        self.class_var = class_var
 
-    return np.array(y_pred)
+        #Scores
+
+        #falls OOD Daten
+        self.logits_idx_in = 0
+        self.logits_idx_out = 0
+        self.softmax_temp_idx_in = 0
+        self.softmax_temp_idx_out = 0
+        self.cosine_idx_in = 0
+        self.cosine_idx_out = 0
+        self.maha_idx_in = 0
+        self.maha_idx_out = 0
+
+
+        
+        self.logits_score_in_ocsvm = 0
+        self.logits_score_out_ocsvm = 0
+        self.logits_score_train_ocsvm = 0
+        self.logits_score_train = 0
+        self.logits_score_dev = 0
+        self.logits_score_in = 0
+        self.logits_score_out = 0
+
+        self.varianz_score_train = 0
+        self.varianz_score_dev = 0
+        self.varianz_score_in = 0
+        self.varianz_score_out = 0
+        
+        self.softmax_score_in_ocsvm = 0
+        self.softmax_score_out_ocsvm = 0
+        self.softmax_score_train_ocsvm = 0
+        self.softmax_score_train = 0
+        self.softmax_score_dev = 0
+        self.softmax_score_in = 0
+        self.softmax_score_out = 0
+
+        self.softmax_score_temp_in_ocsvm = 0
+        self.softmax_score_temp_out_ocsvm = 0
+        self.softmax_score_temp_train_ocsvm = 0
+        self.softmax_score_temp_train = 0
+        self.softmax_score_temp_dev = 0
+        self.softmax_score_temp_in = 0
+        self.softmax_score_temp_out = 0
+
+        self.cosine_score_in_ocsvm = 0
+        self.cosine_score_out_ocsvm = 0
+        self.cosine_score_train_ocsvm = 0
+        self.cosine_score_train = 0
+        self.cosine_score_dev = 0
+        self.cosine_score_in = 0
+        self.cosine_score_out = 0
+
+        self.energy_score_train = 0
+        self.energy_score_dev = 0
+        self.energy_score_in = 0
+        self.energy_score_out = 0
+
+        self.entropy_score_train = 0
+        self.entropy_score_dev = 0
+        self.entropy_score_in = 0
+        self.entropy_score_out = 0
+
+
+        self.maha_score_in_ocsvm = 0
+        self.maha_score_out_ocsvm = 0
+        self.maha_score_dev_ocsvm = 0
+        self.maha_score_train = 0
+        self.maha_score_dev = 0
+        self.maha_score_in = 0
+        self.maha_score_out = 0
 
 
 
-def get_trehsold_with_ood_ood(logits_in, logits_out, step, min):
-    
-    t = logits_out[:,0].max()
-    f = logits_in[:,0].min()
-    threshold = 0
-    best_acc = 0
-    labels_in = np.ones_like(logits_in.max(axis = 1)).astype(np.int64)
-    labels_out = np.zeros_like(logits_out.max(axis = 1)).astype(np.int64)
+    def calculate_scores(self, best_temp, args=None):
 
-    steps = np.linspace(f,t,step)
-    for i in steps:
+        self.logits_idx_in = get_model_prediction(self.logits_in, False, True)
+        self.logits_idx_out = get_model_prediction(self.logits_out, False, True)
+        self.softmax_temp_idx_in = get_softmax_score_with_temp(self.logits_in, best_temp, False, True)
+        self.softmax_temp_idx_out = get_softmax_score_with_temp(self.logits_out, best_temp, False, True)
+        self.cosine_idx_in = get_cosine_score(self.pooled_in, self.norm_bank, False, True)
+        self.cosine_idx_out = get_cosine_score(self.pooled_out, self.norm_bank, False, True)
+        self.maha_idx_in = get_maha_score(self.pooled_in, self.all_classes, self.class_mean, self.class_var, False, True)
+        self.maha_idx_out = get_maha_score(self.pooled_out, self.all_classes, self.class_mean, self.class_var, False, True)
 
-        if min is True:
-            t_pred_in =  np.where(logits_in[:,0] <= i, 0, 1)
-            t_pred_out = np.where(logits_out[:,0] <= i, 0, 1) 
-        else:
-            t_pred_in =  np.where(logits_in[:,0] > i, 0, 1)
-            t_pred_out = np.where(logits_out[:,0] > i, 0, 1)
+        ################## Nur Logits #####################
+        self.logits_score_in_ocsvm = get_model_prediction(self.logits_in, True)
+        self.logits_score_out_ocsvm = get_model_prediction(self.logits_out, True)
+        self.logits_score_train_ocsvm = get_model_prediction(self.logits_train, True)
+        self.logits_score_train = get_model_prediction(self.logits_train, False)
+        self.logits_score_dev = get_model_prediction(self.logits_dev, False)
+        self.logits_score_in = get_model_prediction(self.logits_in, False)
+        self.logits_score_out = get_model_prediction(self.logits_out, False)
 
-        acc = accuracy_score(labels_in, t_pred_in)
-        rec = recall_score(labels_out, t_pred_out, pos_label=0)
+        ################## VARIANZ #####################
+        self.varianz_score_train = get_varianz_score(self.logits_train)
+        self.varianz_score_dev = get_varianz_score(self.logits_dev)
+        self.varianz_score_in = get_varianz_score(self.logits_in)
+        self.varianz_score_out = get_varianz_score(self.logits_out)
 
-        if acc+rec > best_acc:
-            best_acc = acc+rec
-            threshold = i
+        ################## SOFTMAX ########################
+        self.softmax_score_in_ocsvm = get_softmax_score(self.logits_in, True)
+        self.softmax_score_out_ocsvm = get_softmax_score(self.logits_out, True)
+        self.softmax_score_train_ocsvm = get_softmax_score(self.logits_train, True)
+        self.softmax_score_train = get_softmax_score(self.logits_train, False)
+        self.softmax_score_dev = get_softmax_score(self.logits_dev, False)
+        self.softmax_score_in = get_softmax_score(self.logits_in, False)
+        self.softmax_score_out= get_softmax_score(self.logits_out, False)
+
+        ################# SOFTMAX TMP #####################
+        self.softmax_score_temp_in_ocsvm = get_softmax_score_with_temp(self.logits_in, best_temp, True)
+        self.softmax_score_temp_out_ocsvm = get_softmax_score_with_temp(self.logits_out, best_temp, True)
+        self.softmax_score_temp_train_ocsvm = get_softmax_score_with_temp(self.logits_train, best_temp, True)
+        self.softmax_score_temp_train = get_softmax_score_with_temp(self.logits_train, best_temp, False)
+        self.softmax_score_temp_dev = get_softmax_score_with_temp(self.logits_dev, best_temp, False)
+        self.softmax_score_temp_in = get_softmax_score_with_temp(self.logits_in, best_temp, False)
+        self.softmax_score_temp_out = get_softmax_score_with_temp(self.logits_out, best_temp, False)
+
+        ################# COSINE ##########################
+        self.cosine_score_in_ocsvm = get_cosine_score(self.pooled_in, self.norm_bank, True)
+        self.cosine_score_out_ocsvm = get_cosine_score(self.pooled_out, self.norm_bank, True)
+        self.cosine_score_dev_ocsvm = get_cosine_score(self.pooled_dev, self.norm_bank, True)
+        self.cosine_score_train = get_cosine_score(self.pooled_train, self.norm_bank, False)
+        self.cosine_score_dev = get_cosine_score(self.pooled_dev, self.norm_bank, False)
+        self.cosine_score_in = get_cosine_score(self.pooled_in, self.norm_bank, False)
+        self.cosine_score_out = get_cosine_score(self.pooled_out, self.norm_bank, False)
+
+        ################### ENERGY #######################
+        self.energy_score_train = get_energy_score(self.logits_train)
+        self.energy_score_dev = get_energy_score(self.logits_dev)
+        self.energy_score_in = get_energy_score(self.logits_in)
+        self.energy_score_out = get_energy_score(self.logits_out)
+
+        ################## ENTROPY ########################
+        self.entropy_score_train = get_entropy_score(self.logits_train)
+        self.entropy_score_dev = get_entropy_score(self.logits_dev)
+        self.entropy_score_in = get_entropy_score(self.logits_in)
+        self.entropy_score_out = get_entropy_score(self.logits_out)
+
+       
+        ################### MAHA ############################
+        self.maha_score_in_ocsvm = get_maha_score(self.pooled_in, self.all_classes, self.class_mean, self.class_var, True)
+        self.maha_score_out_ocsvm = get_maha_score(self.pooled_out, self.all_classes, self.class_mean, self.class_var, True)
+        self.maha_score_dev_ocsvm = get_maha_score(self.pooled_dev, self.all_classes, self.class_mean, self.class_var, True)
+        self.maha_score_train_ocsvm = get_maha_score(self.pooled_train, self.all_classes, self.class_mean, self.class_var, True)
+        self.maha_score_train = get_maha_score(self.pooled_train, self.all_classes, self.class_mean, self.class_var, False)
+        self.maha_score_dev = get_maha_score(self.pooled_dev, self.all_classes, self.class_mean, self.class_var, False)
+        self.maha_score_in = get_maha_score(self.pooled_in, self.all_classes, self.class_mean, self.class_var, False)
+        self.maha_score_out = get_maha_score(self.pooled_out, self.all_classes, self.class_mean, self.class_var, False)
+
+
+    def apply_ocsvm(self, args, method):
+
+        def get_ocsvm_scores(ocsvm_train, ocsvm_in, ocsvm_out):
             
+            if not isinstance(ocsvm_train, np.ndarray):
+                ocsvm_train = ocsvm_train.cpu().detach().numpy()
+            if not isinstance(ocsvm_in, np.ndarray):
+                ocsvm_in = ocsvm_in.cpu().detach().numpy()
+            if not isinstance(ocsvm_out, np.ndarray):
+                ocsvm_out = ocsvm_out.cpu().detach().numpy()
+            #SVM
+            nuu = 0.8
+            c_lr = None
+            c_lr = svm.OneClassSVM(nu=nuu, kernel='linear', degree=2)
+            #c_lr = svm.OneClassSVM(gamma='scale', nu=0.01)
+            c_lr.fit(ocsvm_train)
 
-    return threshold
+            if method == "predict":
+                #return 0|1
+                pred_in = c_lr.predict(ocsvm_in)
+                pred_in = np.where(pred_in == -1, 0, 1)
+                pred_out = c_lr.predict(ocsvm_out)
+                pred_out = np.where(pred_out == -1, 0, 1)
+            else:
+                #return scores optimiert von ocsvm
+                pred_in = c_lr.score_samples(ocsvm_in)
+                pred_out = c_lr.score_samples(ocsvm_out)
 
-def get_trehsold_with_ood_id(logits_in, logits_out, step, min):
+            return pred_in, pred_out
+
     
-    t = logits_in[:,1:].max()
-    f = logits_out[:,1:].min()
-    threshold = 0
-    best_acc = 0
-    labels_in = np.ones_like(logits_in.max(axis = 1)).astype(np.int64)
-    labels_out = np.zeros_like(logits_out.max(axis = 1)).astype(np.int64)
-
-    steps = np.linspace(f,t,step)
-    for i in steps:
-
-        if min is True:
-            t_pred_in =  np.where(logits_in[:,1:].max(axis = 1) <= i, 1, 0)
-            t_pred_out = np.where(logits_out[:,1:].max(axis = 1) <= i, 1, 0)
-        else:
-            t_pred_in =  np.where(logits_in[:,1:].max(axis = 1) > i,1, 0)
-            t_pred_out = np.where(logits_out[:,1:].max(axis = 1) > i, 1, 0)
-
-        acc = accuracy_score(labels_in, t_pred_in)
-        rec = recall_score(labels_out, t_pred_out, pos_label=0)
+        ################## LOGITS ########################
+        self.logits_score_in_ocsvm, self.logits_score_out_ocsvm = get_ocsvm_scores(self.logits_score_train_ocsvm, self.logits_score_in_ocsvm, self.logits_score_out_ocsvm)
+        ################## SOFTMAX ########################
+        self.softmax_score_in_ocsvm, self.softmax_score_out_ocsvm = get_ocsvm_scores(self.softmax_score_train_ocsvm, self.softmax_score_in_ocsvm, self.softmax_score_out_ocsvm)
+        ################## SOFTMAX TEMP ###########################
+        self.softmax_score_temp_in_ocsvm, self.softmax_score_temp_out_ocsvm = get_ocsvm_scores(self.softmax_score_temp_train_ocsvm, self.softmax_score_temp_in_ocsvm, self.softmax_score_temp_out_ocsvm)
+        ################### MAHA ############################
+        self.maha_score_in_ocsvm, self.maha_score_out_ocsvm = get_ocsvm_scores(self.maha_score_dev_ocsvm, self.maha_score_in_ocsvm, self.maha_score_out_ocsvm)
+        ################## Cosine ###############
+        self.cosine_score_in_ocsvm, self.cosine_score_out_ocsvm = get_ocsvm_scores(self.cosine_score_dev_ocsvm, self.cosine_score_in_ocsvm, self.cosine_score_out_ocsvm)
+        ################### GDA ###############
+        if args.model_ID != 14:
+            self.gda_maha_score_in_ocsvm, self.gda_maha_score_out_ocsvm = get_ocsvm_scores(self.gda_maha_score_train_ocsvm, self.gda_maha_score_in_ocsvm, self.gda_maha_score_out_ocsvm)
+            self.gda_eucl_score_in_ocsvm, self.gda_eucl_score_out_ocsvm = get_ocsvm_scores(self.gda_eucl_score_dev_ocsvm, self.gda_eucl_score_in_ocsvm, self.gda_eucl_score_out_ocsvm)
 
 
-        if acc+rec > best_acc:
-            best_acc = acc+rec
-            threshold = i
-            
+    def apply_tresholds(self, args, tresholds, pooled_in = None, pooled_out = None, centroids = None, delta = None):
 
-    return threshold
+
+        ################## LOGITS ########################
+        self.logits_score_in = np.where(self.logits_score_in >= tresholds.logits_t, 1, 0)
+        self.logits_score_out = np.where(self.logits_score_out >= tresholds.logits_t, 1, 0)
+
+        ################## VARIANZ ########################
+        self.varianz_score_in = np.where(self.varianz_score_in >= tresholds.varianz_t, 1, 0)
+        self.varianz_score_out = np.where(self.varianz_score_out >= tresholds.varianz_t, 1, 0)
+
+        ################## SOFTMAX ########################
+        self.softmax_score_in = np.where(self.softmax_score_in >= tresholds.softmax_t, 1, 0)
+        self.softmax_score_out = np.where(self.softmax_score_out >= tresholds.softmax_t, 1, 0)
+    
+        ################## SOFTMAX TEMP ###########################
+        self.softmax_score_temp_in = np.where(self.softmax_score_temp_in >= tresholds.sofmtax_temp_t, 1, 0)
+        self.softmax_score_temp_out = np.where(self.softmax_score_temp_out >= tresholds.sofmtax_temp_t, 1, 0)
+
+        ################### MAHA ############################
+        self.maha_score_in = np.where(self.maha_score_in <= tresholds.maha_t, 1, 0)
+        self.maha_score_out = np.where(self.maha_score_out <= tresholds.maha_t, 1, 0)
+
+        ################## Entropy ###############
+        self.entropy_score_in = np.where(self.entropy_score_in <= tresholds.entropy_t, 1, 0)
+        self.entropy_score_out = np.where(self.entropy_score_out <= tresholds.entropy_t, 1, 0)
+
+        ################## Cosine ###############
+        self.cosine_score_in = np.where(self.cosine_score_in >= tresholds.cosine_t, 1, 0)
+        self.cosine_score_out = np.where(self.cosine_score_out >= tresholds.cosine_t, 1, 0)
+
+        ################## Energy ###############
+        self.energy_score_in = np.where(self.energy_score_in >= tresholds.energy_t, 1, 0)
+        self.energy_score_out = np.where(self.energy_score_out >= tresholds.energy_t, 1, 0)
+
+        if args.model_ID != 14:
+            ################### GDA ###############
+            self.gda_maha_score_in = np.where(self.gda_maha_score_in <= tresholds.gda_maha_t, 1, 0)
+            self.gda_maha_score_out = np.where(self.gda_maha_score_out <= tresholds.gda_maha_t, 1, 0)
+            self.gda_eucl_score_in = np.where(self.gda_eucl_score_in <= tresholds.gda_eucl_t, 1, 0)
+            self.gda_eucl_score_out = np.where(self.gda_eucl_score_out <= tresholds.gda_eucl_t, 1, 0)
+
+    def ood_classification(self):
+
+        self.logits_idx_in = np.where(self.logits_idx_in > 0, 1, 0)
+        self.logits_idx_out = np.where(self.logits_idx_out > 0, 1, 0)
+        self.softmax_temp_idx_in = np.where(self.softmax_temp_idx_in > 0, 1, 0)
+        self.softmax_temp_idx_out = np.where(self.softmax_temp_idx_out > 0, 1, 0)
+        self.cosine_idx_in = np.where(self.cosine_idx_in > 0, 1, 0)
+        self.cosine_idx_out = np.where(self.cosine_idx_out > 0, 1, 0)
+        self.maha_idx_in = np.where(self.maha_idx_in > 0, 1, 0)
+        self.maha_idx_out = np.where(self.maha_idx_out > 0, 1, 0)
+
+
+
+################################################ Tresholds ##################################################################
+class Tresholds():
+
+    def __init__(self):
+        
+        self.logits_t = 0
+        self.softmax_t = 0
+        self.sofmtax_temp_t = 0
+        self.maha_t = 0
+        self.entropy_t = 0
+        self.cosine_t = 0
+        self.energy_t = 0
+        self.gda_maha_t = 0
+        self.gda_eucl_t = 0
+
+
+    def treshold_picker(self, args, method, pred_dev, pred_in, pred_out, f, t, step, min):
+
+        if method == "avg":
+            if min is False:
+                
+                # n-Niedrgiste Wert -> n z.b. so wählen, dass 90 % drin sind
+                n = int(pred_dev.size/10)
+                t =  np.partition(pred_dev, n-1)[n-1]
+
+                #niedrigster Wert
+                #t =  np.amin(pred_dev)
+
+                #Mean - Varianz
+                #t = np.mean(pred_dev) - np.var(pred_dev)
+
+                #max - 1/3 der Distanz zwischen max und mean
+                #t = np.max(pred_dev) - (np.max(pred_dev) - np.mean(pred_dev)) * 1/3
+                return t
+
+            else:
+
+                # n-Hächste Wert -> n z.b. so wählen, dass 90 % drin sind
+                n = int(int(pred_dev.size) - int(pred_dev.size/10))
+                t = np.partition(pred_dev, n-1)[n-1]
+
+                #Max Wert
+                #t = np.max(pred_dev)
+
+                #Mean - Varianz
+                #t = np.mean(pred_dev) - np.var(pred_dev)
+
+                #max - 1/x der Distanz zwischen max und mean
+                #t = np.min(pred_dev) + (np.mean(pred_dev) - np.min(pred_dev)) * 1/3
+
+                return t
+
+        elif 'best' in method:
+
+            if not isinstance(pred_in, np.ndarray):
+                pred_in = pred_in.cpu().detach().numpy()
+            if not isinstance(pred_out, np.ndarray):
+                pred_out = pred_out.cpu().detach().numpy()
+
+            if method == "best_dev":
+                pass
+
+            else:
+                
+                if args.ood_data != "zero":
+                    help_id = np.insert(pred_in, 0, 0)
+                    help_ood = np.insert(pred_out, 0, 0)
+                    labels_in = np.ones_like(help_id).astype(np.int64)
+                    labels_out = np.zeros_like(help_ood).astype(np.int64)
+
+                else:
+                    labels_in = np.ones_like(pred_in).astype(np.int64)
+                    labels_out = np.zeros_like(pred_out).astype(np.int64)
+                    
+                #WENN NACH ACC+REC OPTIMIERT WERDEN SOLL
+                threshold = 0
+                best_acc = 0
+                
+
+                steps = np.linspace(f,t,step)
+                for i in steps:
+
+                    t_pred = np.concatenate((pred_in, pred_out), axis=-1)
+                    if min is True:
+                        t_pred = np.where(t_pred <= i, 1, 0)
+                        t_pred_in =  np.where(pred_in <= i, 1, 0)
+                        t_pred_out = np.where(pred_out <= i, 1, 0) 
+                    else:
+                        t_pred_in =  np.where(pred_in > i, 1, 0)
+                        t_pred_out = np.where(pred_out > i, 1, 0)
+                    acc = accuracy_score(labels_in, t_pred_in)
+                    rec = recall_score(labels_out, t_pred_out, pos_label=0)
+
+                    if acc+rec > best_acc:
+                        best_acc = acc+rec
+                        threshold = i
+                
+
+            return threshold
+
+
+    def calculate_tresholds(self, args, scores, method):
+
+        #Todo: hier anhand von dev oder Train???
+
+        ################## LOGITS ########################
+        self.logits_t = self.treshold_picker(args, method, scores.logits_score_dev, scores.logits_score_in, scores.logits_score_out, np.min(scores.logits_score_out), max(scores.logits_score_out), 500, min=False)
+        ################## VARIANZ ########################
+        self.varianz_t = self.treshold_picker(args, method, scores.varianz_score_dev, scores.varianz_score_in, scores.varianz_score_out, np.min(scores.varianz_score_out), max(scores.varianz_score_in), 500, min=False)
+
+        ################## SOFTMAX ########################
+        self.softmax_t = self.treshold_picker(args, method, scores.softmax_score_dev, scores.softmax_score_in, scores.softmax_score_out, np.min(scores.softmax_score_out), max(scores.softmax_score_in), 500, min=False)
+    
+        ################## SOFTMAX TEMP ###########################
+        self.sofmtax_temp_t = self.treshold_picker(args, method, scores.softmax_score_temp_dev, scores.softmax_score_temp_in ,scores.softmax_score_temp_out ,np.min(scores.softmax_score_temp_out), max(scores.softmax_score_temp_in), 500, min=False)
+
+        ################### MAHA ############################
+        self.maha_t = self.treshold_picker(args, method, scores.maha_score_dev, scores.maha_score_in, scores.maha_score_out, np.min(scores.maha_score_in), max(scores.maha_score_out), 500, min=True)
+
+        ################## Entropy ###############
+        self.entropy_t = self.treshold_picker(args, method, scores.entropy_score_dev, scores.entropy_score_in, scores.entropy_score_out, np.min(scores.entropy_score_in), max(scores.entropy_score_out), 500, min=True)
+
+        ################## Cosine ###############
+        self.cosine_t = self.treshold_picker(args, method, scores.cosine_score_dev, scores.cosine_score_in, scores.cosine_score_out, np.min(scores.cosine_score_out), max(scores.cosine_score_in), 500, min=False)
+
+        ################## Energy ###############
+        self.energy_t = self.treshold_picker(args, method, scores.energy_score_dev, scores.energy_score_in, scores.energy_score_out, np.min(scores.energy_score_out), max(scores.energy_score_in), 500, min=False)
+

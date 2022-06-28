@@ -166,6 +166,49 @@ def evaluate_scores_ohne_Treshold(args, scores):
     print("Result file saved at: " + csvPath)
 
 
+def evaluate_mit_OOD(args, scores):
+
+    score_list = ['logits_idx', 'softmax_temp_idx', 'cosine_idx', 'maha_idx']
+    header = ['Method', "in_acc + out_recall", "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
+    csvPath = get_result_path(args)
+    if not os.path.isdir(get_result_path(args)):
+        os.mkdir(get_result_path(args))
+    csvPath += "/results_mit_OOD_classic.csv"
+    with open(csvPath, 'w', encoding='utf-8') as csvf:
+
+        writer = csv.writer(csvf, delimiter=',')
+        writer.writerow(header)
+
+        for score_name in score_list:
+            data = []
+            y_pred_in = scores.__dict__[score_name + "_in"]
+            y_pred_out = scores.__dict__[score_name + "_out"]
+
+            labels_in = np.ones_like(y_pred_in).astype(np.int64)
+            labels_out = np.zeros_like(y_pred_out).astype(np.int64)
+            preds_gesamt = np.concatenate((y_pred_in, y_pred_out), axis=-1)
+            labels_gesamt = np.concatenate((labels_in, labels_out), axis=-1)
+
+            in_acc = accuracy_score(labels_in, y_pred_in)
+            in_recall = recall_score(labels_in, y_pred_in)
+            in_f1 = f1_score(labels_in, y_pred_in)
+            out_acc = accuracy_score(labels_out, y_pred_out)
+            out_recall = recall_score(labels_out, y_pred_out, pos_label=0)
+            out_f1 = f1_score(labels_out, y_pred_out, pos_label=0)
+
+            acc = accuracy_score(labels_gesamt, preds_gesamt)
+            recall = recall_score(labels_gesamt, preds_gesamt)
+            f1 = f1_score(labels_gesamt, preds_gesamt)
+            roc_auc = roc_auc_score(labels_gesamt, preds_gesamt)
+            fpr_95 = get_fpr_95(labels_gesamt, preds_gesamt)
+
+            data = [(in_acc + out_recall), in_acc, in_recall, in_f1, out_acc, out_recall, out_f1, acc, recall, f1, roc_auc, fpr_95]
+
+            writer.writerow([score_name.replace("_score", ""),] + data)
+
+    print("Result file saved at: " + csvPath)
+
+
 def evaluate_NLI(args, y_pred_in, y_pred_out):
 
     header = ['Method', "in_acc + out_recall", "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
@@ -371,10 +414,12 @@ def evaluate(args, model, eval_id, eval_ood, centroids=None, delta=None, tag=Non
         logits_score_in = all_logits_in.cpu().detach().numpy()
         logits_score_out = all_logits_out.cpu().detach().numpy()
 
-
         #Variante 1: 0 > 1
         idx_in = logits_score_in.argmax(axis = -1)
         idx_out = logits_score_out.argmax(axis = -1)
+
+        print(idx_in)
+        print(idx_out)
 
         pred_in = np.where(idx_in > 0, 1, 0)
         pred_out = np.where(idx_out > 0, 1, 0)
@@ -404,6 +449,8 @@ def evaluate(args, model, eval_id, eval_ood, centroids=None, delta=None, tag=Non
 
         v2 = in_acc + out_acc
         print("V_T_ID: " + str(v2))
+        print(in_acc)
+        print(out_acc)
 
         #Variante 3: treshold OOD
 

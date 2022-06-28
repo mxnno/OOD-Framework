@@ -4,7 +4,7 @@ import warnings
 
 from model import  set_model
 from finetune import finetune_std
-from ood_detection import detect_ood
+from ood_detection_ood import detect_ood
 from utils.args import get_args
 from data import preprocess_data
 from utils.utils import set_seed, save_model

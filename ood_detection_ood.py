@@ -127,7 +127,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     # nur für logits, softmax und maha, da es eh nicht so gut ist -> weniger Aufwand
     scores_ood = deepcopy(scores)
     scores_ood.ood_classification()
-    evaluate_mit_OOD(scores_ood)
+    evaluate_mit_OOD(args, scores_ood)
     
     
     # (muss als erstes)
@@ -182,9 +182,11 @@ def get_model_prediction(logits, full_score=False, idx=False):
     pred, label_pred = logits.max(dim = 1)
 
     if idx:
+        pred, label_pred = logits.max(dim = 1)
         return label_pred.cpu().detach().numpy()
     else:
-        pred = pred[:,1:]
+        logits = logits[:,1:]
+        pred, label_pred = logits.max(dim = 1)
         return pred.cpu().detach().numpy()
 
 
@@ -206,8 +208,8 @@ def get_softmax_score(logits, full_score=False):
         softmax = F.softmax(logits, dim=-1)
         return softmax
 
-    softmax, idx = F.softmax(logits, dim=-1).max(-1)
-    softmax = softmax[:,1:]
+    softmax = F.softmax(logits, dim=-1)
+    softmax = softmax[:,1:].max(-1)[0]
     return softmax.cpu().detach().numpy()
 
 
@@ -226,12 +228,12 @@ def get_softmax_score_with_temp(logits, temp, full_score=False, idx=False):
         softmax = F.softmax((logits / temp), dim=-1)
         return softmax
 
-    softmax, idx = F.softmax((logits / temp), dim=-1).max(-1)
-
     if idx:
-        return idx.cpu().detach().numpy()
+        idx_score = F.softmax((logits / temp), dim=-1).max(-1)[1]
+        return idx_score.cpu().detach().numpy()
     else:
-        softmax = softmax[:,1:]
+        softmax = F.softmax((logits / temp), dim=-1)
+        softmax = softmax[:,1:].max(-1)[0]
         return softmax.cpu().detach().numpy()
 
 def get_entropy_score(logits):
@@ -245,10 +247,11 @@ def get_entropy_score(logits):
     # - entropy score
 
     softmax = F.softmax(logits, dim=-1)
+    softmax = softmax[:,1:]
     expo = torch.exp(softmax)
     expo = expo.cpu()
     entro = entropy(expo, axis=1)
-    return entro[:,1:]
+    return entro
 
 def get_cosine_score(pooled, norm_bank, full_scores=False, idx=False):
     #von ID 2
@@ -262,16 +265,16 @@ def get_cosine_score(pooled, norm_bank, full_scores=False, idx=False):
         idx = cosine_score.max(-1)[1]
         return idx.cpu().detach().numpy()
     else:
-        cosine_score = cosine_score.max(-1)[0]
-        cosine_score.cpu().detach().numpy()
-        return cosine_score[:,1:]
+        cosine_score = cosine_score[:,1:].max(-1)[0]
+        return cosine_score.cpu().detach().numpy()
 
 
 def get_energy_score(logits):
     #-> hier kein Full_score möglich -> nicht für OCSVM geeignet...
     energy = torch.logsumexp(logits, dim=-1).cpu().detach().numpy()
     #von ID 2
-    return energy[:,1:]
+    #energy = torch.logsumexp(logits[:,1:], dim=-1).cpu().detach().numpy()
+    return energy
 
 
 def get_maha_score(pooled, all_classes, class_mean, class_var, full_scores=False, idx=False):
@@ -290,9 +293,8 @@ def get_maha_score(pooled, all_classes, class_mean, class_var, full_scores=False
         idx = maha_score_full.min(-1)[1]
         return idx.cpu().detach().numpy()
     else:
-        maha_score = maha_score_full.min(-1)[0]
-        maha_score.cpu().detach().numpy()
-        return maha_score[:,1:]
+        maha_score = maha_score_full[:,1:].min(-1)[0]
+        return maha_score.cpu().detach().numpy()
     #https://www.statology.org/mahalanobis-distance-python/
     # aus distanz ein p-Value berechnen -> outlier
 
@@ -515,11 +517,7 @@ class Scores():
         ################## Cosine ###############
         self.cosine_score_in_ocsvm, self.cosine_score_out_ocsvm = get_ocsvm_scores(self.cosine_score_dev_ocsvm, self.cosine_score_in_ocsvm, self.cosine_score_out_ocsvm)
         ################### GDA ###############
-        if args.model_ID != 14:
-            self.gda_maha_score_in_ocsvm, self.gda_maha_score_out_ocsvm = get_ocsvm_scores(self.gda_maha_score_train_ocsvm, self.gda_maha_score_in_ocsvm, self.gda_maha_score_out_ocsvm)
-            self.gda_eucl_score_in_ocsvm, self.gda_eucl_score_out_ocsvm = get_ocsvm_scores(self.gda_eucl_score_dev_ocsvm, self.gda_eucl_score_in_ocsvm, self.gda_eucl_score_out_ocsvm)
-
-
+       
     def apply_tresholds(self, args, tresholds, pooled_in = None, pooled_out = None, centroids = None, delta = None):
 
 
@@ -555,12 +553,6 @@ class Scores():
         self.energy_score_in = np.where(self.energy_score_in >= tresholds.energy_t, 1, 0)
         self.energy_score_out = np.where(self.energy_score_out >= tresholds.energy_t, 1, 0)
 
-        if args.model_ID != 14:
-            ################### GDA ###############
-            self.gda_maha_score_in = np.where(self.gda_maha_score_in <= tresholds.gda_maha_t, 1, 0)
-            self.gda_maha_score_out = np.where(self.gda_maha_score_out <= tresholds.gda_maha_t, 1, 0)
-            self.gda_eucl_score_in = np.where(self.gda_eucl_score_in <= tresholds.gda_eucl_t, 1, 0)
-            self.gda_eucl_score_out = np.where(self.gda_eucl_score_out <= tresholds.gda_eucl_t, 1, 0)
 
     def ood_classification(self):
 
@@ -638,16 +630,9 @@ class Tresholds():
                 pass
 
             else:
-                
-                if args.ood_data != "zero":
-                    help_id = np.insert(pred_in, 0, 0)
-                    help_ood = np.insert(pred_out, 0, 0)
-                    labels_in = np.ones_like(help_id).astype(np.int64)
-                    labels_out = np.zeros_like(help_ood).astype(np.int64)
 
-                else:
-                    labels_in = np.ones_like(pred_in).astype(np.int64)
-                    labels_out = np.zeros_like(pred_out).astype(np.int64)
+                labels_in = np.ones_like(pred_in).astype(np.int64)
+                labels_out = np.zeros_like(pred_out).astype(np.int64)
                     
                 #WENN NACH ACC+REC OPTIMIERT WERDEN SOLL
                 threshold = 0

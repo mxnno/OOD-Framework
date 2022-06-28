@@ -23,6 +23,9 @@ def evaluate_metriken_ohne_Treshold(args, scores):
     else:
         score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score', 'varianz_score']
 
+    if args.ood_data != "zero":
+        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score','varianz_score']
+
     header = ['Method', "tnr_at_tpr95", "auroc", "dtacc", "au_in", "au_out"]
     csvPath = get_result_path(args)
     if not os.path.isdir(get_result_path(args)):
@@ -68,6 +71,9 @@ def evaluate_mit_Treshold(args, scores, name):
     else:
         score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'energy_score', 'entropy_score', 'gda_eucl_score', 'gda_maha_score', 'maha_score', 'varianz_score']
 
+    if args.ood_data != "zero":
+        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'energy_score', 'entropy_score', 'maha_score', 'varianz_score']
+        
     header = ['Method', "in_acc + out_recall", "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
     csvPath = get_result_path(args)
     if not os.path.isdir(get_result_path(args)):
@@ -114,6 +120,9 @@ def evaluate_scores_ohne_Treshold(args, scores):
         score_list = ['logits_score', 'softmax_score', 'softmax_score_temp','maha_score']
     else:
         score_list = ['lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score']
+    
+    if args.ood_data != "zero":
+        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score']
 
     #score_list = ['lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score', 'varianz_score']
 
@@ -449,29 +458,8 @@ def evaluate(args, model, eval_id, eval_ood, centroids=None, delta=None, tag=Non
 
         v2 = in_acc + out_acc
         print("V_T_ID: " + str(v2))
-        print(in_acc)
-        print(out_acc)
 
-        #Variante 3: treshold OOD
-
-        t_3 = get_trehsold_with_ood_ood(logits_score_in, logits_score_out, 500, False)
-    
-        #labeled:
-        pred_in =  np.where(logits_score_in[:,0] > t_3, 0, 1)
-        pred_out =  np.where(logits_score_out[:,0] > t_3, 0, 1)
-
-        #Validation
-        labels_in = np.ones_like(pred_in).astype(np.int64)
-        labels_out = np.zeros_like(pred_out).astype(np.int64)
-
-        #labeled:
-        in_acc = accuracy_score(labels_in, pred_in)
-        out_acc = accuracy_score(labels_out, pred_out)
-
-        v3 = in_acc + out_acc
-        print("V_T_OOD: " + str(v3))
-
-        results = {"acc": max(v1, v2, v3)}
+        results = {"acc": max(v1, v2)}
         return results
     
 

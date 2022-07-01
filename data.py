@@ -304,6 +304,7 @@ def load_clinc(args):
     
     test_id_help.to_csv("test_id")
     test_ood_help.to_csv("test_ood")
+    train_dataset.to_csv("train_travel_5_zero.csv")
 
     test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
     #dev_dataset = train + dev_id
@@ -318,7 +319,7 @@ def load_clinc_with_ID_Augmentation(args, source):
         shutil.rmtree('/root/.cache/huggingface/datasets/csv/')
 
     if source == "gpt3":
-        path_csv = "/content/OOD-Framework/data/id_augm/gpt-3/travel_5_20.csv"
+        path_csv = "/content/OOD-Framework/data/Augmentation/id_augm/gpt-3/travel_5_20.csv"
     else:
         path_csv = '/content/drive/MyDrive/Masterarbeit/ID_Augmentation/train_augmented.csv'
 

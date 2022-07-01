@@ -18,7 +18,8 @@ from utils.utils import set_seed, save_model
 def id_data_augm():
 
 
-    n = 20
+    n = 2
+    ood_augm = True
 
     
     #get args
@@ -84,10 +85,15 @@ def id_data_augm():
             text = data[0]
             label = data[1].split(')')[0].strip()
 
-            if label != label_name:
+            if ood_augm:
+                if label == label_name:
                 # the format of the response is invalid
-                print("WARNUNG !!!!!!!!!!!!!!!!!!!")
-                continue
+                    continue
+            else:
+                if label != label_name:
+                # the format of the response is invalid
+                    continue
+            
 
             new_texts.append(text)
             new_labels.append(label_names.index(label))
@@ -103,8 +109,12 @@ def id_data_augm():
         else:
             full_aug_ds = concatenate_datasets([full_aug_ds, synthetic_ds])
 
-    full_aug_ds.save_to_disk('./data/id_augm/gpt-3/full_id_augm/' )
-    full_aug_ds.to_csv("id_augm_ds.csv")
+    if ood_augm:
+        full_aug_ds.save_to_disk('./data/id_augm/gpt-3/full_ood_augm/' )
+        full_aug_ds.to_csv("ood_augm_ds.csv")
+    else:
+        full_aug_ds.save_to_disk('./data/id_augm/gpt-3/full_id_augm/' )
+        full_aug_ds.to_csv("id_augm_ds.csv")
 
 
 

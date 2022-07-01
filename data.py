@@ -6,12 +6,12 @@ from transformers import DataCollatorWithPadding, DataCollatorForLanguageModelin
 import re
 import shutil
 from utils.utils import get_labels, get_num_labels
-from os import path
+import os
 
 datasets.logging.set_verbosity(datasets.logging.ERROR)
 
 
-def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceClassification", special_dataset=None):
+def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceClassification", special_dataset=None, id_augm=None):
 
     target_data = args.dataset
     if special_dataset:
@@ -23,7 +23,7 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     elif target_data == 'clinc150_AUG':
         raw_datasets = load_clinc_with_Augmentation(args)
     elif target_data == 'clinc150_AUG_ID':
-        raw_datasets = load_clinc_with_ID_Augmentation(args)
+        raw_datasets = load_clinc_with_ID_Augmentation(args, "gpt3")
     elif target_data == 'test_eval':
         raw_datasets = test_evaluation_dataset()
     else:
@@ -50,6 +50,11 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     else:
         raise NotImplementedError
         
+    if id_augm:
+        #tokenized_datasets.set_format("torch")
+        tokenized_datasets.remove_columns(["input_ids"])
+        tokenized_datasets.remove_columns(["attention_mask"])
+        return tokenized_datasets["train"]
 
     #Columns anpassen
     tokenized_datasets = tokenized_datasets.remove_columns(["text"])
@@ -156,7 +161,7 @@ def load_clinc(args):
 
 
     #Cache leeren
-    if path.exists('/root/.cache/huggingface/datasets/clinc_oos/small/'):
+    if os.path.exists('/root/.cache/huggingface/datasets/clinc_oos/small/'):
         shutil.rmtree('/root/.cache/huggingface/datasets/clinc_oos/small/')
     #Datensatz laden
     datasets_dict = load_dataset("clinc_oos", "small", keep_in_memory=False)
@@ -305,13 +310,29 @@ def load_clinc(args):
     return DatasetDict({'train': train_dataset, 'trainval':  trainval_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset, 'val_test_id': test_id_help, 'val_test_ood': test_ood_help})
 
 
-def load_clinc_with_ID_Augmentation(args):
+def load_clinc_with_ID_Augmentation(args, source):
 
     clinc_DatasetDict = load_clinc(args)
-    #get Augmented Data
-    train_data = load_dataset('csv', data_files={'train': ['/content/drive/MyDrive/Masterarbeit/ID_Augmentation/train_augmented.csv']})
-    clinc_DatasetDict['train'] = train_data['train'].remove_columns("Unnamed: 0")
-    print(clinc_DatasetDict)
+
+    if os.path.exists('/root/.cache/huggingface/datasets/csv/'):
+        shutil.rmtree('/root/.cache/huggingface/datasets/csv/')
+
+    if source == "gpt3":
+        path_csv = "/content/OOD-Framework/data/id_augm/gpt-3/travel_5_20.csv"
+    else:
+        path_csv = '/content/drive/MyDrive/Masterarbeit/ID_Augmentation/train_augmented.csv'
+
+    train_augm_data = load_dataset('csv', data_files={'train': [path_csv]})    
+    train_augm_data['train'] = train_augm_data['train'].remove_columns("Unnamed: 0")
+    
+    num_labels = get_num_labels(args)
+    label_names, label_ids = get_labels(args)
+    classlabel = ClassLabel(num_classes=num_labels, names=label_names)
+    train_augm_data = train_augm_data.cast_column("intent", classlabel)
+
+    clinc_DatasetDict['train'] = concatenate_datasets([clinc_DatasetDict['train'], train_augm_data['train']])
+    clinc_DatasetDict['train'] = clinc_DatasetDict['train'].sort('intent')
+    clinc_DatasetDict['train'].to_csv("check.csv")
     return clinc_DatasetDict
 
 def load_clinc_with_Augmentation(args):
@@ -371,7 +392,7 @@ def load_clinc_with_Augmentation(args):
 
         #löschen vom cache
         
-        if path.exists('/root/.cache/huggingface/datasets/text/'):
+        if os.path.exists('/root/.cache/huggingface/datasets/text/'):
             shutil.rmtree('/root/.cache/huggingface/datasets/text/')
 
         data_dict = load_dataset('text', data_files={'train': datafile})

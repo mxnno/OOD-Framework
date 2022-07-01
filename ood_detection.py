@@ -161,10 +161,10 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     # -> Maha nur in Kombi mit OC-SVM-Scores
     # --> bei softmax wesentlich schlechtere Erg mit OC-SVM -> softmax mit und ohne OC-SVM Scores in einer Tabelle
     print("Metriken ohne Treshold...")
-    scores_ocsvm = deepcopy(scores)
-    scores_ocsvm.apply_ocsvm(args, "scores")
+    #scores_ocsvm = deepcopy(scores)
+    #scores_ocsvm.apply_ocsvm(args, "scores")
     #-> scores_in bzw. scors_out UND scores_in_ocsvm bzw. scores_out_ocsvm in eval abfragen!
-    evaluate_metriken_ohne_Treshold(args, scores_ocsvm)
+    #evaluate_metriken_ohne_Treshold(args, scores_ocsvm)
 
 
 
@@ -424,7 +424,7 @@ def get_softmax_score_with_temp(logits, temp, full_score=False, idx=False):
         softmax = F.softmax((logits / temp), dim=-1)
         return softmax
 
-    softmax, idx = F.softmax((logits / temp), dim=-1).max(-1)
+    softmax, softmax_idx = F.softmax((logits / temp), dim=-1).max(-1)
 
     if idx:
         return idx.cpu().detach().numpy()
@@ -775,13 +775,13 @@ class Scores():
         self.softmax_score_out= get_softmax_score(self.logits_out, False)
 
         ################# SOFTMAX TMP #####################
-        self.softmax_score_temp_in_ocsvm = get_softmax_score_with_temp(self.logits_in, best_temp, True)
-        self.softmax_score_temp_out_ocsvm = get_softmax_score_with_temp(self.logits_out, best_temp, True)
-        self.softmax_score_temp_train_ocsvm = get_softmax_score_with_temp(self.logits_train, best_temp, True)
-        self.softmax_score_temp_train = get_softmax_score_with_temp(self.logits_train, best_temp, False)
-        self.softmax_score_temp_dev = get_softmax_score_with_temp(self.logits_dev, best_temp, False)
-        self.softmax_score_temp_in = get_softmax_score_with_temp(self.logits_in, best_temp, False)
-        self.softmax_score_temp_out = get_softmax_score_with_temp(self.logits_out, best_temp, False)
+        self.softmax_score_temp_in_ocsvm = get_softmax_score_with_temp(self.logits_in, best_temp, full_score=True)
+        self.softmax_score_temp_out_ocsvm = get_softmax_score_with_temp(self.logits_out, best_temp, full_score=True)
+        self.softmax_score_temp_train_ocsvm = get_softmax_score_with_temp(self.logits_train, best_temp, full_score=True)
+        self.softmax_score_temp_train = get_softmax_score_with_temp(self.logits_train, best_temp, full_score=False)
+        self.softmax_score_temp_dev = get_softmax_score_with_temp(self.logits_dev, best_temp, full_score=False)
+        self.softmax_score_temp_in = get_softmax_score_with_temp(self.logits_in, best_temp, full_score=False)
+        self.softmax_score_temp_out = get_softmax_score_with_temp(self.logits_out, best_temp, full_score=False)
 
         ################# COSINE ##########################
         self.cosine_score_in_ocsvm = get_cosine_score(self.pooled_in, self.norm_bank, True)

@@ -1,7 +1,8 @@
 #source https://github.com/ml6team/quick-tips/blob/main/nlp/2021_11_25_augmentation_lm/nlp_augmentation_lm.ipynb
-import random
-from datasets import load_from_disk, Dataset, ClassLabel
 
+
+import random
+from datasets import load_from_disk, Dataset, ClassLabel, concatenate_datasets
 import json
 import random
 import requests
@@ -9,72 +10,103 @@ from data import preprocess_data
 from model import  set_model
 from utils.args import get_args
 from utils.utils import get_labels
+import torch
+from utils.utils import set_seed, save_model
+
 
 
 def id_data_augm():
 
 
     n = 20
+
     
     #get args
     args = get_args()
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    args.n_gpu = torch.cuda.device_count()
+    args.device = device
+    set_seed(args)
 
     #Load Model
     print("Load model...")
     _ , _ , tokenizer = set_model(args)
 
     #Preprocess Data
-    print("Preprocess Data...")
-    train_dataset, _ , _ = preprocess_data(args, tokenizer,no_Dataloader=True)
+    print("Preprocess Data..._")
+    train_dataset_full = preprocess_data(args, tokenizer,id_augm=True)
 
-    label_name, label_id = get_labels(args)
-    mapping = ClassLabel(names=label_name)
+    
+    label_names, label_ids = get_labels(args)
 
-    # define the number of synthetic samples to generate
-    new_texts = []
-    new_labels = []
-    api_key = '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'
-    headers = {'Authorization' : 'Bearer ' + api_key,
-                'Content-type':'application/json', 
-                'Accept':'application/json'}
 
-    iter = 0
-    while iter < n:
-        # select two random samples from training set
-        text1, label1, text2, label2 = get_two_random_samples(train_dataset)
-        # create the prompt
-        prompt = get_prompt(text1, label1, text2, label2, mapping)
-        # send a post request to gpt-3 using the prompt
-        response = requests.post('https://api.openai.com/v1/engines/davinci/completions',
-                                    headers=headers,
-                                    data = json.dumps({"prompt": prompt, 
-                                                    "max_tokens": 30,
-                                                    "temperature": 0.9,
-                                                    "top_p": 0.95}))
 
-        # get response and extract the generated text and label
-        # the generated output will be in the form "<text> (Sentiment: <label>)"
-        data = response.json()['choices'][0]['text'].split('\n')[0].split('(Sentiment:')
+    for label_id,  label_name in enumerate(label_names):
 
-        if len(data) < 2:
-            # the format of the response is invalid
-            continue
+        print("Label: " + str(label_name))
 
-        text = data[0]
-        label = data[1].split(')')[0].strip()
+        train_dataset = train_dataset_full.filter(lambda e: e['intent'] == label_id)
 
-        if label not in label_name:
-            # the format of the response is invalid
-            continue
+        # define the number of synthetic samples to generate
+        new_texts = []
+        new_labels = []
+        api_key = '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'
+        headers = {'Authorization' : 'Bearer ' + api_key,
+                    'Content-type':'application/json', 
+                    'Accept':'application/json'}
 
-        new_texts.append(text)
-        new_labels.append(mapping.str2int(label))
-        iter += 1
+        print("start ID AUGM generation")
+        iter = 0
+        while iter < n:
+            # select two random samples from training set
+            text1, label1, text2, label2 = get_two_random_samples(train_dataset)
+            # create the prompt
+            prompt = get_prompt(text1, label1, text2, label2, label_names)
+            # send a post request to gpt-3 using the prompt
+            response = requests.post('https://api.openai.com/v1/engines/davinci/completions',
+                                        headers=headers,
+                                        data = json.dumps({"prompt": prompt, 
+                                                        "max_tokens": 30,
+                                                        "temperature": 0.9,
+                                                        "top_p": 0.95}))
+
+            # get response and extract the generated text and label
+            # the generated output will be in the form "<text> (Sentiment: <label>)"
+            print(response)
+            print(response.json())
+            data = response.json()['choices'][0]['text'].split('\n')[0].split('(Domain:')
+
+            if len(data) < 2:
+                # the format of the response is invalid
+                continue
+
+            text = data[0]
+            label = data[1].split(')')[0].strip()
+
+            if label != label_name:
+                # the format of the response is invalid
+                print("WARNUNG !!!!!!!!!!!!!!!!!!!")
+                continue
+
+            new_texts.append(text)
+            new_labels.append(label_names.index(label))
+            iter += 1
 
         # define the synthetic dataset and save it to disk so as to prevent sending 
         # many api requests
         synthetic_ds = Dataset.from_dict({'text': new_texts, 'intent': new_labels})
-        synthetic_ds.save_to_disk('./data/id_augm/gpt-3/' + str(n))
+        synthetic_ds.save_to_disk('./data/id_augm/gpt-3/' + str(label_id))
+
+        if label_id == 0:
+            full_aug_ds = synthetic_ds
+        else:
+            full_aug_ds = concatenate_datasets([full_aug_ds, synthetic_ds])
+
+    full_aug_ds.save_to_disk('./data/id_augm/gpt-3/full_id_augm/' )
+    full_aug_ds.to_csv("id_augm_ds.csv")
+
+
 
 
 
@@ -83,13 +115,14 @@ def get_two_random_samples(train_dataset):
     s1, s2 = random.sample(range(0, len(train_dataset)), 2)
     return train_dataset['text'][s1], train_dataset['intent'][s1], train_dataset['text'][s2], train_dataset['intent'][s2]
 
-def get_prompt(text1, label1, text2, label2, mapping):
+def get_prompt(text1, label1, text2, label2, label_names):
     # define a function that takes as input two samples and generates the prompt
     # that we should pass to the GPT-3 language model for completion.
-    description = "Each item in the following list contains a chatbot question and its sub-domain. Sub-Domain is one of 'exchange_rate' or 'car_rental' or 'vaccines' or 'international_visa' or 'translate' or 'carry_on' or 'book_flight' or 'timezone' or 'flight_status' or 'lost_luggage' or 'book_hotel' or 'plug_type' or 'travel_alert' or 'travel_notification' or 'travel_suggestion'"
+    description = "Each item in the following list contains a chatbot question and its Sub-Domain. Sub-Domain is " + str(label_names[label1]) + "."
+    #description = "Each item in the following list contains a chatbot question and its Sub-Domain. Sub-Domain is one of 'exchange_rate' or 'car_rental' or 'vaccines' or 'international_visa' or 'translate' or 'carry_on' or 'book_flight' or 'timezone' or 'flight_status' or 'lost_luggage' or 'book_hotel' or 'plug_type' or 'travel_alert' or 'travel_notification' or 'travel_suggestion'"
     prompt = (f"{description}\n"
-            f"Question: {text1} (Domain: {mapping.int2str(label1)})\n"
-            f"Question: {text2} (Domain: {mapping.int2str(label2)})\n"
+            f"Question: {text1} (Domain: {label_names[label1]})\n"
+            f"Question: {text2} (Domain: {label_names[label2]})\n"
             f"Question:")
     return prompt
 
@@ -99,10 +132,10 @@ def get_prompt(text1, label1, text2, label2, mapping):
 
 
 
-synthetic_gpt3_10_ds = load_from_disk('./data/id_augm/gpt-3/10')
-synthetic_gpt3_50_ds = load_from_disk('./data/gpt-3/50')
-synthetic_gpt3_100_ds = load_from_disk('./data/gpt-3/100')
-synthetic_gpt3_200_ds = load_from_disk('./data/gpt-3/200')
+# synthetic_gpt3_10_ds = load_from_disk('./data/id_augm/gpt-3/10')
+# synthetic_gpt3_50_ds = load_from_disk('./data/gpt-3/50')
+# synthetic_gpt3_100_ds = load_from_disk('./data/gpt-3/100')
+# synthetic_gpt3_200_ds = load_from_disk('./data/gpt-3/200')
 
 
 if __name__ == "__main__":

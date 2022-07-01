@@ -1,0 +1,301 @@
+,text,intent
+0," I have 25 euros; if I converted them to U.S. dollars, how much would I get ",0
+1, how many dollars are 500 pesos ,0
+2, how much is one British pound in Chinese yuan ,0
+3, how many dollars can i get for one euro ,0
+4, how much is one dollar in rupees ,0
+5, how much for dollar to pound ,0
+6, how many euros can i get for one dollar ,0
+7, *5.5.5 what is the current exchange rate on a us dollar ,0
+8, how many dollars can i get for one peso ,0
+9, exchange rate between mexico and brazil ,0
+10, how many pesos to dollars ,0
+11, what is the rate of emirates dirham to us dollar ,0
+12, how many us dollars can i get for 10000 pesos ,0
+13, exchange rate for euro usd ,0
+14, what is the exchange rate between the dollar and the yen ,0
+15, how much is USD in CHF ,0
+16, what's the exchange rate of mexico to usd ,0
+17, how many pesos in one dollar ,0
+18, how many us dollars can i get for one kwanza ,0
+19, can you show me the rate of the euro ,0
+20, when do you have cars? ,1
+21, what rental cars have a moon roof in december in san diego ,1
+22, can i get a rental car in new york city june 10-12 ,1
+23, can i rent a car from san francisco to san jose for 3 days ,1
+24, i need a car for 4 days from 4/3 - 4/7 in san jose ,1
+25, could i rent a car in boston for march 2nd and 3rd please ,1
+26, do you have a car available for april 8 for the day in san francisco ,1
+27, i'm looking for a car rental in houston 4/21-4/22 ,1
+28," need a car to rent for a week in london, april 4-11 ",1
+29, can i rent a car from your rental office in chicago? ,1
+30, can i rent a car in boston for one week from now until next tuesday ,1
+31, i'll need a car this weekend ,1
+32, I want to rent a car in Boston for one week in the summer. How much does the insurance cost ,1
+33, i would like to rent a car on march 2 in berlin ,1
+34, check if there are rental cars between 2/21-2/24 in bay area ,1
+35, when is the cheapest time to rent a car? ,1
+36, i would like to rent a car on ,1
+37, Can you please tell me if I am able to rent a car on Mar 22nd ,1
+38," hi i want to book a car in boston on march 10, in the evening ",1
+39, could i find at boston airport a car from tuesday at noon to sunday at 8 pm ,1
+40, how often to vaccinate a child at 2 months old ,2
+41, can i enter bangladesh without all vaccinations ,2
+42, what shots do i need to enter georgia ,2
+43, what are the vaccinations for traveling to canada ,2
+44, I'm going to south america in 10 months. Do i need the hepatitis shots? ,2
+45, what vaccines do i need to go to mexico ,2
+46, is there a list of recommended shots to get before travelling to laos ,2
+47, are there injections required to travel to thailand ,2
+48, vaccines ,2
+49, how much does an H1N1 vaccination cost ,2
+50, please tell me if i need any shots for a trip to france ,2
+51, can you recommend travel vaccines for my trip to brazil in september? ,2
+52, do you have a guide to what vaccines i should have ,2
+53, what is the recommended booster schedule for hepatitis a ,2
+54, how many vaccinations do i need for traveling to south america ,2
+55, how many days does it take for dtap shot to take effect ,2
+56, do you know if any shots are required to travel to usa ,2
+57, what do i need for travel to ethiopia ,2
+58, what are the required shots for kids to travel to nigeria ,2
+59, what is the right vacince for a 3 month old travelling to south africa ,2
+60, i'd like to know if i need a visa for germany ,3
+61, do i need a visitor visa to go to new zealand ,3
+62, do i need an american visa for business ,3
+63, do i need a visa to go to spain ,3
+64, What type of visa do I need to enter Italy? ,3
+65, do i need an international visa to enter canada from the uk? ,3
+66," ""i need a travel visa to visit the usa"" ",3
+67, is there a visa required for us to travel to france? ,3
+68, Do i need a visa to visit australia ,3
+69, will i need a visa to visit new zealand ,3
+70," at the airport, do they check or ask for an international visa ",3
+71, i am from afghanistan and i intend to go to turkey. should i apply for a visa? ,3
+72, how do i apply for a china visa ,3
+73, i have a british passport and was wondering if i need a visa to travel to south africa? ,3
+74, do i need an actual passport to apply for a visa ,3
+75, Do I need an international visa to visit my family in Laos ,3
+76," i'm travelling to morocco in a few weeks, does my wife need an international visa? ",3
+77, will i need an international visa to go to spain ,3
+78, i have a visa for mexico but i've been told i can no longer go ,3
+79, i don't know if i need a visa to visit switzerland with my american passport ,3
+80, what is the french word for forest ,4
+81," what is ""hello"" in german ",4
+82, what is the french word for beach ,4
+83, do you know how to say good evening in spanish ,4
+84, how can i say hello in french ,4
+85," can you tell me how to say ""good evening"" in french ",4
+86, how do you say thank you in japanese ,4
+87," how do you say ""red"" in hindi ",4
+88, how to say hello in french language ,4
+89, how do you say chinese food in spanish ,4
+90, how to say good morning in spanish ,4
+91," What does ""bonjour"" mean in french ",4
+92, hello and thanks in french ,4
+93, How do you say hello in german ,4
+94, in italian how do you say family reunion ,4
+95, how do you say italian people in japanese ,4
+96, i want to say i want to say hello from maryland in french. what should i say ,4
+97," how do you say ""your my hero"" in german ",4
+98, how do you say good morning in italian ,4
+99, how do you say hello in spanish ,4
+100, can i carry on and carry on with american airlines ,5
+101, which airlines include carry ons for different flights ,5
+102, i fly american airlines will i be charged for carry on ,5
+103, am i limited in what i can carry on with jetblue to jamaica ,5
+104, i will be traveling with 2 pieces of luggage and one carry on ,5
+105, i have a few bags can i take a flight on the Lufthansa to moscow ,5
+106, does american airlines allow only one carry on bag on a flight from new york ,5
+107, how much can i bring as a carry on ,5
+108, does jetblue allow carry ons for travelers flying to florida ,5
+109," my flight from new york to chicago is on friday, how many carry ons am i allowed ",5
+110, give me options for carry on luggage ,5
+111, how many carry ons can i bring on a westjet flight ,5
+112, what is the carry on limit for delta ,5
+113, can i bring a carry on and a personal item? ,5
+114, which bag is the largest size allowed for free carry on ,5
+115, is there a limit to the amount of carry ons with southwest ,5
+116, what is delta's carry on policy ,5
+117, can you confirm that i can check a small carry on and a large personal item on a delta flight ,5
+118, what is allowed as my carryon on jetblue ,5
+119, what is the max number of carry on baggage allowed for a flight with singapore airlines ,5
+120, price for flight from msp to atl ,6
+121, how many hotel rooms in tampa airport ,6
+122, is the southwest fare to san jose california available? ,6
+123, i want to find a flight from bwi to albany that departs on tuesday and returns on thursday ,6
+124, prices on flights to aspen from tulsa this weekend ,6
+125, purchase a flight from berlin to hanoi on sunday ,6
+126, find the cheapest flights from nyc to atlanta in august ,6
+127, book me a flight from dallas to new york on southwest ,6
+128, cancel trip from boston to las vegas on may 3 ,6
+129, return me flights from pittsburgh to austin on southwest ,6
+130, find the flight from lax to slc on friday that leaves at 5 pm and returns the following sunday ,6
+131, will you find a one way flight from ottawa to los angeles on feb 1 ,6
+132, did you have any aisle seats available? ,6
+133, i want to go from denver to seattle from next thursday to the following sunday ,6
+134," i want to book a flight from lax to san francisco for tomorrow, january 2 ",6
+135, how much are the flights from aus to los ,6
+136, can you find me a flight from seattle to vancouver on september 8 ,6
+137, how much would it cost to fly from boston to san francisco in january ,6
+138, how much is a roundtrip ticket from me to paris on thursday in the month of september ,6
+139, i want to go to new york from seattle on november 7th returning on november 13th ,6
+140, what timezone is australia in ,7
+141, estonia's timezone is ,7
+142, what is timezone of brazil ,7
+143, what is the timezone for australia ,7
+144, what is cuba's timezone ,7
+145, what timezone is las vegas in ,7
+146, what timezone is moscow in ,7
+147, italy's timezone is the same as ,7
+148, what timezone is it in london ,7
+149, a timezone of london is what ,7
+150, what timezone is london in ,7
+151, what timezone is kuala in ,7
+152, the timezone of new york is ,7
+153, what is the correct timezone in prague ,7
+154, in which timezone is alaska ,7
+155, when is the timezone in italy ,7
+156, the timezone of italy is ,7
+157, the default timezone for argentina is ,7
+158, what timezone is brisbane in ,7
+159, what timezone is venezuela in ,7
+160, when does my flight arrive in nyc ,8
+161, when is my flight's eta ,8
+162, is my flight on time ,8
+163, which flight is delayed? ,8
+164, what is the delta flight 4456 ,8
+165, how long until my flight leaves ,8
+166, whats the delay on delta flight 67 ,8
+167, when is my flight expected to land ,8
+168, when will my flight land ,8
+169, give me a status of this flight DL123 ,8
+170, are there delays ,8
+171, whats the status of Delta flight 175 from Atlanta to Orlando ,8
+172, Please tell me what is the flight number of DL123 ,8
+173, what time is the next deltaflight out of boston ,8
+174, where is my flight located ,8
+175, what time is my flight ,8
+176, how many miles is this flight ,8
+177, why did this flight get delayed ,8
+178," my airline is _____, what's my flight's status ",8
+179, do i have to wait long for my flight ,8
+180, what do i do if i lost my luggage ,9
+181, can i get a replacement for my lost luggage ,9
+182, where can i find information about lost luggage ,9
+183, which number do i call to find out when my lost luggage will arrive ,9
+184, I want to know where my luggage is ,9
+185," i lost my bag in transit, what do i do? ",9
+186, i have a question about my lost luggage ,9
+187, i lost my luggage ,9
+188, how can i find my lost luggage ,9
+189, i don't see my luggage claim number on delta's website ,9
+190, what action should i take if my luggage is lost ,9
+191, what is the next step of the process of reporting my luggage lost ,9
+192," i lost my black suitcase, what do i do? ",9
+193, does the airline have a process for passengers to report lost luggage ,9
+194, i don't know my baggage claim ticket number ,9
+195, how do i find my lost luggage ,9
+196, how long will it take to locate my luggage ,9
+197, is there a lost and found at airport X ,9
+198, can i please speak to an agent about the arrival of my bag(s) from ab123 from juno? ,9
+199," i have lost my luggage in florida, what do i do? ",9
+200," hello, I want to book a hotel in nyc on monday ",10
+201, how much is the cost of 2 rooms in queens ,10
+202, book 3 rooms with garden in london for next week for a couple ,10
+203, find me the cheapest hotel room in new york ,10
+204, can i have a little hotel ,10
+205, i need to book a hotel in ny queens arriving on 9th and leaving on the 13th ,10
+206, what hotels are available in london ,10
+207, for how many people do you have a room for april 5th ,10
+208, find me a hotel in cologne ,10
+209, find me a hotel that is nearby the rock and roll hall of fame in cleveland ,10
+210, how do i cancel this reservation ,10
+211, book hotels in los angeles within a budget of $50-70 per night ,10
+212, what's the best deal on hotels in san francisco tonight ,10
+213, i need a room from monday to monday in manhattan for 2 people ,10
+214, what is the contact number of the hotel barcelona ,10
+215, how many hotels in london ,10
+216, how much is a hotel in san diego near the beach ,10
+217, can i get a hotel with swimming pool in notting hill and is it close to the metro ,10
+218, i want to book a hotel in london ,10
+219, are there any hotels with in-room laundry facilities in long beach ,10
+220, what plug types are used in america ,11
+221, what is the plug type of belgium ,11
+222, is a 220v to 110v plug adapter needed in germany ,11
+223, is the current a standard in ireland ,11
+224, what socket type is used in france ,11
+225, what plug type is used in philippines ,11
+226, which plugs fit in the power sockets in america ,11
+227, do i need plug adapter for switzerland ,11
+228, please tell me the plug type for iceland ,11
+229, will my plugs work in sydney ,11
+230, does any plug have 3 prongs? ,11
+231, i am traveling from the usa. what plug type do i need in australia ,11
+232, does i need a plug converter if i am traveling to egypt ,11
+233, how many prongs are there in a travel plug ,11
+234, what plugs do they use in italy ,11
+235, can you plug the device into a 220v outlet ,11
+236, which countries use the uk plug ,11
+237, is there a plug adapter that can convert a usb to a uk plug ,11
+238, does the hotel provide plug converters in cairo ,11
+239, what type of plug do the use in france ,11
+240, is it safe to go to country ,12
+241, are there any travel alerts for the country ,12
+242, does russia have a state department travel warning ,12
+243, are there any travel alerts for china ,12
+244, is there a travel alert for the country ,12
+245, is it safe to travel to east africa ,12
+246, any travel alerts for russia ,12
+247, is there a travel alert for France ,12
+248, has the us changed its travel warnings ,12
+249, how dangerous is it to travel to russia ,12
+250, will travel warnings affect my trip to the us ,12
+251, how about the travel warnings for the country ,12
+252, is it safe to travel in the us ,12
+253, is there a travel alert for (country) ,12
+254, are there any new travel warnings for usa ,12
+255, do you know if there are any travel alerts for usa ,12
+256, is russia safe for travel ,12
+257, get travel alert for country ,12
+258, is there a travel alert for hong kong ,12
+259, is there a travel alert for ,12
+260, i'm now going to cologne and london for the weekend. should i let my bank know ,13
+261, i am flying to canada this weekend ,13
+262, i am going to brazil from june 1st to july 1st please adjust my account to reflect that ,13
+263, tell walmart i am going to africa from june 1st to july 1st ,13
+264," i am travelling to thailand in a week, should my bank know? ",13
+265, i'm traveling for two weeks. contact my bank and let them know ,13
+266, mark down that i will be in rome from february 1 to march 1 ,13
+267, inform my bank i will not be able to make payments during this trip ,13
+268, what is the weather like in china right now ,13
+269, cancel my booking for the trip to rome ,13
+270, alert my bank ,13
+271, mark down that i am going to berlin for two weeks ,13
+272, please tell the bank i will be traveling ,13
+273," i am travelling to switzerland, i should notify the bank to avoid fraud ",13
+274," if i go to switzerland, my bank should be informed ",13
+275, notify my bank that i am going to brazil from june 1st to july 1st ,13
+276, tell bank i am going on a trip to korea ,13
+277," I'm leaving to china, should I inform the bank? ",13
+278, i need to find out if my flight will be delayed ,13
+279, authorize my bank to contact me every day ,13
+280, what are the best things to do in miami? ,14
+281, what cool things can i do in the area ,14
+282, what's a good restaurant to eat at in evans ,14
+283, where should i go for my vacation ,14
+284, what are things to do in san francisco ,14
+285, what are the places of interest in paris france ,14
+286, is there anything fun to do in chicago on saturday ,14
+287, where can i have a great time in nyc ,14
+288, where should i go for my vacation ,14
+289, what to see in nyc on sunday ,14
+290, where can I travel next month ,14
+291, where is best to go in nashville ,14
+292, where can i catch the van? ,14
+293, where can I go skiing nearby ,14
+294, what are some things i can do in london ,14
+295, what should i do in san francisco? ,14
+296, what activities are in nashville ,14
+297, help me find attractions in nashville ,14
+298, where can i find things to do in california ,14
+299, where can I find an historical tour of the city ,14

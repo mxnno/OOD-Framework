@@ -161,10 +161,10 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
     # -> Maha nur in Kombi mit OC-SVM-Scores
     # --> bei softmax wesentlich schlechtere Erg mit OC-SVM -> softmax mit und ohne OC-SVM Scores in einer Tabelle
     print("Metriken ohne Treshold...")
-    #scores_ocsvm = deepcopy(scores)
-    #scores_ocsvm.apply_ocsvm(args, "scores")
+    scores_ocsvm = deepcopy(scores)
+    scores_ocsvm.apply_ocsvm(args, "scores")
     #-> scores_in bzw. scors_out UND scores_in_ocsvm bzw. scores_out_ocsvm in eval abfragen!
-    #evaluate_metriken_ohne_Treshold(args, scores_ocsvm)
+    evaluate_metriken_ohne_Treshold(args, scores_ocsvm)
 
 
 

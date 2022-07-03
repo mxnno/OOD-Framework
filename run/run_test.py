@@ -7,7 +7,7 @@ from finetune import finetune_std
 from ood_detection_ood import detect_ood
 from utils.args import get_args
 from data import preprocess_data
-from utils.utils import set_seed, save_model
+from utils.utils import set_seed, save_model, csv_to_txt
 from accelerate import Accelerator
 from model_temp import ModelWithTemperature
 warnings.filterwarnings("ignore")
@@ -47,14 +47,15 @@ def main():
         print("Preprocess Data...")
         train_dataset, traindev_dataset, dev_id_dataset, dev_ood_dataset, test_dataset, test_id_dataset, test_ood_dataset, eval_id, eval_ood = preprocess_data(args, tokenizer)
         
+        # #Pretrain SCL
+        # print("Pretrain SCL (margin/similarity) ...")
+        # ft_model, best_epoch =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator)
 
-        #Pretrain SCL
-        print("Pretrain SCL (margin/similarity) ...")
-        ft_model, best_epoch =  finetune_std(args, model, train_dataset, eval_id, eval_ood, accelerator)
-
-        if args.save_path != "debug":
-            save_model(ft_model, args, best_epoch)
-
+        # if args.save_path != "debug":
+        #     save_model(ft_model, args, best_epoch)
+        csv_to_txt(args, "/content/OOD-Framework/training.csv", "/content/drive/MyDrive/Masterarbeit/Datensätze/clinic/txt/training.txt")
+        csv_to_txt(args, "/content/OOD-Framework/validation.csv", "/content/drive/MyDrive/Masterarbeit/Datensätze/clinic/txt/validation.txt")
+        csv_to_txt(args, "/content/OOD-Framework/test_id.csv", "/content/drive/MyDrive/Masterarbeit/Datensätze/clinic/txt/test.txt")
 
     elif args.task == "ood_detection":
         

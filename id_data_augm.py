@@ -96,7 +96,11 @@ def id_data_augm():
             
 
             new_texts.append(text)
-            new_labels.append(label_names.index(label))
+            if ood_augm:
+                new_labels.append(0)
+            else:
+                new_labels.append(label_names.index(label))
+                
             iter += 1
 
         # define the synthetic dataset and save it to disk so as to prevent sending 

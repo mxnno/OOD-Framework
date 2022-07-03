@@ -2,6 +2,7 @@ from re import I
 import torch
 import random
 import numpy as np
+import csv
 
 
 def set_seed(args):
@@ -114,6 +115,30 @@ def save_logits(logits, name):
     for i, logits in enumerate(logits):
         logit_dict[i] = logits
     torch.save(logit_dict, name) 
+
+
+def csv_to_txt(args, csv_path, txt_path):
+
+    labels_name, _ = get_labels(args)
+
+    with open(txt_path, "w", encoding='utf-8') as my_output_file:
+        with open(csv_path, "r", encoding='utf-8') as my_input_file:
+            counter = 0
+            for row in csv.reader(my_input_file):
+                counter += 1
+                if counter == 1:
+                    continue
+                
+                print(row[2])
+                label = labels_name[int(row[2])]
+                my_output_file.write(label)
+                my_output_file.write("\t")
+                my_output_file.write(row[1])
+                my_output_file.write("\n")
+            my_input_file.close()
+        my_output_file.close()
+
+    print("File saved to " + txt_path)
 
 
 

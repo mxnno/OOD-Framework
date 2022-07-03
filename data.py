@@ -23,7 +23,7 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     elif target_data == 'clinc150_AUG':
         raw_datasets = load_clinc_with_Augmentation(args)
     elif target_data == 'clinc150_AUG_ID':
-        raw_datasets = load_clinc_with_ID_Augmentation(args, "gpt3")
+        raw_datasets = load_clinc_with_ID_Augmentation(args, "backtrans")
     elif target_data == 'test_eval':
         raw_datasets = test_evaluation_dataset()
     else:
@@ -211,7 +211,6 @@ def load_clinc(args):
     
     #train_dataset = train_dataset.shuffle(seed=args.seed)
     train_dataset = train_dataset.cast_column("intent", classlabel)
-    train_dataset.to_csv('training.csv')
 
 
     ########################################################### Validation ###############################################################
@@ -302,9 +301,11 @@ def load_clinc(args):
     test_ood_help = test_ood_help.sort('intent')
     test_ood_help = test_ood_help.shard(num_shards=20, index=0) #20 normal
     
-    test_id_help.to_csv("test_id")
-    test_ood_help.to_csv("test_ood")
-    train_dataset.to_csv("train_travel_5_zero.csv")
+    test_id_dataset.to_csv("test_id.csv")
+    train_dataset.to_csv("training.csv")
+    val_id.to_csv("validation.csv")
+
+
 
     test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
     #dev_dataset = train + dev_id
@@ -315,13 +316,14 @@ def load_clinc_with_ID_Augmentation(args, source):
 
     clinc_DatasetDict = load_clinc(args)
 
+
     if os.path.exists('/root/.cache/huggingface/datasets/csv/'):
         shutil.rmtree('/root/.cache/huggingface/datasets/csv/')
 
     if source == "gpt3":
         path_csv = "/content/OOD-Framework/data/Augmentation/id_augm/gpt-3/travel_5_20.csv"
     else:
-        path_csv = '/content/drive/MyDrive/Masterarbeit/ID_Augmentation/train_augmented.csv'
+        path_csv = '/content/OOD-Framework/data/Augmentation/id_augm/backtrans/travel_5_18.csv'
 
     train_augm_data = load_dataset('csv', data_files={'train': [path_csv]})    
     train_augm_data['train'] = train_augm_data['train'].remove_columns("Unnamed: 0")
@@ -331,7 +333,12 @@ def load_clinc_with_ID_Augmentation(args, source):
     classlabel = ClassLabel(num_classes=num_labels, names=label_names)
     train_augm_data = train_augm_data.cast_column("intent", classlabel)
 
-    clinc_DatasetDict['train'] = concatenate_datasets([clinc_DatasetDict['train'], train_augm_data['train']])
+    if source == "gpt3":
+        clinc_DatasetDict['train'] = concatenate_datasets([clinc_DatasetDict['train'], train_augm_data['train']])
+        
+    else:
+        clinc_DatasetDict['train'] = train_augm_data['train']
+
     clinc_DatasetDict['train'] = clinc_DatasetDict['train'].sort('intent')
     clinc_DatasetDict['train'].to_csv("check.csv")
     return clinc_DatasetDict

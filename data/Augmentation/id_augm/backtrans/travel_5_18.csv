@@ -1,0 +1,272 @@
+,text,intent
+0,how many pesos can i get for one dollar,0
+1,how much peso can you buy for a dollar,0
+2,how many pesos i can get for a dollar,0
+3,how many pesos can i get for one dollars,0
+4,tell me the exchange rate of dollars to yen,0
+5,tell me about the exchange rate of the united states dollar for the yen,0
+6,tell me the exchange rate of the dollar to the yen,0
+7,tell me the exchange rate of dollars to yens,0
+8,usd to the euro exchanges at what right now,0
+9,at the current euro exchange rate,0
+10,used to the exchange of the euro to what is maintained,0
+11,usd to the euro exchanged at what right now,0
+12,what is the yen worth in terms of the peso,0
+13,"in peso terms, what is the value of the yen",0
+14,source is the value of the yen in relation to the peso,0
+15,what is the yens worth in terms of the peso,0
+16,exchange rate between mexico and us,0
+17,exchange rates between mexico and us,0
+18,interchange rate between mexico and us,0
+19,could i rent a car in seattle from next monday to thursday please,1
+20,"next monday through thursday, i can rent a car in the canteen",1
+21,could i rent a car in seattle from next monday to wednesday please,1
+22,i'll require a rental car from 3/6 - 3/19 in san jose,1
+23,i need a cab from 3/6-3/19 in san jose,1
+24,i need a rental visit from 3/6 - 3/19 to san jose,1
+25,i'll require a rental vehicle from 3/6 - 3/19 in san jose,1
+26,i want to rent a car in boston for march 2 until march 4,1
+27,i'd like to rent a car in boston for a march two until march 4th,1
+28,i want to rent a auto in boston for march 2 until march 4,1
+29,i need a rental car for sfo from friday to saturday,1
+30,i need a rental car from friday to saturday,1
+31,i need a rental visit for sfo from friday to saturday,1
+32,i need a rental motorcars for sfo from friday to saturday,1
+33,"will you help me rent a car from march 2 to 6th in dallas i want a bmw suv, if possible",1
+34,"rent me a car from 2nd to 6th street in dallas. i'd like to buy a bmwsuv, if possible",1
+35,"you'll help me rent a visit from march 2 to 6 in dallas, i want a bmw suv, if possible",1
+36,"will you supporting me rent a car from march 2 to 6th in dallas i wish a bmw suv, if possible",1
+37,is there a list of recommended shots to get before travelling to kenya,2
+38,is there a list of suggested shots to get before travelling to kenya,2
+39,what are the shots i need in order to travel to mexico,2
+40,what shots do i need to travel to mexico,2
+41,what are the shots i need in order to voyages to mexico,2
+42,please tell me what shots i am required to get to travel to india,2
+43,please tell me what recordings i need to travel to india,2
+44,invite tell me what shots i am required to get to travel to india,2
+45,how many vaccinations will i need to travel to asia,2
+46,how many vaccines do i need to travel to asia,2
+47,how many vaccinations do i have to go to asia,2
+48,how many vaccinations will i need to trip to asia,2
+49,are there shots required before going to south africa,2
+50,gunshots are needed before going to south africa,2
+51,are there shots requisite before going to south africa,2
+52,do i need an international visa to go to malaysia,3
+53,i need an international visa to go to malaysia,3
+54,i need an international visa for everyone in malaysia,3
+55,do i need an international visa to go to malaysian,3
+56,do i have to get an international visa before they'll let me in melbourne,3
+57,i have to get an international visa before they let me into milburn,3
+58,i have to get an international visa before they leave me in melbourne,3
+59,do i have to get an international visa before they'll leave me in melbourne,3
+60,will i have to apply for a visa if i want to visit mexico,3
+61,"if i want to go to mexico, i have to apply for a visa",3
+62,i have to apply for a visa if i want to visit mexico,3
+63,will i have to implementing for a visa if i want to visit mexico,3
+64,i need to know if i must have an international visa to go to france,3
+65,i need to know if i have to have an international visa to go to france,3
+66,i need to know if i need an international visa for everyone in france,3
+67,i gotta to know if i must have an international visa to go to france,3
+68,do i need a travel visa to visit canada,3
+69,i need a travel visa to qatar,3
+70,i need a travel visa to visit canada,3
+71,do i need a voyager visa to visit canada,3
+72,how would i say hello in french,4
+73,how am i supposed to say hi in french,4
+74,how would i say bye in french,4
+75,what is spanish for good morning,4
+76,in the morning there will be a morning in spanish,4
+77,what is spanish for hello,4
+78,what is spanish for well morning,4
+79,what is hello in french,4
+80,what's a french ha ha ha,4
+81,what's good morning in french,4
+82,what is salut in french,4
+83,can you tell me how i would normally say thank you as a french person,4
+84,can you tell me how i usually thank you for being a frenchman,4
+85,"can you tell me how i normally say, thank you as a french person",4
+86,can you tell me how i would normally say appreciation you as a french person,4
+87,"how do they say ""how's it going"" in swahili",4
+88,"how do you say, in swahili, ""how's it going?""",4
+89,"as they say ""how's it going"" in swahili",4
+90,"how do they say ""how's it gonna"" in swahili",4
+91,"if i take a flight on pan am to denver, how many carry ons are included",5
+92,"if i take a flights on pan am to denver, how many carry ons are included",5
+93,am i limited in carry ons for jet blue,5
+94,i am limit in transport ons for jet blue,5
+95,am i limits in carry ons for jet blue,5
+96,would you let me know how many carry ons i can take on a flight with southwest airlines to miami,5
+97,would you leaving me know how countless carry ons i can take on a flight with southwest airlines to miami,5
+98,am i allowed carry ons for my flight with westjet to edmonton,5
+99,am i authorizes carry ons for my flight with westjet to edmonton,5
+100,tell me united's carry on policy,5
+101,tell me united's carry on politically,5
+102,"purchase a flight from fiji to san diego on november 1 that returns on december 1, please",6
+103,please purchase flights from fiji to sandigo on the november 1 that will return on december 1st,6
+104,"buy a flight from fiji to san diego on november 1, which estimates december 1, please",6
+105,"purchase a flight from fiji to san diego on november 1 that returns on janvier 1, please",6
+106,find me round trip flights out of lax to sfox,6
+107,i'm running business flights from lax to sfox,6
+108,find me round outing flights out of lax to sfox,6
+109,i want to find a roundtrip flight from philadelphia to sioux falls from august 3rd through august 25th,6
+110,i'd like to find a round-trip flight from phila del fia to sue from ugu 3rd to 25th from ugu 25th to ugu 25th,6
+111,i want to find a roundtrip aeroplane from philadelphia to sioux falls from august 3rd through august 25th,6
+112,purchase a flight from slc to columbus on tuesday that returns on friday,6
+113,"saturday flight from slc to colubbus, returning on friday",6
+114,buy a slc flight to columbus tuesday coming back friday,6
+115,purchase a flight from slc to columbus on yesterday that returns on friday,6
+116,reserve me a flight from ft lauderdale to houston on southwest,6
+117,i'm on a flight from fort lauderdale to southwest houston,6
+118,book me a flight from ft lauderdale to houston in the southwest,6
+119,reserved me a flight from ft lauderdale to houston on southwest,6
+120,which timezone is colombia,7
+121,time zone is colombia,7
+122,which time zone is colombia,7
+123,which timezone is columbian,7
+124,what timezone is miami in,7
+125,how many time zones are miami's,7
+126,which time zone is miami in,7
+127,the timezone of italy is what,7
+128,"in the time zone of italy,",7
+129,the timezone of italian is what,7
+130,what timezone is lima in,7
+131,which time zone is the month,7
+132,which time zone is lima in,7
+133,italy's timezone is what,7
+134,what's italy's time zone,7
+135,italys time zone is what,7
+136,whats the status of my delta flight,8
+137,how's my delta flying,8
+138,what is the status of my delta flight,8
+139,cant the status of my delta flight,8
+140,can you tell me what time this flight is going to land,8
+141,can you tell me when this plane will land,8
+142,can you tell me when this flight will arrive,8
+143,can you tell me what time this vol is going to land,8
+144,can you check when my flight lands,8
+145,you can check when my flight landed,8
+146,can you check when my flight will land,8
+147,can you check when my vol lands,8
+148,i need to know the status of flight dl123,8
+149,i'm close to the state of flight dl123,8
+150,i need to know the status of aeroplane dl123,8
+151,what's my flight's eta,8
+152,what's my plane,8
+153,what's my flight,8
+154,i arrived on delta flight ab123 from juno but my luggage doesn't appear to have come with me,9
+155,"i arrived from juno on delta ab123, but my luggage doesn't seem to follow me",9
+156,"i came to delta vol123 juno, but my luggage doesn't seem to have come with me",9
+157,i arrived on delta flight ab123 from juno but my suitcase doesn't appear to have come with me,9
+158,can you tell me what to do as i am in the airport and have been for some time and there is still no sign of my suitcase,9
+159,"you can tell me what to do, like i've been at the airport for a while, and there's still no sign of my suitcase",9
+160,"can you tell me what's right, how i've been at the airport and for some time and there's only a few tracks of my suitcase",9
+161,can you telling me what to do as i am in the airport and have been for some time and there is yet no sign of my suitcase,9
+162,where do i begin the process of reporting my luggage lost,9
+163,where do i start reporting my luggage missing,9
+164,where to comment on the process of notification of my lost baggage,9
+165,where do i commence the process of reporting my luggage lost,9
+166,"i can't locate my luggage, i was on jetblue flight ab123 out of detroit",9
+167,i couldn't find my luggage,9
+168,"i can't fix my luggage, i was on jetblue flight from 123 detroit",9
+169,"i can't locate my suitcases, i was on jetblue flight ab123 out of detroit",9
+170,who do i go to to find lost luggage,9
+171,find out who lost the luggage,9
+172,who i'm gonna rip some lost luggage,9
+173,who do i go to to find lost pouch,9
+174,is it possible to book 10 people from monday to tuesday in manhattan,10
+175,can we have about 10 people in manhattan from monday to tuesday,10
+176,it is possible to reserve 10 people from monday to tuesday in manhattan,10
+177,is it possible to books 10 people from monday to tuesday in manhattan,10
+178,get me a hotel room for 3 people from march 12th to 14th in chicago,10
+179,"from 12th street to 14th street in chicago, three people's hotel room",10
+180,find me a hotel room for 3 people from march 12 to 14 in chicago,10
+181,get me a hotel rooms for 3 people from march 12th to 14th in chicago,10
+182,book me a hotel with good ratings in nashville,10
+183,i got a hotel in nashville with a high ratings,10
+184,book a hotel with good reviews in nashville,10
+185,ledger me a hotel with good ratings in nashville,10
+186,can you find me a hotel for 2 people on april 1st to 4th in rome,10
+187,you can help me find a hotel where two people live at the april 1 to 4 in rome,10
+188,truver me a hotel for 2 people on april 1 to 4 in rome,10
+189,can you find me a hotel for 2 people on avril 1st to 4th in rome,10
+190,"i need to book a hotel in ny, queens arrive on 8th and leave on the 13th",10
+191,i need to be at the nini reservation. queen arrives on 8 and leaves on 13,10
+192,"i have to book a hotel in ny, pure things on the 8th and share the 13",10
+193,"i necessary to book a hotel in ny, queens arrive on 8th and leave on the 13th",10
+194,should i buy a plug converter if i am traveling to egypt,11
+195,i should buy a plug switch if i'm on my way to egypt,11
+196,i should buy a connector convertor when i travel to egypt,11
+197,should i buys a plug converter if i am traveling to egypt,11
+198,will my plugs work in barcelona,11
+199,can my plug work in barcelona,11
+200,my connectors working in barcelona,11
+201,will my plugs working in barcelona,11
+202,what plug type is used in spain,11
+203,what kind of plugs to use for spain,11
+204,what type of connector is used in spain,11
+205,what plug genus is used in spain,11
+206,if i visit cairo will i need a plug converter,11
+207,"if i have access to cairo, i need a plug converter",11
+208,if i visit cairo will i needs a plug converter,11
+209,tell me the plug type that is used in scotland,11
+210,tell me the type of plug i use in scotland,11
+211,tell me the type of connector used in scotland,11
+212,tell me the plug types that is used in scotland,11
+213,are there any travel alerts for russia,12
+214,any russian travel alerts,12
+215,there are travel ages for russia,12
+216,are there any travel alerts for russian,12
+217,i'd like to see if there's a travel alert for the country,12
+218,i'd like to see if there's a travel alert in this country,12
+219,i'd like to see if there's a travel alliance for the country,12
+220,i'd iike to see if there's a travel alert for the country,12
+221,are there any new travel warnings for the us,12
+222,are there any new travel warnings for us,12
+223,there are new travel alerts for us,12
+224,are there any novo travel warnings for the us,12
+225,is it safe to travel to russia,12
+226,it's safe to go to russia,12
+227,is it safe to voyage to russia,12
+228,inform me if there's a travel alert for the country,12
+229,"if there's a travel alert in the country, let me know",12
+230,let me know if there's a travel alliance for the country,12
+231,apprised me if there's a travel alert for the country,12
+232,alert my bank and let them know that i'm travelling to switzerland,13
+233,call my bank and let them know i'm on my way to switzerland,13
+234,warning my bank and let him know that i am travelling to switzerland,13
+235,alert my bank and let them know that i'm traveling to switzerland,13
+236,please tell the bank i will be traveling internationally,13
+237,please tell the bank i'm going abroad,13
+238,tell the bank i'm going to travel internationally,13
+239,please tell the bank i will be traveling international,13
+240,"i am going to asia in a bit, i should tell the bank",13
+241,i'll be at the achilles in a minute. i should have told the bank,13
+242,"i'm going to asia, i'm going to tell the bank",13
+243,"i am go to asia in a bit, i should tell the bank",13
+244,mark down that i will be in rome from february 1 to march 1 and notify my bank,13
+245,write down that i'll be in rome from ebriary 1 to march 1st and inform my bank,13
+246,mark that i will be in rome from february 1 to march 1 and inform my bank,13
+247,mark down that i will be in rome from february 1 to march 1 and enlightened my bank,13
+248,tell my bank i am taking a trip to brazil from june 1st to july 1st,13
+249,tell the bank i'm going on a trip to brazil from june 1 to july 1st,13
+250,tell my bank i'm on a trip to brazil from june 1 to july 1,13
+251,tell my bank i am taking a journeys to brazil from june 1st to july 1st,13
+252,do you know of any activities in nashville,14
+253,do you know anything about any activity in nashville,14
+254,know all activities in nashville,14
+255,do you know of any efforts in nashville,14
+256,name some things i should do while in evans,14
+257,what i'm supposed to do in evans,14
+258,name tail things i should just when in evans,14
+259,name some items i should do while in evans,14
+260,are there any fun tourist things to do in boston,14
+261,there are fun things for tourists to just boston,14
+262,are there any fun tourism things to do in boston,14
+263,help me find things to do in nashville,14
+264,help me find something to do in nashville,14
+265,help me fix what i can do in nashville,14
+266,assist me find things to do in nashville,14
+267,what's the best place to travel to this time of year,14
+268,"at this time of year, where is the best place to travel",14
+269,which is the best place to travel this season,14
+270,what's the best place to journey to this time of year,14

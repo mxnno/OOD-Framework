@@ -851,6 +851,7 @@ class Scores():
             best_acc = 0
             for i in steps:
                 #erstmal weglassen, ist ja eigentlich auch nicht richtig
+                break
                 nuu = i
                 c_lr = None
                 c_lr = svm.OneClassSVM(nu=nuu, kernel='linear', degree=2)
@@ -874,8 +875,7 @@ class Scores():
                     best_acc = acc
                     best_t = i
 
-            print(best_t)
-            nuu = best_t
+            nuu = 0.8
             c_lr = None
             c_lr = svm.OneClassSVM(nu=nuu, kernel='linear', degree=2)
             #c_lr = svm.OneClassSVM(gamma='scale', nu=0.01)

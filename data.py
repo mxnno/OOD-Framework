@@ -106,7 +106,13 @@ def load_clinc(args):
     #ood_data: 'zero' -> nur ID, sonst ID + OOD
     ood_data = args.ood_data
     num_shards = int(100/(args.few_shot*2))
-    num_shards_ood = 2 #num_shards * 2
+
+    if args.few_shot == 5:
+        num_shards_ood = 20
+    elif args.few_shot == 20: 
+        num_shards_ood = 4
+    else:
+        num_shards_ood = 2
 
     ood_original = True
     
@@ -204,7 +210,7 @@ def load_clinc(args):
             ood = ood.shard(num_shards=num_shards*10, index=0)
             ood = ood.map(set_label_to_OOD)
 
-        train_dataset = concatenate_datasets([id, ood])
+        train_dataset = concatenate_datasets([ood, id])
 
     else:
         train_dataset = id

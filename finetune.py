@@ -29,7 +29,7 @@ def finetune_std(args, model, train_dataloader, dev_id, dev_ood, accelerator, nu
     counter_early = 0
 
     if args.few_shot == 5:
-        earlystop = 19
+        earlystop = 12
     elif args.few_shot == 20:
         earlystop = 6
     else:

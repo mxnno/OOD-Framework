@@ -64,6 +64,8 @@ def id_data_augm():
             text1, label1, text2, label2 = get_two_random_samples(train_dataset)
             # create the prompt
             prompt = get_prompt(text1, label1, text2, label2, label_names)
+            prompt = "give me chatbot questions, that do not belong to the following domains: 'exchange_rate', 'car_rental', 'vaccines', 'international_visa', 'translate', 'carry_on', 'book_flight', 'timezone', 'flight_status', 'lost_luggage', 'book_hotel', 'plug_type', 'travel_alert', 'travel_notification' or 'travel_suggestion' ?"
+            #prompt = "can you give me an example of a chatbot question that is the same format like this question: 'How much is a dollar in euro?' but has a completely different context/domain?"
             # send a post request to gpt-3 using the prompt
             response = requests.post('https://api.openai.com/v1/engines/davinci/completions',
                                         headers=headers,
@@ -138,6 +140,18 @@ def get_prompt(text1, label1, text2, label2, label_names):
             f"Question: {text1} (Domain: {label_names[label1]})\n"
             f"Question: {text2} (Domain: {label_names[label2]})\n"
             f"Question:")
+    return prompt
+
+def get_prompt_ood(text1, label1, text2, label2, label_names):
+    # define a function that takes as input two samples and generates the prompt
+    # that we should pass to the GPT-3 language model for completion.
+    description = "Generate new OOD-questions for a bot, that have a completely different domain then the ID-question."
+    #description = "Each item in the following list contains a chatbot question and its Sub-Domain. Sub-Domain is one of 'exchange_rate' or 'car_rental' or 'vaccines' or 'international_visa' or 'translate' or 'carry_on' or 'book_flight' or 'timezone' or 'flight_status' or 'lost_luggage' or 'book_hotel' or 'plug_type' or 'travel_alert' or 'travel_notification' or 'travel_suggestion'"
+    prompt = (f"{description}\n"
+            f"ID-Question: {text1} (Domain: {label_names[label1]})\n"
+            f"OOD-Question: {'How long does a football match last?'} (Domain: {'footbal'})\n"
+            f"ID-Question: {text2} (Domain: {label_names[label1]})\n"
+            f"OOD-Question:")
     return prompt
 
 

@@ -87,7 +87,7 @@ def main():
         #OOD-Detection
         print("Start OOD-Detection...")
         if args.ood_data != "zero":
-            detect_ood_with_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
+            detect_ood_with_ood(args, model, train_dataset, traindev_dataset, dev_ood_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
         else:
             detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
 

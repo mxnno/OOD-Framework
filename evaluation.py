@@ -396,7 +396,6 @@ def evaluate(args, model, eval_id, eval_ood, centroids=None, delta=None, tag=Non
         results = {"acc": in_acc + out_acc}
         return results
     else:
-        print("11111")
         #Idee bei OOD Trainignsdaten: schauen ob in Klasse 0 oder nicht
         # idx_in= all_logits_in.max(dim = 1)[0]
         # idx_in = idx_in.cpu().detach().numpy()

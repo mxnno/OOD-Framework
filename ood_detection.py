@@ -22,7 +22,7 @@ from model import  set_model
 #Paper -> soll mit in die Arbeit
 
 
-def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None, best_temp=None):
+def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_id_dataset, test_ood_dataset, tag="test", centroids=None, delta=None, best_temp=None):
     
 
     #OOD Detection + Eval in 3 Schritten
@@ -85,7 +85,7 @@ def detect_ood(args, model, train_dataset, dev_dataset, dev_id_dataset, test_id_
 
     #Dev:
     dev_labels = []
-    for batch in tqdm(dev_id_dataset):
+    for batch in tqdm(dev_dataset):
         model.eval()
         batch = {key: value.to(args.device) for key, value in batch.items()}
         dev_label = batch["labels"].cpu().detach()

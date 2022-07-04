@@ -107,16 +107,21 @@ def load_clinc(args):
     ood_data = args.ood_data
     num_shards = int(100/(args.few_shot*2))
 
+
+    ood_ratio = args.ood_ratio # 15/30/... -> 1:15 -> 1:1 -> 2:1 ...
     if args.few_shot == 5:
-        num_shards_ood = 20
+        num_ood_train = 5 * ood_ratio
+        num_ood_val = 2 * ood_ratio
     elif args.few_shot == 20: 
-        num_shards_ood = 4
+        num_ood_train = 25 * ood_ratio
+        num_ood_val = 10 * ood_ratio
     else:
-        num_shards_ood = 2
+        num_ood_train = 50 * ood_ratio
+        num_ood_val = 20 * ood_ratio
 
     ood_original = True
     
-    #ic = label_ids[1] #Das muss noch überarbeitet werdne ???
+
 
     #Label Namen + Ids
     num_labels = get_num_labels(args)
@@ -183,7 +188,6 @@ def load_clinc(args):
         id = train_dataset.filter(lambda example: example['intent'] in label_ids)
     else:
         id = train_dataset.filter(lambda example: example['intent'] in label_ids[1:])
-    print(id)
     id = id.shuffle(seed=args.seed)
     id = id.sort('intent')
     id = id.shard(num_shards=num_shards, index=0)
@@ -196,18 +200,11 @@ def load_clinc(args):
 
         if ood_original is True:
             #wenn OOD nur original OOD
-            ood = train_dataset.filter(lambda example: example['intent']==0)
-            ood = ood.shuffle(seed=args.seed)
-            ood = ood.sort('intent')
-            ood = ood.shard(num_shards=num_shards_ood, index=0)
+            ood = train_dataset.filter(lambda example: example['intent']==0).shuffle(seed=args.seed).select(range(num_ood_train))
         else:
 
             #wenn OOD alle bis auf Domain
-            ood = train_dataset.filter(lambda example: example['intent'] not in label_ids)
-            
-            ood = ood.shuffle(seed=args.seed)
-            ood = ood.sort('intent')
-            ood = ood.shard(num_shards=num_shards*10, index=0)
+            ood = train_dataset.filter(lambda example: example['intent'] not in label_ids).shuffle(seed=args.seed).select(range(num_ood_train))
             ood = ood.map(set_label_to_OOD)
 
         train_dataset = concatenate_datasets([ood, id])
@@ -245,15 +242,9 @@ def load_clinc(args):
         #OOD Daten zufällig shuffeln und reduzieren auf 3*n Few-Shot
         if ood_original is True:
             #wenn OOD nur original OOD
-            val_ood = val_dataset.filter(lambda example: example['intent']==0)
-            val_ood = val_ood.shuffle(seed=args.seed)
-            val_ood = val_ood.sort('intent')
-            val_ood = val_ood.shard(num_shards=20, index=0)
+            val_ood = val_dataset.filter(lambda example: example['intent']==0).shuffle(seed=args.seed).select(range(num_ood_val))
         else:
-            val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids)
-            val_ood = val_ood.shuffle(seed=args.seed)
-            val_ood = val_ood.sort('intent')
-            val_ood = val_ood.shard(num_shards=num_shards*3, index=0)
+            val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids).shuffle(seed=args.seed).select(range(num_ood_val))
             val_ood = val_ood.map(set_label_to_OOD)
 
         trainval_dataset = concatenate_datasets([val_ood, val_id, id])
@@ -265,9 +256,6 @@ def load_clinc(args):
 
     trainval_dataset.cast_column("intent", classlabel)
 
-    #val_id.to_csv("val_id_csv")
-    #train_dataset.to_csv("train_csv")
-    #trainval_dataset.to_csv("trainval_csv")
 
 
     ########################################################### Test ###############################################################
@@ -292,29 +280,41 @@ def load_clinc(args):
     test_id_dataset = test_id_dataset.map(set_label_to_ID)
     test_id_dataset = test_id_dataset.cast_column("intent", classlabel)
 
-    #test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
-    
+   
 
     #Testdaten für Evaluation 
     # pro Klasse 3 ID Daten = 45 ID und 50 OOD Daten 
-    test_id_help = test_id_dataset
-    test_id_help = test_id_help.shuffle(seed=args.seed)
-    test_id_help = test_id_help.sort('intent')
-    test_id_help = test_id_help.shard(num_shards=10, index=0) #10
+    test_id_help = test_id_dataset.shuffle(seed=args.seed).select(range(50))
+    # test_id_help = test_id_help.shuffle(seed=args.seed)
+    # test_id_help = test_id_help.sort('intent')
+    # test_id_help = test_id_help.shard(num_shards=10, index=0) #10
 
     test_ood_help = test_ood_dataset
     test_ood_help = test_ood_help.shuffle(seed=args.seed)
     test_ood_help = test_ood_help.sort('intent')
     test_ood_help = test_ood_help.shard(num_shards=20, index=0) #20 normal
     
-    test_id_dataset.to_csv("test_id.csv")
-    train_dataset.to_csv("training.csv")
-    val_id.to_csv("validation.csv")
-
-
-
     test_dataset = concatenate_datasets([test_id_dataset, test_ood_dataset])
-    #dev_dataset = train + dev_id
+
+
+    path_data = "/content/OOD-Framework/data/last_datasets/"
+    train_dataset.to_csv(path_data + "training.csv")
+    trainval_dataset.to_csv(path_data + "trainval_dataset.csv")
+    val_id.to_csv(path_data +"val_id.csv")
+    val_ood.to_csv(path_data + "val_ood.csv")
+    test_dataset.to_csv(path_data + "test_dataset.csv")
+    test_id_dataset.to_csv(path_data + "test_id_dataset.csv")
+    test_ood_dataset.to_csv(path_data + "test_ood_dataset.csv")
+    test_id_help.to_csv(path_data + "test_id_help.csv")
+    test_ood_help.to_csv(path_data + "test_ood_dataset.csv")
+
+    
+
+
+    
+
+
+
     return DatasetDict({'train': train_dataset, 'trainval':  trainval_dataset, 'val_id': val_id, 'val_ood': val_ood, 'test': test_dataset, 'test_ood': test_ood_dataset, 'test_id': test_id_dataset, 'val_test_id': test_id_help, 'val_test_ood': test_ood_help})
 
 

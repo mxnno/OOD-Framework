@@ -9,6 +9,7 @@ def get_args():
     parser.add_argument("--dataset", type=str, default="clinc150")
     parser.add_argument("--max_seq_length", default=128, type=int)
     parser.add_argument("--ood_data", default="full", type=str, choices=['full','zero', 'augm'])
+    parser.add_argument("--ood_ratio", default=1, type=int)
     parser.add_argument("--id_data", default="full", type=str)
     parser.add_argument("--few_shot", default="100", type=int)
     parser.add_argument("--project_name", type=str, default="ood")

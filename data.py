@@ -119,8 +119,10 @@ def load_clinc(args):
         num_ood_train = 50 * ood_ratio
         num_ood_val = 20 * ood_ratio
 
-    ood_original = True
-    
+    if num_ood_train > 100:
+        ood_original = False
+    else:
+        ood_original = True
 
 
     #Label Namen + Ids
@@ -204,8 +206,13 @@ def load_clinc(args):
         else:
 
             #wenn OOD alle bis auf Domain
-            ood = train_dataset.filter(lambda example: example['intent'] not in label_ids).shuffle(seed=args.seed).select(range(num_ood_train))
-            ood = ood.map(set_label_to_OOD)
+            #erst alle echten OOD, dann auffüllen mit anderen Domains
+            ood1 = train_dataset.filter(lambda example: example['intent']==0).shuffle(seed=args.seed).select(range(100))
+
+            ood2 = train_dataset.filter(lambda example: example['intent'] not in label_ids).shuffle(seed=args.seed).select(range(num_ood_train-100))
+            ood2 = ood2.map(set_label_to_OOD)
+
+            ood = concatenate_datasets([ood1, ood2])
 
         train_dataset = concatenate_datasets([ood, id])
 
@@ -244,8 +251,14 @@ def load_clinc(args):
             #wenn OOD nur original OOD
             val_ood = val_dataset.filter(lambda example: example['intent']==0).shuffle(seed=args.seed).select(range(num_ood_val))
         else:
-            val_ood = val_dataset.filter(lambda example: example['intent'] not in label_ids).shuffle(seed=args.seed).select(range(num_ood_val))
-            val_ood = val_ood.map(set_label_to_OOD)
+            if num_ood_val <= 100:
+                val_ood = val_dataset.filter(lambda example: example['intent']==0).shuffle(seed=args.seed).select(range(num_ood_val))
+            else:
+                val_ood_1 = val_dataset.filter(lambda example: example['intent']==0).shuffle(seed=args.seed).select(range(100))
+
+                val_ood_2 = val_dataset.filter(lambda example: example['intent'] not in label_ids).shuffle(seed=args.seed).select(range(num_ood_val-100))
+                val_ood_2 = val_ood_2.map(set_label_to_OOD)
+                val_ood = concatenate_datasets([val_ood_1, val_ood_2])
 
         trainval_dataset = concatenate_datasets([val_ood, val_id, id])
         val_ood = concatenate_datasets([val_ood, val_id])
@@ -284,10 +297,10 @@ def load_clinc(args):
 
     #Testdaten für Evaluation 
     # pro Klasse 3 ID Daten = 45 ID und 50 OOD Daten 
-    test_id_help = test_id_dataset.shuffle(seed=args.seed).select(range(50))
-    # test_id_help = test_id_help.shuffle(seed=args.seed)
-    # test_id_help = test_id_help.sort('intent')
-    # test_id_help = test_id_help.shard(num_shards=10, index=0) #10
+    test_id_help = test_id_dataset
+    test_id_help = test_id_help.shuffle(seed=args.seed)
+    test_id_help = test_id_help.sort('intent')
+    test_id_help = test_id_help.shard(num_shards=10, index=0) #10
 
     test_ood_help = test_ood_dataset
     test_ood_help = test_ood_help.shuffle(seed=args.seed)

@@ -24,6 +24,8 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
         raw_datasets = load_clinc_with_Augmentation(args)
     elif target_data == 'clinc150_AUG_ID':
         raw_datasets = load_clinc_with_ID_Augmentation(args, "backtrans")
+    elif target_data == 'clinc150_AUG_OOD':
+        raw_datasets = load_clinc_with_OOD_Augmentation(args, "gpt3")
     elif target_data == 'test_eval':
         raw_datasets = test_evaluation_dataset()
     else:
@@ -108,7 +110,7 @@ def load_clinc(args):
     num_shards = int(100/(args.few_shot*2))
 
 
-    ood_ratio = args.ood_ratio # 15/30/... -> 1:15 -> 1:1 -> 2:1 ...
+    ood_ratio = args.ood_ratio # 1/15/30/... -> 1:15 -> 1:1 -> 2:1 ...
     if args.few_shot == 5:
         num_ood_train = 5 * ood_ratio
         num_ood_val = 2 * ood_ratio
@@ -355,6 +357,39 @@ def load_clinc_with_ID_Augmentation(args, source):
     if source == "gpt3":
         clinc_DatasetDict['train'] = concatenate_datasets([clinc_DatasetDict['train'], train_augm_data['train']])
         
+    else:
+        clinc_DatasetDict['train'] = train_augm_data['train']
+
+    clinc_DatasetDict['train'] = clinc_DatasetDict['train'].sort('intent')
+    clinc_DatasetDict['train'].to_csv("check.csv")
+    return clinc_DatasetDict
+
+def load_clinc_with_OOD_Augmentation(args, source):
+
+    clinc_DatasetDict = load_clinc(args)
+
+
+    if os.path.exists('/root/.cache/huggingface/datasets/csv/'):
+        shutil.rmtree('/root/.cache/huggingface/datasets/csv/')
+
+    if source == "gpt3":
+        path_csv = "/content/drive/MyDrive/Masterarbeit/ID_Augmentation/gpt3/OOD/ood_augm_" + str(args.ood_ratio) + ".csv"
+    else:
+        path_csv = ''
+
+    train_augm_data = load_dataset('csv', data_files={'train': [path_csv]})    
+    train_augm_data['train'] = train_augm_data['train'].remove_columns("Unnamed: 0")
+    
+    num_labels = get_num_labels(args)
+    label_names, label_ids = get_labels(args)
+    classlabel = ClassLabel(num_classes=num_labels, names=label_names)
+    train_augm_data = train_augm_data.cast_column("intent", classlabel)
+
+    if source == "gpt3":
+        new_dataset = clinc_DatasetDict['train'].filter(lambda example: example['intent'] != 0)
+        new_dataset = concatenate_datasets([train_augm_data['train'], new_dataset])
+        clinc_DatasetDict['train'] = new_dataset
+
     else:
         clinc_DatasetDict['train'] = train_augm_data['train']
 

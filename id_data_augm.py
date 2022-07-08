@@ -18,8 +18,8 @@ from utils.utils import set_seed, save_model
 def id_data_augm():
 
 
-    n = 2
-    ood_augm = True
+    n = 20
+    ood_augm = False
 
     
     #get args
@@ -176,7 +176,11 @@ def id_data_augm():
                 full_aug_ds = concatenate_datasets([full_aug_ds, synthetic_ds])
 
         full_aug_ds.save_to_disk('./data/id_augm/gpt-3/full_id_augm/' )
-        full_aug_ds.to_csv("id_augm_ds.csv")
+        #local
+        full_aug_ds.to_csv('id_augm_' + str(args.seed) + '.csv')
+        #drive
+        drive_path = "/content/drive/MyDrive/Masterarbeit/ID_Augmentation/gpt3/ID/"
+        full_aug_ds.to_csv(drive_path + str(args.id_data) + "_" + str(args.few_shot) + "to" + str(n) + "_" + str(args.seed) + ".csv")
 
 
 

@@ -321,7 +321,7 @@ def load_clinc(args):
     test_id_dataset.to_csv(path_data + "test_id_dataset.csv")
     test_ood_dataset.to_csv(path_data + "test_ood_dataset.csv")
     test_id_help.to_csv(path_data + "test_id_help.csv")
-    test_ood_help.to_csv(path_data + "test_ood_dataset.csv")
+    test_ood_help.to_csv(path_data + "test_ood_help.csv")
 
     
 

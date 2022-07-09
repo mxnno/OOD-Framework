@@ -1,5 +1,5 @@
 #source https://github.com/ml6team/quick-tips/blob/main/nlp/2021_11_25_augmentation_lm/nlp_augmentation_lm.ipynb
-
+#teuer -> 0,66 cent pro Anfrage
 
 import random
 from datasets import load_from_disk, Dataset, ClassLabel, concatenate_datasets
@@ -43,7 +43,7 @@ def id_data_augm():
     label_exludes = get_label_excludes(label_names)
     print(label_exludes)
 
-    if ood_augm:
+    if ood_augm is True:
 
 
         train_dataset = train_dataset_full
@@ -129,7 +129,7 @@ def id_data_augm():
                 # select two random samples from training set
                 text1, label1, text2, label2 = get_two_random_samples(train_dataset)
                 # create the prompt
-                prompt = get_prompt_ood(text1, label1, text2, label2, label_names)
+                prompt = get_prompt(text1, label1, text2, label2, label_names)
                 # send a post request to gpt-3 using the prompt
                 response = requests.post('https://api.openai.com/v1/engines/davinci/completions',
                                             headers=headers,

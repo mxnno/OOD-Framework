@@ -23,7 +23,7 @@ def preprocess_data(args, tokenizer, no_Dataloader=False, model_type="SequenceCl
     elif target_data == 'clinc150_AUG':
         raw_datasets = load_clinc_with_Augmentation(args)
     elif target_data == 'clinc150_AUG_ID':
-        raw_datasets = load_clinc_with_ID_Augmentation(args, "backtrans")
+        raw_datasets = load_clinc_with_ID_Augmentation(args, "gpt3")
     elif target_data == 'clinc150_AUG_OOD':
         raw_datasets = load_clinc_with_OOD_Augmentation(args, "gpt3")
     elif target_data == 'test_eval':
@@ -342,7 +342,8 @@ def load_clinc_with_ID_Augmentation(args, source):
         shutil.rmtree('/root/.cache/huggingface/datasets/csv/')
 
     if source == "gpt3":
-        path_csv = "/content/OOD-Framework/data/Augmentation/id_augm/gpt-3/travel_5_20.csv"
+        path_drive = "/content/drive/MyDrive/Masterarbeit/ID_Augmentation/gpt3/ID/"
+        path_csv = path_drive + str(args.id_data) + "_" + str(args.few_shot) + "to20" + "_" + str(args.seed) + ".csv"
     else:
         path_csv = '/content/OOD-Framework/data/Augmentation/id_augm/backtrans/travel_5_18.csv'
 

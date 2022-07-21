@@ -122,7 +122,7 @@ def evaluate_scores_ohne_Treshold(args, scores):
         score_list = ['lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score']
     
     if args.ood_data != "zero":
-        score_list = ['logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score']
+        score_list = ['logits_score', 'doc_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score']
 
     #score_list = ['lof_score', 'doc_score', 'logits_score', 'softmax_score', 'softmax_score_temp', 'cosine_score', 'maha_score', 'gda_eucl_score', 'gda_maha_score', 'varianz_score']
 

@@ -151,6 +151,7 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     scores = Scores(all_logits_in, all_logits_out, all_pool_in, all_pool_out, all_logits_train, all_pool_train, all_logits_dev, all_pool_dev, model.norm_bank, model.all_classes, train_labels, dev_labels, model.class_mean, model.class_var)
     print("Calculate all scores...")
     scores.calculate_scores(best_temp, args)
+    scores.calculate_varianzen(args)
 
 
     
@@ -675,11 +676,13 @@ class Scores():
         self.logits_score_dev = 0
         self.logits_score_in = 0
         self.logits_score_out = 0
+        self.logits_score_full = 0
 
         self.varianz_score_train = 0
         self.varianz_score_dev = 0
         self.varianz_score_in = 0
         self.varianz_score_out = 0
+        self.varianz_score_full = 0
         
         self.softmax_score_in_ocsvm = 0
         self.softmax_score_out_ocsvm = 0
@@ -688,6 +691,7 @@ class Scores():
         self.softmax_score_dev = 0
         self.softmax_score_in = 0
         self.softmax_score_out = 0
+        self.softmax_score_full = 0
 
         self.softmax_score_temp_in_ocsvm = 0
         self.softmax_score_temp_out_ocsvm = 0
@@ -696,6 +700,7 @@ class Scores():
         self.softmax_score_temp_dev = 0
         self.softmax_score_temp_in = 0
         self.softmax_score_temp_out = 0
+        self.softmax_score_temp_full = 0
 
         self.cosine_score_in_ocsvm = 0
         self.cosine_score_out_ocsvm = 0
@@ -704,16 +709,19 @@ class Scores():
         self.cosine_score_dev = 0
         self.cosine_score_in = 0
         self.cosine_score_out = 0
+        self.cosine_score_full = 0
 
         self.energy_score_train = 0
         self.energy_score_dev = 0
         self.energy_score_in = 0
         self.energy_score_out = 0
+        self.energy_score_full = 0
 
         self.entropy_score_train = 0
         self.entropy_score_dev = 0
         self.entropy_score_in = 0
         self.entropy_score_out = 0
+        self.entropy_score_full = 0
 
         #GDA ist wie Softmax, Maha etc.
         self.gda_maha_score_dev_ocsvm = 0
@@ -723,6 +731,7 @@ class Scores():
         self.gda_maha_score_dev = 0
         self.gda_maha_score_in = 0
         self.gda_maha_score_out = 0
+        self.gda_maha_score_full = 0
 
         self.gda_eucl_score_dev_ocsvm = 0
         self.gda_eucl_score_in_ocsvm = 0
@@ -731,6 +740,7 @@ class Scores():
         self.gda_eucl_score_dev = 0
         self.gda_eucl_score_in = 0
         self.gda_eucl_score_out = 0
+        self.gda_eucl_score_full = 0
 
         self.maha_score_in_ocsvm = 0
         self.maha_score_out_ocsvm = 0
@@ -739,9 +749,11 @@ class Scores():
         self.maha_score_dev = 0
         self.maha_score_in = 0
         self.maha_score_out = 0
+        self.maha_score_full = 0
 
         self.doc_score_in = 0
         self.doc_score_out = 0
+        self.doc_score_full = 0
         
         self.lof_score_in = 0
         self.lof_score_out = 0
@@ -832,6 +844,208 @@ class Scores():
         #(return 0/1 -> kein treshold notwendig)
         self.doc_score_in = get_doc_score(self.logits_train, self.train_labels, self.logits_in, self.all_classes)
         self.doc_score_out = get_doc_score(self.logits_train, self.train_labels, self.logits_out, self.all_classes)
+
+
+    def calculate_varianzen(self, args):
+        
+
+        
+        
+        self.logits_score_full = np.concatenate([self.logits_score_in, self.logits_score_out])
+        self.varianz_score_full = np.concatenate([self.varianz_score_in, self.varianz_score_out])
+        self.softmax_score_full = np.concatenate([self.softmax_score_in, self.softmax_score_out])
+        self.softmax_score_temp_full = np.concatenate([self.softmax_score_temp_in, self.softmax_score_temp_out])
+        self.cosine_score_full = np.concatenate([self.cosine_score_in, self.cosine_score_out])
+        self.energy_score_full = np.concatenate([self.energy_score_in, self.energy_score_out])
+        self.entropy_score_full = np.concatenate([self.entropy_score_in, self.entropy_score_out])
+        self.gda_maha_score_full = np.concatenate([self.gda_maha_score_in, self.gda_maha_score_out])
+        self.gda_eucl_score_full = np.concatenate([self.gda_eucl_score_in, self.gda_eucl_score_out])
+        self.maha_score_full = np.concatenate([self.maha_score_in, self.maha_score_out])
+        self.doc_score_full = np.concatenate([self.doc_score_in, self.doc_score_out])
+
+    
+        # ID Vergleich
+
+
+        methods = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
+
+        in_1 = 0
+        in_1_m = 0
+        in_2 = 0
+        in_2_m = 0
+        in_3 = 0
+        in_3_m = 0
+
+        out_1 = 0
+        out_1_m = 0
+        out_2 = 0
+        out_2_m = 0
+        out_3 = 0
+        out_3_m = 0
+
+        full_1 = 0
+        full_1_m = 0
+        full_2 = 0
+        full_2_m = 0
+        full_3 = 0
+        full_3_m = 0
+
+        for method1 in methods:
+
+            v1_in = getattr(self,  method1 + "_score_in")
+            v1_out = getattr(self,  method1 + "_score_out")
+            v1_full = getattr(self,  method1 + "_score_full")
+
+            for method2 in methods:
+                
+                v2_in = getattr(self,  method2 + "_score_in")
+                v2_out = getattr(self,  method1 + "_score_out")
+                v2_full = getattr(self,  method1 + "_score_full")
+
+                diff_in = (v1_in != v2_in).sum()
+                diff_out = (v1_out != v2_out).sum()
+                diff_full = (v1_full != v2_full).sum()
+
+                bskip = False
+
+                if diff_in > in_1:
+
+                    in_3 = in_2
+                    in_3_m = in_2_m
+
+                    in_2 = in_1
+                    in_2_m = in_1_m
+
+                    in_1 = diff_in
+                    in_1_m = method1 + "_" + method2
+
+                    bskip = True
+
+                if diff_out > out_1:
+
+                    out_3 = out_2
+                    out_3_m = out_2_m
+
+                    out_2 = out_1
+                    out_2_m = out_1_m
+
+                    out_1 = diff_out
+                    out_1_m = method1 + "_" + method2
+
+                    bskip = True
+
+                if diff_full > full_1:
+
+                    full_3 = full_2
+                    full_3_m = full_2_m
+
+                    full_2 = full_1
+                    full_2_m = full_1_m
+
+                    full_1 = diff_full
+                    full_1_m = method1 + "_" + method2
+
+                    bskip = True
+
+                if bskip is True:
+                    continue
+
+                if diff_in > in_2:
+
+                    in_3 = in_2
+                    in_3_m = in_2_m
+
+                    in_2 = diff_in
+                    in_2_m = method1 + "_" + method2
+
+                    bskip = True
+
+                if diff_out > out_1:
+
+                    out_3 = out_2
+                    out_3_m = out_2_m
+
+
+                    out_2 = diff_out
+                    out_2_m = method1 + "_" + method2
+
+                    bskip = True
+
+                if diff_full > full_1:
+
+                    full_3 = full_2
+                    full_3_m = full_2_m
+
+                    full_2 = diff_full
+                    full_2_m = method1 + "_" + method2
+
+                    bskip = True
+
+                if bskip is True:
+                    continue
+
+                if diff_in > in_3:
+
+                    in_3 = diff_in
+                    in_3_m = method1 + "_" + method2
+
+
+                if diff_out > out_1:
+
+
+                    out_3 = diff_out
+                    out_3_m = method1 + "_" + method2
+
+
+                if diff_full > full_1:
+
+                    full_3 = diff_full
+                    full_3_m = method1 + "_" + method2
+
+        print("#############################")
+        print("IN")
+        print("1")
+        print(in_1)
+        print(in_1_m)
+        print("2")
+        print(in_2)
+        print(in_2_m)
+        print("3")
+        print(in_3)
+        print(in_3_m)
+
+        print("#############################")
+        print("out")
+        print("1")
+        print(out_1)
+        print(out_1_m)
+        print("2")
+        print(out_2)
+        print(out_2_m)
+        print("3")
+        print(out_3)
+        print(out_3_m)
+
+
+        print("#############################")
+        print("IN")
+        print("1")
+        print(full_1)
+        print(full_1_m)
+        print("2")
+        print(full_2)
+        print(full_2_m)
+        print("3")
+        print(full_3)
+        print(full_3_m)
+
+
+
+
+                
+
+                
+
 
     def apply_ocsvm(self, args, method):
 

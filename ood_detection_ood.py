@@ -298,6 +298,51 @@ def get_maha_score(pooled, all_classes, class_mean, class_var, full_scores=False
     #https://www.statology.org/mahalanobis-distance-python/
     # aus distanz ein p-Value berechnen -> outlier
 
+def get_doc_score(train_logits, train_labels, logits_predict, all_classes):
+    #bzw DOC ID 12/13
+
+    if not isinstance(train_logits, np.ndarray):
+        train_logits = train_logits.cpu().detach().numpy()
+    if not isinstance(logits_predict, np.ndarray):
+        logits_predict = logits_predict.cpu().detach().numpy()
+
+    def mu_fit(prob_pos_X):
+        prob_pos = [p for p in prob_pos_X] + [2 - p for p in prob_pos_X]
+        pos_mu, pos_std = dist_model.fit(prob_pos)
+        return pos_mu, pos_std
+
+    mu_stds = []
+    for i in range(len(all_classes)):
+        index_list = [y for y, x in enumerate(train_labels) if x == i]
+        pos_mu, pos_std = mu_fit(train_logits[index_list, i])
+        mu_stds.append([pos_mu, pos_std])
+    
+    thresholds = np.empty([len(all_classes)])
+    for col in range(len(all_classes)):
+        threshold = mu_stds[col][1]
+        label = all_classes[col]
+        thresholds[label] = threshold
+    thresholds = np.array(thresholds)
+    #treshold = np.mean(thresholds) + np.var(thresholds)
+    threshold = np.max(thresholds)
+    threshold = np.mean(thresholds)
+
+    y_pred = []
+    for p in logits_predict:
+        max_class = np.argmax(p)
+        max_value = np.max(p)
+        
+        #threshold = max(0.5, 1 - 0.3 * mu_stds[max_class][1])
+        #threshold = mu_stds[max_class][1]
+        if max_value > threshold:
+            #y_pred.append(max_class)
+            y_pred.append(1)
+        else:
+            #y_pred.append(data.unseen_label_id)
+            y_pred.append(0)
+
+    return np.array(y_pred)
+
 
 
 
@@ -395,7 +440,10 @@ class Scores():
         self.maha_score_dev = 0
         self.maha_score_in = 0
         self.maha_score_out = 0
-
+        
+        
+        self.doc_score_in = 0
+        self.doc_score_out = 0
 
 
     def calculate_scores(self, best_temp, args=None):
@@ -473,6 +521,12 @@ class Scores():
         self.maha_score_dev = get_maha_score(self.pooled_dev, self.all_classes, self.class_mean, self.class_var, False)
         self.maha_score_in = get_maha_score(self.pooled_in, self.all_classes, self.class_mean, self.class_var, False)
         self.maha_score_out = get_maha_score(self.pooled_out, self.all_classes, self.class_mean, self.class_var, False)
+
+        
+        #################### DOC ##########################
+        #(return 0/1 -> kein treshold notwendig)
+        self.doc_score_in = get_doc_score(self.logits_train, self.train_labels, self.logits_in, self.all_classes)
+        self.doc_score_out = get_doc_score(self.logits_train, self.train_labels, self.logits_out, self.all_classes)
 
 
     def apply_ocsvm(self, args, method):

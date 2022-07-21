@@ -6,12 +6,11 @@ def create_gold_json(args):
 
     labels_name, _ = get_labels(args)
 
-    csv_list = ["/content/drive/MyDrive/Masterarbeit/GOLD/train.csv", "/content/drive/MyDrive/Masterarbeit/GOLD/validation.csv", "/content/drive/MyDrive/Masterarbeit/GOLD/test.csv"]
+    csv_list = ["/content/drive/MyDrive/Masterarbeit/OOD-Methoden/GOLD/train.csv", "/content/drive/MyDrive/Masterarbeit/OOD-Methoden/GOLD/validation.csv", "/content/drive/MyDrive/Masterarbeit/OOD-Methoden/GOLD/test.csv"]
     key = ["train", "dev", "test"]
     # create a dictionary
     data = {}
     for i, csvPath in enumerate(csv_list):
-
 
         # Open a csv reader called DictReader
         with open(csvPath, encoding='utf-8') as csvf:
@@ -29,18 +28,20 @@ def create_gold_json(args):
                 if counter == 1:
                     continue
 
-                inner_Dict["guid"] = key[i] + "_" + str(counter)
+                inner_Dict["guid"] = key[i] + "_" + str(counter-1)
                 inner_Dict["split"] = key[i]
                 inner_Dict["context"] = row[1]
-                if int(row[2]) == 0:
+                    
+                if labels_name[int(row[2])] == "ood":
                     #oos
                     inner_Dict["oos_label"] = 1
                     inner_Dict["intent_label"] = -1
+                    inner_Dict["label_text"] = "oos"
                 else:
                     inner_Dict["oos_label"] = 0
-                    #muss bei 0 anfange
-                    inner_Dict["intent_label"] = int(row[2]) - 1
-                inner_Dict["label_text"] = labels_name[int(row[2])]
+                    inner_Dict["intent_label"] = int(row[2])
+                    inner_Dict["label_text"] = labels_name[int(row[2])]
+                
                 inner_Dict["agent_text"] = ""
 
                 inner_Dict_list.append(inner_Dict)
@@ -50,7 +51,7 @@ def create_gold_json(args):
         
     # Open a json writer, and use the json.dumps()
     # function to dump data
-    with open('"/content/drive/MyDrive/Masterarbeit/GOLD/gold.json"', 'w', encoding='utf-8') as jsonf:
+    with open("/content/drive/MyDrive/Masterarbeit/OOD-Methoden/GOLD/gold.json", 'w', encoding='utf-8') as jsonf:
         jsonf.write(json.dumps(data, indent=4))
         
     # Driver Code

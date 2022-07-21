@@ -1,13 +1,9 @@
 import torch
 import wandb
 import warnings
-from datasets import concatenate_datasets
-from model import  set_model
-from finetune import finetune_std
-from ood_detection import detect_ood, test_detect_ood
 from utils.args import get_args
-from data import preprocess_data, load_clinc
-from utils.utils import set_seed, save_model
+from data import load_clinc
+from utils.utils import set_seed
 from utils.utils_gold import create_gold_json
 from accelerate import Accelerator
 
@@ -38,9 +34,9 @@ def main():
     #Preprocess Data
     print("Preprocess Data...")
     dataset_dict = load_clinc(args)
-    dataset_dict['train'].to_csv("/content/drive/MyDrive/Masterarbeit/GOLD/train.csv")
-    dataset_dict['validation'].to_csv("/content/drive/MyDrive/Masterarbeit/GOLD/validation.csv")
-    dataset_dict['test'].to_csv("/content/drive/MyDrive/Masterarbeit/GOLD/test.csv")
+    dataset_dict['train'].to_csv("/content/drive/MyDrive/Masterarbeit/OOD-Methoden/GOLD/train.csv")
+    dataset_dict['val_ood'].to_csv("/content/drive/MyDrive/Masterarbeit/OOD-Methoden/GOLD/validation.csv")
+    dataset_dict['test'].to_csv("/content/drive/MyDrive/Masterarbeit/OOD-Methoden/GOLD/test.csv")
 
     create_gold_json(args)
 

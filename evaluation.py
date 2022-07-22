@@ -178,10 +178,10 @@ def evaluate_scores_ohne_Treshold(args, scores):
 def evaluate_method_combination(args, combis, scores_in, scores_out, Ttype):
 
     header = ['Method', "in_acc + out_recall", "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
-    csvPath = "/content/drive/MyDrive/Masterarbeit/Kombination/Methoden/3/" + args.id_data + "_ " + args.few_shot + "_" + args.seeds 
-    if not os.path.isdir(get_result_path(args)):
-        os.mkdir(get_result_path(args))
-    csvPath += + "/combi_" + Ttype + ".csv"
+    csvPath = "/content/drive/MyDrive/Masterarbeit/Kombination/Methoden/3/" + str(args.id_data) + "_" + str(args.few_shot) + "_" + str(args.seed)
+    if not os.path.isdir(csvPath):
+        os.mkdir(csvPath)
+    csvPath += "/combi_" + Ttype + ".csv"
     with open(csvPath, 'w', encoding='utf-8') as csvf:
 
         writer = csv.writer(csvf, delimiter=',')

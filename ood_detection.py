@@ -944,31 +944,47 @@ class Scores():
                     v3_out = getattr(self,  method3 + "_score_" + appendix3 + "out")
                     v3_full = getattr(self,  method3 + "_score_" + appendix3 + "full")
 
-                    diff_in = 0
-                    for i, x in enumerate(v1_in):
-                        if x == 0 and v2_in[i] == 1 and v3_in[i] == 1:
-                            diff_in +=1
-                        elif x == 1 and (v2_in[i] == 1 or v3_in[i] == 1):
-                            diff_in +=1
 
-                    diff_out = 0
-                    for i, x in enumerate(v1_out):
-                        if x == 1 and v2_out[i] == 0 and v3_out[i] == 0:
-                            diff_out +=1
-                        elif x == 0 and (v2_out[i] == 0 or v3_out[i] == 0):
-                            diff_out +=1
+
+                    for method4 in methods:
+
+                        if method2 == method4 or method4 == method1 or method3 == method4:
+                            continue
+
+                        if method4 == "softmax_temp":
+                            method4 = "softmax"
+                            appendix4 = "temp_"
+                        else:
+                            appendix4 = ""
+
+                        v4_in = getattr(self,  method4 + "_score_" + appendix4 + "in")
+                        v4_out = getattr(self,  method4 + "_score_" + appendix4 + "out")
+                        v4_full = getattr(self,  method4 + "_score_" + appendix4 + "full")
+
+
+                       
+
+                        diff_in = 0
+                        for i, x in enumerate(v1_in):
+                            v_sum = v1_in[i] + v2_in[i] + v3_in[i] + v4_in[i]
+                            if v_sum >= 3:
+                                diff_in +=1
+
+
+                        diff_out = 0
+                        for i, x in enumerate(v1_out):
+                            v_sum = v1_out[i] + v2_out[i] + v3_out[i] + v4_out[i]
+                            if v_sum < 3:
+                                diff_out +=1
+
+                
+                        score = (diff_in * 2.2222 + diff_out)/2000
+
+                        if score > best_comb:
+                            best_comb = score
+                            best_comb_n = method1 + appendix1 + "_" + method2 + appendix2 + "_" + method3 + appendix3 + "_" + method4 + appendix4
 
                     
-                    score = (diff_in * 2.2222 + diff_out)/2000
-
-                    if score > best_comb:
-                        best_comb = score
-                        best_comb_n = method1 + appendix1 + "_" + method2 + appendix2 + "_" + method3 + appendix3
-
-                    print("############")
-                    print(method1 + appendix1 + "_" + method2 + appendix2 + "_" + method3 + appendix3)
-                    print(diff_in)
-                    print(diff_out)
 
         print("iiiiiiiiiiiiiiiiiiiiiii")
         print(best_comb)

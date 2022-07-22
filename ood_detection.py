@@ -151,7 +151,6 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     scores = Scores(all_logits_in, all_logits_out, all_pool_in, all_pool_out, all_logits_train, all_pool_train, all_logits_dev, all_pool_dev, model.norm_bank, model.all_classes, train_labels, dev_labels, model.class_mean, model.class_var)
     print("Calculate all scores...")
     scores.calculate_scores(best_temp, args)
-    scores.calculate_varianzen(args)
 
 
     
@@ -165,7 +164,7 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     scores_ocsvm = deepcopy(scores)
     scores_ocsvm.apply_ocsvm(args, "scores")
     #-> scores_in bzw. scors_out UND scores_in_ocsvm bzw. scores_out_ocsvm in eval abfragen!
-    evaluate_metriken_ohne_Treshold(args, scores_ocsvm)
+    #evaluate_metriken_ohne_Treshold(args, scores_ocsvm)
 
 
 
@@ -176,17 +175,19 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     scores_best = deepcopy(scores)
     thresholds.calculate_tresholds(args, scores_best, 'best')
     scores_best.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
-    evaluate_mit_Treshold(args, scores_best, 'best')
+    scores_best.calculate_varianzen(args)
+
+    #evaluate_mit_Treshold(args, scores_best, 'best')
     print("...best_dev...")
     scores_best_dev = deepcopy(scores)
     thresholds.calculate_tresholds(args, scores_best_dev, 'best_dev')
     scores_best_dev.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
-    evaluate_mit_Treshold(args, scores_best_dev, 'best_dev')
+    #evaluate_mit_Treshold(args, scores_best_dev, 'best_dev')
     print("...avg...")
     scores_avg = deepcopy(scores)
     thresholds.calculate_tresholds(args, scores_avg, 'avg')
     scores_avg.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
-    evaluate_mit_Treshold(args, scores_avg, 'avg')
+    #evaluate_mit_Treshold(args, scores_avg, 'avg')
     
 # 2.2 ohne Treshold zu 0/1
     # - OCSVM Predict (logits, softmax ...)
@@ -197,7 +198,7 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     
     scores_ohne_Treshold = deepcopy(scores)
     scores_ohne_Treshold.apply_ocsvm(args, 'predict')
-    evaluate_scores_ohne_Treshold(args, scores_ohne_Treshold)
+    #evaluate_scores_ohne_Treshold(args, scores_ohne_Treshold)
 
 
    
@@ -847,6 +848,10 @@ class Scores():
 
 
     def calculate_varianzen(self, args):
+
+
+        #Ideen
+        # - 2 Methoden: bei iD -> wenn beide 
         
 
         
@@ -866,8 +871,10 @@ class Scores():
     
         # ID Vergleich
 
-
+        method_1 = ["varianz"]
         methods = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
+        methods = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "maha", "doc"]
+
 
         in_1 = 0
         in_1_m = 0
@@ -890,154 +897,224 @@ class Scores():
         full_3 = 0
         full_3_m = 0
 
+        best_comb = 0
+        best_comb_n = 0
+
         for method1 in methods:
 
-            v1_in = getattr(self,  method1 + "_score_in")
-            v1_out = getattr(self,  method1 + "_score_out")
-            v1_full = getattr(self,  method1 + "_score_full")
+            if method1 == "softmax_temp":
+                method1 = "softmax"
+                appendix1 = "temp_"
+            else:
+                appendix1 = ""
+
+            v1_in = getattr(self,  method1 + "_score_" + appendix1 + "in")
+            v1_out = getattr(self,  method1 + "_score_" + appendix1 + "out")
+            v1_full = getattr(self,  method1 + "_score_" + appendix1 + "full")
 
             for method2 in methods:
-                
-                v2_in = getattr(self,  method2 + "_score_in")
-                v2_out = getattr(self,  method1 + "_score_out")
-                v2_full = getattr(self,  method1 + "_score_full")
 
-                diff_in = (v1_in != v2_in).sum()
-                diff_out = (v1_out != v2_out).sum()
-                diff_full = (v1_full != v2_full).sum()
-
-                bskip = False
-
-                if diff_in > in_1:
-
-                    in_3 = in_2
-                    in_3_m = in_2_m
-
-                    in_2 = in_1
-                    in_2_m = in_1_m
-
-                    in_1 = diff_in
-                    in_1_m = method1 + "_" + method2
-
-                    bskip = True
-
-                if diff_out > out_1:
-
-                    out_3 = out_2
-                    out_3_m = out_2_m
-
-                    out_2 = out_1
-                    out_2_m = out_1_m
-
-                    out_1 = diff_out
-                    out_1_m = method1 + "_" + method2
-
-                    bskip = True
-
-                if diff_full > full_1:
-
-                    full_3 = full_2
-                    full_3_m = full_2_m
-
-                    full_2 = full_1
-                    full_2_m = full_1_m
-
-                    full_1 = diff_full
-                    full_1_m = method1 + "_" + method2
-
-                    bskip = True
-
-                if bskip is True:
+                if method1 == method2:
                     continue
 
-                if diff_in > in_2:
+                if method2 == "softmax_temp":
+                    method2 = "softmax"
+                    appendix2 = "temp_"
+                else:
+                    appendix2 = ""
 
-                    in_3 = in_2
-                    in_3_m = in_2_m
-
-                    in_2 = diff_in
-                    in_2_m = method1 + "_" + method2
-
-                    bskip = True
-
-                if diff_out > out_1:
-
-                    out_3 = out_2
-                    out_3_m = out_2_m
+                v2_in = getattr(self,  method2 + "_score_" + appendix2 + "in")
+                v2_out = getattr(self,  method2 + "_score_" + appendix2 + "out")
+                v2_full = getattr(self,  method2 + "_score_" + appendix2 + "full")
 
 
-                    out_2 = diff_out
-                    out_2_m = method1 + "_" + method2
+                for method3 in methods:
 
-                    bskip = True
+                    if method2 == method3 or method3 == method1:
+                        continue
 
-                if diff_full > full_1:
+                    if method3 == "softmax_temp":
+                        method3 = "softmax"
+                        appendix3 = "temp_"
+                    else:
+                        appendix3 = ""
 
-                    full_3 = full_2
-                    full_3_m = full_2_m
+                    v3_in = getattr(self,  method3 + "_score_" + appendix3 + "in")
+                    v3_out = getattr(self,  method3 + "_score_" + appendix3 + "out")
+                    v3_full = getattr(self,  method3 + "_score_" + appendix3 + "full")
 
-                    full_2 = diff_full
-                    full_2_m = method1 + "_" + method2
+                    diff_in = 0
+                    for i, x in enumerate(v1_in):
+                        if x == 0 and v2_in[i] == 1 and v3_in[i] == 1:
+                            diff_in +=1
+                        elif x == 1 and (v2_in[i] == 1 or v3_in[i] == 1):
+                            diff_in +=1
 
-                    bskip = True
+                    diff_out = 0
+                    for i, x in enumerate(v1_out):
+                        if x == 1 and v2_out[i] == 0 and v3_out[i] == 0:
+                            diff_out +=1
+                        elif x == 0 and (v2_out[i] == 0 or v3_out[i] == 0):
+                            diff_out +=1
 
-                if bskip is True:
-                    continue
+                    
+                    score = (diff_in * 2.2222 + diff_out)/2000
 
-                if diff_in > in_3:
+                    if score > best_comb:
+                        best_comb = score
+                        best_comb_n = method1 + appendix1 + "_" + method2 + appendix2 + "_" + method3 + appendix3
 
-                    in_3 = diff_in
-                    in_3_m = method1 + "_" + method2
+                    print("############")
+                    print(method1 + appendix1 + "_" + method2 + appendix2 + "_" + method3 + appendix3)
+                    print(diff_in)
+                    print(diff_out)
 
-
-                if diff_out > out_1:
-
-
-                    out_3 = diff_out
-                    out_3_m = method1 + "_" + method2
-
-
-                if diff_full > full_1:
-
-                    full_3 = diff_full
-                    full_3_m = method1 + "_" + method2
-
-        print("#############################")
-        print("IN")
-        print("1")
-        print(in_1)
-        print(in_1_m)
-        print("2")
-        print(in_2)
-        print(in_2_m)
-        print("3")
-        print(in_3)
-        print(in_3_m)
-
-        print("#############################")
-        print("out")
-        print("1")
-        print(out_1)
-        print(out_1_m)
-        print("2")
-        print(out_2)
-        print(out_2_m)
-        print("3")
-        print(out_3)
-        print(out_3_m)
+        print("iiiiiiiiiiiiiiiiiiiiiii")
+        print(best_comb)
+        print(best_comb_n)
 
 
-        print("#############################")
-        print("IN")
-        print("1")
-        print(full_1)
-        print(full_1_m)
-        print("2")
-        print(full_2)
-        print(full_2_m)
-        print("3")
-        print(full_3)
-        print(full_3_m)
+        with open("combo.csv", 'w', encoding='utf-8') as csvf:
+
+            writer = csv.writer(csvf, delimiter=',')
+            writer.writerow(method1 + appendix1 + "_" + method2 + appendix2 + "_" + method3 + appendix3)
+
+                # diff_in = (v1_in != v2_in).sum()
+                # diff_out = (v1_out != v2_out).sum()
+                # diff_full = (v1_full != v2_full).sum()
+
+                # bskip = False
+
+                # if diff_in > in_1:
+
+                #     in_3 = in_2
+                #     in_3_m = in_2_m
+
+                #     in_2 = in_1
+                #     in_2_m = in_1_m
+
+                #     in_1 = diff_in
+                #     in_1_m = method1 + appendix1 + "_" + method2 +appendix2
+
+                #     bskip = True
+
+                # if diff_out > out_1:
+
+                #     out_3 = out_2
+                #     out_3_m = out_2_m
+
+                #     out_2 = out_1
+                #     out_2_m = out_1_m
+
+                #     out_1 = diff_out
+                #     out_1_m = method1 + appendix1+ "_" + method2 + appendix2
+
+                #     bskip = True
+
+                # if diff_full > full_1:
+
+                #     full_3 = full_2
+                #     full_3_m = full_2_m
+
+                #     full_2 = full_1
+                #     full_2_m = full_1_m
+
+                #     full_1 = diff_full
+                #     full_1_m = method1 + appendix1 + "_" + method2 + appendix2
+
+                #     bskip = True
+
+                # if bskip is True:
+                #     continue
+
+                # if diff_in > in_2:
+
+                #     in_3 = in_2
+                #     in_3_m = in_2_m
+
+                #     in_2 = diff_in
+                #     in_2_m = method1 + "_" + method2
+
+                #     bskip = True
+
+                # if diff_out > out_2:
+
+                #     out_3 = out_2
+                #     out_3_m = out_2_m
+
+
+                #     out_2 = diff_out
+                #     out_2_m = method1 + "_" + method2
+
+                #     bskip = True
+
+                # if diff_full > full_2:
+
+                #     full_3 = full_2
+                #     full_3_m = full_2_m
+
+                #     full_2 = diff_full
+                #     full_2_m = method1 + "_" + method2
+
+                #     bskip = True
+
+                # if bskip is True:
+                #     continue
+
+                # if diff_in > in_3:
+
+                #     in_3 = diff_in
+                #     in_3_m = method1 + "_" + method2
+
+
+                # if diff_out > out_3:
+
+
+                #     out_3 = diff_out
+                #     out_3_m = method1 + "_" + method2
+
+
+                # if diff_full > full_3:
+
+                #     full_3 = diff_full
+                #     full_3_m = method1 + "_" + method2
+
+        # print("#############################")
+        # print("IN")
+        # print("1")
+        # print(in_1)
+        # print(in_1_m)
+        # print("2")
+        # print(in_2)
+        # print(in_2_m)
+        # print("3")
+        # print(in_3)
+        # print(in_3_m)
+
+        # print("#############################")
+        # print("out")
+        # print("1")
+        # print(out_1)
+        # print(out_1_m)
+        # print("2")
+        # print(out_2)
+        # print(out_2_m)
+        # print("3")
+        # print(out_3)
+        # print(out_3_m)
+
+
+        # print("#############################")
+        # print("IN")
+        # print("1")
+        # print(full_1)
+        # print(full_1_m)
+        # print("2")
+        # print(full_2)
+        # print(full_2_m)
+        # print("3")
+        # print(full_3)
+        # print(full_3_m)
 
 
 

@@ -974,14 +974,10 @@ class Scores():
         print(best_comb)
         print(best_comb_n)
 
-        print("aaa")
-        with open("combo.txt", 'w', encoding='utf-8') as file:
-            
-            print("bbb")
-            file.write(best_comb_n + ": " + best_comb)
+        with open("combo_" + args.few_shot + ".txt", 'a', encoding='utf-8') as file:
+            file.write("\n")
+            file.write(best_comb_n + ": " + str(best_comb))
             file.close()
-
-        print("ccc")
                 # diff_in = (v1_in != v2_in).sum()
                 # diff_out = (v1_out != v2_out).sum()
                 # diff_full = (v1_full != v2_full).sum()

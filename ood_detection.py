@@ -17,6 +17,7 @@ from functools import reduce
 from evaluation import evaluate_metriken_ohne_Treshold, evaluate_mit_Treshold, evaluate_scores_ohne_Treshold, evaluate_NLI, evaluate_ADB, evaluate_mit_OOD
 from scipy.stats import chi2
 from model import  set_model
+import csv
 
 
 #Paper -> soll mit in die Arbeit
@@ -973,12 +974,14 @@ class Scores():
         print(best_comb)
         print(best_comb_n)
 
+        print("aaa")
+        with open("combo.txt", 'w', encoding='utf-8') as file:
+            
+            print("bbb")
+            file.write(best_comb_n + ": " + best_comb)
+            file.close()
 
-        with open("combo.csv", 'w', encoding='utf-8') as csvf:
-
-            writer = csv.writer(csvf, delimiter=',')
-            writer.writerow(method1 + appendix1 + "_" + method2 + appendix2 + "_" + method3 + appendix3)
-
+        print("ccc")
                 # diff_in = (v1_in != v2_in).sum()
                 # diff_out = (v1_out != v2_out).sum()
                 # diff_full = (v1_full != v2_full).sum()

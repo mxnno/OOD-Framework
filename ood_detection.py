@@ -974,7 +974,7 @@ class Scores():
         print(best_comb)
         print(best_comb_n)
 
-        with open("combo_" + args.few_shot + ".txt", 'a', encoding='utf-8') as file:
+        with open("combo_" + str(args.few_shot) + ".txt", 'a', encoding='utf-8') as file:
             file.write("\n")
             file.write(best_comb_n + ": " + str(best_comb))
             file.close()

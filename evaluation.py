@@ -175,6 +175,48 @@ def evaluate_scores_ohne_Treshold(args, scores):
     print("Result file saved at: " + csvPath)
 
 
+def evaluate_method_combination(args, combis, scores_in, scores_out, Ttype):
+
+    header = ['Method', "in_acc + out_recall", "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
+    csvPath = "/content/drive/MyDrive/Masterarbeit/Kombination/Methoden/3/" + args.id_data + "_ " + args.few_shot + "_" + args.seeds 
+    if not os.path.isdir(get_result_path(args)):
+        os.mkdir(get_result_path(args))
+    csvPath += + "/combi_" + Ttype + ".csv"
+    with open(csvPath, 'w', encoding='utf-8') as csvf:
+
+        writer = csv.writer(csvf, delimiter=',')
+        writer.writerow(header)
+
+        for i, score_name in enumerate(combis):
+            data = []
+            y_pred_in = scores_in[i]
+            y_pred_out = scores_out[i]
+
+            labels_in = np.ones_like(y_pred_in).astype(np.int64)
+            labels_out = np.zeros_like(y_pred_out).astype(np.int64)
+            preds_gesamt = np.concatenate((y_pred_in, y_pred_out), axis=-1)
+            labels_gesamt = np.concatenate((labels_in, labels_out), axis=-1)
+
+            in_acc = accuracy_score(labels_in, y_pred_in)
+            in_recall = recall_score(labels_in, y_pred_in)
+            in_f1 = f1_score(labels_in, y_pred_in)
+            out_acc = accuracy_score(labels_out, y_pred_out)
+            out_recall = recall_score(labels_out, y_pred_out, pos_label=0)
+            out_f1 = f1_score(labels_out, y_pred_out, pos_label=0)
+
+            acc = accuracy_score(labels_gesamt, preds_gesamt)
+            recall = recall_score(labels_gesamt, preds_gesamt)
+            f1 = f1_score(labels_gesamt, preds_gesamt)
+            roc_auc = roc_auc_score(labels_gesamt, preds_gesamt)
+            fpr_95 = get_fpr_95(labels_gesamt, preds_gesamt)
+
+            data = [(in_acc + out_recall), in_acc, in_recall, in_f1, out_acc, out_recall, out_f1, acc, recall, f1, roc_auc, fpr_95]
+
+            writer.writerow([score_name,] + data)
+
+    print("Result file saved at: " + csvPath)
+
+
 def evaluate_mit_OOD(args, scores):
 
     score_list = ['logits_idx', 'softmax_temp_idx', 'cosine_idx', 'maha_idx']

@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-import wandb
+import copy
 from copy import deepcopy
 from tqdm import tqdm
 from sklearn.metrics import confusion_matrix, classification_report, accuracy_score, recall_score
@@ -14,7 +14,7 @@ from sklearn import svm
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from functools import reduce
-from evaluation import evaluate_metriken_ohne_Treshold, evaluate_mit_Treshold, evaluate_scores_ohne_Treshold, evaluate_NLI, evaluate_ADB, evaluate_mit_OOD
+from evaluation import evaluate_metriken_ohne_Treshold, evaluate_mit_Treshold, evaluate_scores_ohne_Treshold, evaluate_NLI, evaluate_ADB, evaluate_mit_OOD, evaluate_method_combination
 from scipy.stats import chi2
 from model import  set_model
 import csv
@@ -176,8 +176,8 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     scores_best = deepcopy(scores)
     thresholds.calculate_tresholds(args, scores_best, 'best')
     scores_best.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
-    scores_best.calculate_varianzen(args)
-
+    n, i, o = scores_best.calculate_method_combination(args)
+    evaluate_method_combination(args, n, i, o, "best")
     #evaluate_mit_Treshold(args, scores_best, 'best')
     print("...best_dev...")
     scores_best_dev = deepcopy(scores)
@@ -188,6 +188,8 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     scores_avg = deepcopy(scores)
     thresholds.calculate_tresholds(args, scores_avg, 'avg')
     scores_avg.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
+    n, i, o = scores_avg.calculate_method_combination(args)
+    evaluate_method_combination(args, n, i, o, "avg")
     #evaluate_mit_Treshold(args, scores_avg, 'avg')
     
 # 2.2 ohne Treshold zu 0/1
@@ -761,6 +763,21 @@ class Scores():
         self.lof_score_out = 0
 
 
+
+        #Kombinationen:
+        self.varianz_cosine_energy_in = 0
+        self.varianz_cosine_energy_out = 0
+
+        self.varianz_energy_doc_in = 0
+        self.varianz_energy_doc_out = 0
+
+        self.varianz_energy_maha_in = 0
+        self.varianz_energy_maha_out = 0
+
+        self.softmax_temp_cosine_maha_in = 0
+        self.softmax_temp_cosine_maha_in = 0
+
+
     def calculate_scores(self, best_temp, args=None):
 
 
@@ -848,26 +865,87 @@ class Scores():
         self.doc_score_out = get_doc_score(self.logits_train, self.train_labels, self.logits_out, self.all_classes)
 
 
-    def calculate_varianzen(self, args):
+    def calculate_method_combination(self, args):
 
 
-        #Ideen
-        # - 2 Methoden: bei iD -> wenn beide 
-        
+        # self.logits_score_full = np.concatenate([self.logits_score_in, self.logits_score_out])
+        # self.varianz_score_full = np.concatenate([self.varianz_score_in, self.varianz_score_out])
+        # self.softmax_score_full = np.concatenate([self.softmax_score_in, self.softmax_score_out])
+        # self.softmax_score_temp_full = np.concatenate([self.softmax_score_temp_in, self.softmax_score_temp_out])
+        # self.cosine_score_full = np.concatenate([self.cosine_score_in, self.cosine_score_out])
+        # self.energy_score_full = np.concatenate([self.energy_score_in, self.energy_score_out])
+        # self.entropy_score_full = np.concatenate([self.entropy_score_in, self.entropy_score_out])
+        # self.gda_maha_score_full = np.concatenate([self.gda_maha_score_in, self.gda_maha_score_out])
+        # self.gda_eucl_score_full = np.concatenate([self.gda_eucl_score_in, self.gda_eucl_score_out])
+        # self.maha_score_full = np.concatenate([self.maha_score_in, self.maha_score_out])
+        # self.doc_score_full = np.concatenate([self.doc_score_in, self.doc_score_out])
 
-        
-        
-        self.logits_score_full = np.concatenate([self.logits_score_in, self.logits_score_out])
-        self.varianz_score_full = np.concatenate([self.varianz_score_in, self.varianz_score_out])
-        self.softmax_score_full = np.concatenate([self.softmax_score_in, self.softmax_score_out])
-        self.softmax_score_temp_full = np.concatenate([self.softmax_score_temp_in, self.softmax_score_temp_out])
-        self.cosine_score_full = np.concatenate([self.cosine_score_in, self.cosine_score_out])
-        self.energy_score_full = np.concatenate([self.energy_score_in, self.energy_score_out])
-        self.entropy_score_full = np.concatenate([self.entropy_score_in, self.entropy_score_out])
-        self.gda_maha_score_full = np.concatenate([self.gda_maha_score_in, self.gda_maha_score_out])
-        self.gda_eucl_score_full = np.concatenate([self.gda_eucl_score_in, self.gda_eucl_score_out])
-        self.maha_score_full = np.concatenate([self.maha_score_in, self.maha_score_out])
-        self.doc_score_full = np.concatenate([self.doc_score_in, self.doc_score_out])
+        methods1 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
+        methods2 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
+        methods3 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
+
+        list_kombi = []
+        list_in = []
+        list_out = []
+
+        for i, x in enumerate(methods1):
+    
+            methods2.pop(0)
+            methods3.pop(0)
+            m3Help = copy.deepcopy(methods3)
+            for y in methods2:
+                m3Help.pop(0)
+                for z in m3Help:
+                    print(x + y + z)
+
+                    if x == "softmax_temp":
+                        namex = "softmax_score_temp_"
+                    else:
+                        namex = x + "_score_"
+                    v1_in = getattr(self,  namex + "in")
+                    v1_out = getattr(self,  namex + "out")
+
+                    if y == "softmax_temp":
+                        namey = "softmax_score_temp_"
+                    else:
+                        namey = y + "_score_"
+                    v2_in = getattr(self,  namey + "in")
+                    v2_out = getattr(self,  namey + "out")
+
+                    if z == "softmax_temp":
+                        namez = "softmax_score_temp_"
+                    else:
+                        namez = z + "_score_"
+                    v3_in = getattr(self,  namez + "in")
+                    v3_out = getattr(self,  namez + "out")
+
+
+                    score_in = np.empty_like(v1_in)
+                    for i, _ in enumerate(v1_in):
+                        v_sum = v1_in[i] + v2_in[i] + v3_in[i]
+                        if v_sum >= 3:
+                            score_in[i] = 1
+                        else:
+                            score_in[i] = 0
+
+
+                    score_out = np.empty_like(v1_out)
+                    for i, _ in enumerate(v1_out):
+                        v_sum = v1_out[i] + v2_out[i] + v3_out[i]
+                        if v_sum < 2:
+                            score_out[i] = 0
+                        else:
+                            score_out[i] = 1
+
+                    list_kombi.append(x + "_" + y + "_" + z)
+                    list_in.append(score_in)
+                    list_out.append(score_out)
+
+        return list_kombi, list_in, list_out
+
+
+
+                    
 
     
         # ID Vergleich

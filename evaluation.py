@@ -177,8 +177,16 @@ def evaluate_scores_ohne_Treshold(args, scores):
 
 def evaluate_method_combination(args, combis, scores_in, scores_out, Ttype):
 
+    if args.model_ID == 2:
+        if "margin" in args.model_name_or_path:
+            id = "2_m"
+        else:
+            id = "2_s"
+    else:
+        id = 3
+
     header = ['Method', "in_acc + out_recall", "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
-    csvPath = "/content/drive/MyDrive/Masterarbeit/Kombination/Methoden/3/" + str(args.id_data) + "_" + str(args.few_shot) + "_" + str(args.seed)
+    csvPath = "/content/drive/MyDrive/Masterarbeit/Kombination/Methoden/3/" + id + "/" + str(args.id_data) + "_" + str(args.few_shot) + "_" + str(args.seed)
     if not os.path.isdir(csvPath):
         os.mkdir(csvPath)
     csvPath += "/combi_" + Ttype + ".csv"

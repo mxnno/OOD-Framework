@@ -177,7 +177,7 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     thresholds.calculate_tresholds(args, scores_best, 'best')
     scores_best.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
     n, i, o = scores_best.calculate_method_combination(args)
-    evaluate_method_combination(args, n, i, o, "best")
+    #evaluate_method_combination(args, n, i, o, "best")
     #evaluate_mit_Treshold(args, scores_best, 'best')
     print("...best_dev...")
     scores_best_dev = deepcopy(scores)
@@ -188,8 +188,8 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     scores_avg = deepcopy(scores)
     thresholds.calculate_tresholds(args, scores_avg, 'avg')
     scores_avg.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
-    n, i, o = scores_avg.calculate_method_combination(args)
-    evaluate_method_combination(args, n, i, o, "avg")
+    #n, i, o = scores_avg.calculate_method_combination(args)
+    #evaluate_method_combination(args, n, i, o, "avg")
     #evaluate_mit_Treshold(args, scores_avg, 'avg')
     
 # 2.2 ohne Treshold zu 0/1
@@ -884,6 +884,8 @@ class Scores():
         methods2 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
         methods3 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
 
+        method1, method2, method3 = ["varianz", "cosine", "energy"]
+
         list_kombi = []
         list_in = []
         list_out = []
@@ -940,6 +942,13 @@ class Scores():
                     list_kombi.append(x + "_" + y + "_" + z)
                     list_in.append(score_in)
                     list_out.append(score_out)
+
+                    print(score_in)
+                    print(self.varianz_score_in)
+
+                    print("-----")
+                    print(score_out)
+                    print(self.varianz_score_out)
 
         return list_kombi, list_in, list_out
 

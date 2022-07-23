@@ -175,8 +175,9 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     print("...best...")
     scores_best = deepcopy(scores)
     thresholds.calculate_tresholds(args, scores_best, 'best')
+    scores_best_copy = deepcopy(scores_best)
     scores_best.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
-    n, i, o = scores_best.calculate_method_combination(args)
+    n, i, o = scores_best.calculate_method_combination(args, scores_best_copy, thresholds)
     evaluate_method_combination(args, n, i, o, "best")
     #evaluate_mit_Treshold(args, scores_best, 'best')
     print("...best_dev...")
@@ -187,8 +188,9 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     print("...avg...")
     scores_avg = deepcopy(scores)
     thresholds.calculate_tresholds(args, scores_avg, 'avg')
+    scores_avg_copy = deepcopy(scores_avg)
     scores_avg.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
-    n, i, o = scores_avg.calculate_method_combination(args)
+    n, i, o = scores_avg.calculate_method_combination(args, scores_avg_copy, thresholds)
     evaluate_method_combination(args, n, i, o, "avg")
     #evaluate_mit_Treshold(args, scores_avg, 'avg')
     
@@ -865,7 +867,97 @@ class Scores():
         self.doc_score_out = get_doc_score(self.logits_train, self.train_labels, self.logits_out, self.all_classes)
 
 
-    def calculate_method_combination(self, args):
+    def calculate_method_combination(self, args, score_copy, tresholds):
+
+        #idee: alle und höchste confidenc wählt aus
+
+        #idee2: mehrheit 
+
+
+        methods1 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha"]
+        methods2 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha"]
+        methods3 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha"]
+        methods4 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha"]
+
+        list_kombi = []
+        list_in = []
+        list_out = []
+
+        for i, x in enumerate(methods1):
+    
+            methods2.pop(0)
+            for y in methods2:
+                
+                if x == "softmax_temp":
+                    namex = "softmax_score_temp_"
+                else:
+                    namex = x + "_score_"
+                v1_in = getattr(self,  namex + "in")
+                v1_out = getattr(self,  namex + "out")
+
+                if y == "softmax_temp":
+                    namey = "softmax_score_temp_"
+                else:
+                    namey = y + "_score_"
+                v2_in = getattr(self,  namey + "in")
+                v2_out = getattr(self,  namey + "out")
+
+
+                score_in = np.empty_like(v1_in)
+                for i, _ in enumerate(v1_in):
+                    v_sum = v1_in[i] + v2_in[i]
+                    if v_sum == 2:
+                        score_in[i] = 1
+                    elif v_sum == 0:
+                        score_in[i] = 0
+                    else:
+                        v1_score = getattr(score_copy,  namex + "in")
+                        v2_score = getattr(score_copy,  namey + "in")
+
+                        t1 = getattr(tresholds, x + "_t")
+                        t2 = getattr(tresholds, y + "_t")
+
+                        #normalisieren
+                        v1_score = 1/t1 * v1_score[i]
+                        v2_score = 1/t2 * v2_score[i]
+
+                        if abs(1-v1_score) >= abs(1-v2_score):
+                            score_in[i] = v1_in[i]
+                        else:
+                            score_in[i] = v2_in[i]
+
+                            
+
+
+
+                score_out = np.empty_like(v1_out)
+                for i, _ in enumerate(v1_out):
+                    v_sum = v1_out[i] + v2_out[i]
+                    if v_sum == 2:
+                        score_out[i] = 1
+                    elif v_sum == 0:
+                        score_out[i] = 0
+                    else:
+                        v1_score = getattr(score_copy,  namex + "out")
+                        v2_score = getattr(score_copy,  namey + "out")
+                        t1 = getattr(tresholds, x + "_t")
+                        t2 = getattr(tresholds, y + "_t")
+
+                        #normalisieren
+                        v1_score = 1/t1 * v1_score[i]
+                        v2_score = 1/t2 * v2_score[i]
+
+                        if abs(1-v1_score) >= abs(1-v2_score):
+                            score_out[i] = v1_out[i]
+                        else:
+                            score_out[i] = v2_out[i]
+
+
+                list_kombi.append(x + "_" + y)
+                list_in.append(score_in)
+                list_out.append(score_out)
+
+        return list_kombi, list_in, list_out
 
 
         # self.logits_score_full = np.concatenate([self.logits_score_in, self.logits_score_out])
@@ -880,68 +972,68 @@ class Scores():
         # self.maha_score_full = np.concatenate([self.maha_score_in, self.maha_score_out])
         # self.doc_score_full = np.concatenate([self.doc_score_in, self.doc_score_out])
 
-        methods1 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
-        methods2 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
-        methods3 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
+        # methods1 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
+        # methods2 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
+        # methods3 = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
 
-        list_kombi = []
-        list_in = []
-        list_out = []
+        # list_kombi = []
+        # list_in = []
+        # list_out = []
 
-        for i, x in enumerate(methods1):
+        # for i, x in enumerate(methods1):
     
-            methods2.pop(0)
-            methods3.pop(0)
-            m3Help = copy.deepcopy(methods3)
-            for y in methods2:
-                m3Help.pop(0)
-                for z in m3Help:
-                    print(x + y + z)
+        #     methods2.pop(0)
+        #     methods3.pop(0)
+        #     m3Help = copy.deepcopy(methods3)
+        #     for y in methods2:
+        #         m3Help.pop(0)
+        #         for z in m3Help:
+        #             print(x + y + z)
 
-                    if x == "softmax_temp":
-                        namex = "softmax_score_temp_"
-                    else:
-                        namex = x + "_score_"
-                    v1_in = getattr(self,  namex + "in")
-                    v1_out = getattr(self,  namex + "out")
+        #             if x == "softmax_temp":
+        #                 namex = "softmax_score_temp_"
+        #             else:
+        #                 namex = x + "_score_"
+        #             v1_in = getattr(self,  namex + "in")
+        #             v1_out = getattr(self,  namex + "out")
 
-                    if y == "softmax_temp":
-                        namey = "softmax_score_temp_"
-                    else:
-                        namey = y + "_score_"
-                    v2_in = getattr(self,  namey + "in")
-                    v2_out = getattr(self,  namey + "out")
+        #             if y == "softmax_temp":
+        #                 namey = "softmax_score_temp_"
+        #             else:
+        #                 namey = y + "_score_"
+        #             v2_in = getattr(self,  namey + "in")
+        #             v2_out = getattr(self,  namey + "out")
 
-                    if z == "softmax_temp":
-                        namez = "softmax_score_temp_"
-                    else:
-                        namez = z + "_score_"
-                    v3_in = getattr(self,  namez + "in")
-                    v3_out = getattr(self,  namez + "out")
-
-
-                    score_in = np.empty_like(v1_in)
-                    for i, _ in enumerate(v1_in):
-                        v_sum = v1_in[i] + v2_in[i] + v3_in[i]
-                        if v_sum >= 2:
-                            score_in[i] = 1
-                        else:
-                            score_in[i] = 0
+        #             if z == "softmax_temp":
+        #                 namez = "softmax_score_temp_"
+        #             else:
+        #                 namez = z + "_score_"
+        #             v3_in = getattr(self,  namez + "in")
+        #             v3_out = getattr(self,  namez + "out")
 
 
-                    score_out = np.empty_like(v1_out)
-                    for i, _ in enumerate(v1_out):
-                        v_sum = v1_out[i] + v2_out[i] + v3_out[i]
-                        if v_sum < 2:
-                            score_out[i] = 0
-                        else:
-                            score_out[i] = 1
+        #             score_in = np.empty_like(v1_in)
+        #             for i, _ in enumerate(v1_in):
+        #                 v_sum = v1_in[i] + v2_in[i] + v3_in[i]
+        #                 if v_sum >= 2:
+        #                     score_in[i] = 1
+        #                 else:
+        #                     score_in[i] = 0
 
-                    list_kombi.append(x + "_" + y + "_" + z)
-                    list_in.append(score_in)
-                    list_out.append(score_out)
 
-        return list_kombi, list_in, list_out
+        #             score_out = np.empty_like(v1_out)
+        #             for i, _ in enumerate(v1_out):
+        #                 v_sum = v1_out[i] + v2_out[i] + v3_out[i]
+        #                 if v_sum < 2:
+        #                     score_out[i] = 0
+        #                 else:
+        #                     score_out[i] = 1
+
+        #             list_kombi.append(x + "_" + y + "_" + z)
+        #             list_in.append(score_in)
+        #             list_out.append(score_out)
+
+        # return list_kombi, list_in, list_out
 
 
 
@@ -1310,8 +1402,8 @@ class Scores():
         self.softmax_score_out = np.where(self.softmax_score_out >= tresholds.softmax_t, 1, 0)
     
         ################## SOFTMAX TEMP ###########################
-        self.softmax_score_temp_in = np.where(self.softmax_score_temp_in >= tresholds.sofmtax_temp_t, 1, 0)
-        self.softmax_score_temp_out = np.where(self.softmax_score_temp_out >= tresholds.sofmtax_temp_t, 1, 0)
+        self.softmax_score_temp_in = np.where(self.softmax_score_temp_in >= tresholds.softmax_temp_t, 1, 0)
+        self.softmax_score_temp_out = np.where(self.softmax_score_temp_out >= tresholds.softmax_temp_t, 1, 0)
 
         ################### MAHA ############################
         self.maha_score_in = np.where(self.maha_score_in <= tresholds.maha_t, 1, 0)
@@ -1356,7 +1448,7 @@ class Tresholds():
         
         self.logits_t = 0
         self.softmax_t = 0
-        self.sofmtax_temp_t = 0
+        self.softmax_temp_t = 0
         self.maha_t = 0
         self.entropy_t = 0
         self.cosine_t = 0
@@ -1500,7 +1592,7 @@ class Tresholds():
         self.softmax_t = self.treshold_picker(args, method, scores.softmax_score_dev, scores.softmax_score_in, scores.softmax_score_out, np.min(scores.softmax_score_out), max(scores.softmax_score_in), 500, min=False)
     
         ################## SOFTMAX TEMP ###########################
-        self.sofmtax_temp_t = self.treshold_picker(args, method, scores.softmax_score_temp_dev, scores.softmax_score_temp_in ,scores.softmax_score_temp_out ,np.min(scores.softmax_score_temp_out), max(scores.softmax_score_temp_in), 500, min=False)
+        self.softmax_temp_t = self.treshold_picker(args, method, scores.softmax_score_temp_dev, scores.softmax_score_temp_in ,scores.softmax_score_temp_out ,np.min(scores.softmax_score_temp_out), max(scores.softmax_score_temp_in), 500, min=False)
 
         ################### MAHA ############################
         self.maha_t = self.treshold_picker(args, method, scores.maha_score_dev, scores.maha_score_in, scores.maha_score_out, np.min(scores.maha_score_in), max(scores.maha_score_out), 500, min=True)

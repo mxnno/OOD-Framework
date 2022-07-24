@@ -186,10 +186,12 @@ def evaluate_method_combination(args, combis, scores_in, scores_out, Ttype):
         id = "3"
 
     header = ['Method', "in_acc + out_recall", "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
-    csvPath = "/content/drive/MyDrive/Masterarbeit/Kombination/Methoden/alle/" + id + "/" + str(args.id_data) + "_" + str(args.few_shot) + "_" + str(args.seed)
+    #csvPath = "/content/drive/MyDrive/Masterarbeit/Kombination/Methoden/alle/" + id + "/" + str(args.id_data) + "_" + str(args.few_shot) + "_" + str(args.seed)
+    csvPath = "/content/drive/MyDrive/Masterarbeit/Kombination/Architekturen/" + str(args.id_data) + "_" + str(args.few_shot) + "_" + str(args.seed)
+
     if not os.path.isdir(csvPath):
         os.mkdir(csvPath)
-    csvPath += "/combi_" + Ttype + ".csv"
+    csvPath += "/Arch_combi_" + Ttype + ".csv"
     with open(csvPath, 'w', encoding='utf-8') as csvf:
 
         writer = csv.writer(csvf, delimiter=',')
@@ -206,8 +208,6 @@ def evaluate_method_combination(args, combis, scores_in, scores_out, Ttype):
             labels_gesamt = np.concatenate((labels_in, labels_out), axis=-1)
 
             in_acc = accuracy_score(labels_in, y_pred_in)
-            print(labels_in)
-            print(y_pred_in)
             in_recall = recall_score(labels_in, y_pred_in)
             in_f1 = f1_score(labels_in, y_pred_in)
             out_acc = accuracy_score(labels_out, y_pred_out)

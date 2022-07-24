@@ -1,16 +1,23 @@
 import torch
 import wandb
 import warnings
+import time
+import copy
+import other
+
 
 from model import  set_model
 from finetune import finetune_std
-from ood_detection import detect_ood
 from ood_detection_ood import detect_ood as detect_ood_with_ood
 from utils.args import get_args
-from data import preprocess_data
 from utils.utils import set_seed, save_model
 from accelerate import Accelerator
 from model_temp import ModelWithTemperature
+from ood_detection import detect_ood, detect_ood_DNNC
+from data import preprocess_data, load_clinc
+from utils.utils_DNNC import *
+from evaluation import evaluate_method_combination
+
 warnings.filterwarnings("ignore")
 
 ## ID 2
@@ -89,7 +96,106 @@ def main():
         if args.ood_data != "zero":
             detect_ood_with_ood(args, model, train_dataset, traindev_dataset, dev_ood_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
         else:
-            detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
+            name_2, in2, out2 = detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
+
+        #für 2m,3:
+        # - 10 nromale
+        # - 5 mit k3
+        # - 5 mit k2
+        # - 5 mit kalle
+        model, config, tokenizer = set_model(args)
+        temp_model = ModelWithTemperature(model)
+        best_temp = temp_model.set_temperature(dev_id_dataset)
+        name3, in2, out2 = detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
+
+        #NLI
+        args.model_ID = 8
+        args.model_name_or_path =""
+        model, config, tokenizer = set_model(args)
+        dataset_dict  = load_clinc(args)
+        train_dataset = dataset_dict['train']
+        train_dataset.to_csv("train_dataset_8.csv")
+        test_id = dataset_dict['test_id']
+        test_ood = dataset_dict['test_ood']
+        test_id.to_csv("test_id_dataset_8.csv")
+        test_ood.to_csv("test_od_dataset_8.csv")
+        time.sleep(2)
+        test_data_id, test_data_ood = load_intent_datasets("test_id_dataset_8.csv", "test_od_dataset_8.csv", True)
+        train_data, _ = load_intent_datasets("train_dataset_8.csv", "train_dataset_8.csv", True)
+        
+        #OOD-Detection
+        print("Start OOD-Detection...")
+        name8, in8, out8 = detect_ood_DNNC(args, model, tokenizer, train_data, test_data_id, test_data_ood)
+
+
+        #ADB
+        args.model_ID = 14
+        args.model_name_or_path =""
+        model, config, tokenizer = set_model(args)
+        #centroids holen
+        centroids = torch.load(args.model_name_or_path + "/centroids.pt")
+        #delta holen
+        delta = torch.load(args.model_name_or_path + "/delta.pt")
+        name14, in14, out14 = detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp, centroids=centroids, delta=delta)
+
+
+        combis1 = ["2", "3", "8", "14"]
+        combis2 = ["2", "3", "8", "14"]
+        combis3 = ["2", "3", "8", "14"]
+
+        n_list = []
+        i_list = []
+        o_list = []
+
+        for x in combis1:
+            combis2.pop(0)
+            combis3.pop(0)
+
+            cHelp = copy.deepcopy(combis3)
+            for y in combis2:
+                cHelp.pop(0)
+                for z in cHelp:
+                    print(x + y + z)
+
+                    nx = getattr(other, "name" + x)
+                    ix = getattr(other, "in" + x)
+                    ox = getattr(other, "out" + x)
+
+                    ny = getattr(other, "name" + y)
+                    iy = getattr(other, "in" + y)
+                    oy = getattr(other, "out" + y)
+
+                    nz = getattr(other, "name" + z)
+                    iz = getattr(other, "in" + z)
+                    oz = getattr(other, "out" + z)
+
+                    #a ist pred_in mit 450 werten
+                    for i, a in enumerate(ix):
+                        for j, b in enumerate(iy):
+                            for k, c in enumerate(iz):
+
+                                d = a + b + c
+                                d = np.where(d>=2, 1, 0)
+                                i_list.append(d)
+                                n_list.append(nx[i] + "|" + ny[j] + "|" + nz[k])
+                    
+                    for i, a in enumerate(ox):
+                        for j, b in enumerate(oy):
+                            for k, c in enumerate(oz):
+
+                                d = a + b + c
+                                d = np.where(d>=2, 1, 0)
+                                o_list.append(d)
+
+        evaluate_method_combination(args, n, i, o, "best")
+
+
+
+
+                        
+
+
+
 
 if __name__ == "__main__":
     main()

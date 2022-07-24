@@ -1,8 +1,11 @@
+from random import seed
 import torch
 import wandb
 import warnings
 import time
 import copy
+import glob
+
 
 
 
@@ -78,7 +81,7 @@ def main():
         #Load Model
         print("Load model...")
         sPath = args.model_name_or_path
-        model, config, tokenizer = set_model(args, sPath)
+        model, config, tokenizer = set_model(args, path=sPath)
 
         #Preprocess Data
         #dev_dataset = train + dev_id
@@ -97,22 +100,45 @@ def main():
         if args.ood_data != "zero":
             detect_ood_with_ood(args, model, train_dataset, traindev_dataset, dev_ood_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
         else:
-            name_2, in2, out2 = detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
+            pass
+        name2, in2, out2 = detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
 
+        print(locals()["name2"])
         #für 2m,3:
         # - 10 nromale
         # - 5 mit k3
         # - 5 mit k2
         # - 5 mit kalle
-        sPath = "/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/3/travel_zero_5_6_222"
+
+        id_data = args.id_data
+        few_shot = args.few_shot
+        sSeed = args.seed
+
+        sPath = "/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/3/" + str(id_data) + "_zero_" + str(few_shot) + "_*_"+ str(sSeed)
+        sPath = glob.glob(sPath)[0]
         model, config, tokenizer = set_model(args, path=sPath)
         temp_model = ModelWithTemperature(model)
         best_temp = temp_model.set_temperature(dev_id_dataset)
-        name3, in2, out2 = detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
+        name3, in3, out3 = detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
+
+
+        #ADB
+        args.model_ID = 14
+        sPath ="/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/14/" + str(id_data) + "_zero_" + str(few_shot) + "_*_"+ str(sSeed)
+        sPath = glob.glob(sPath)[0]
+        model, config, tokenizer = set_model(args, path=sPath)
+        #centroids holen
+        centroids = torch.load(sPath + "/centroids.pt")
+        #delta holen
+        delta = torch.load(sPath + "/delta.pt")
+        name14, in14, out14 = detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp, centroids=centroids, delta=delta)
+
+
 
         #NLI
         args.model_ID = 8
-        sPath ="/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/8/travel_zero_5_2_222"
+        sPath ="/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/8/" + str(id_data) + "_zero_" + str(few_shot) + "_*_"+ str(sSeed)
+        sPath = glob.glob(sPath)[0]
         model, config, tokenizer = set_model(args,path=sPath)
         dataset_dict  = load_clinc(args)
         train_dataset = dataset_dict['train']
@@ -128,17 +154,6 @@ def main():
         #OOD-Detection
         print("Start OOD-Detection...")
         name8, in8, out8 = detect_ood_DNNC(args, model, tokenizer, train_data, test_data_id, test_data_ood)
-
-
-        #ADB
-        args.model_ID = 14
-        sPath ="/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/14/travel_zero_5_30_222"
-        model, config, tokenizer = set_model(args, path=sPath)
-        #centroids holen
-        centroids = torch.load(args.model_name_or_path + "/centroids.pt")
-        #delta holen
-        delta = torch.load(args.model_name_or_path + "/delta.pt")
-        name14, in14, out14 = detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp, centroids=centroids, delta=delta)
 
 
         combis1 = ["2", "3", "8", "14"]
@@ -158,17 +173,18 @@ def main():
                 cHelp.pop(0)
                 for z in cHelp:
 
-                    nx = globals()["name" + x]
-                    ix = globals()["in" + x]
-                    ox = globals()["out" + x]
 
-                    ny = globals()["name" + y]
-                    iy = globals()["in" + y]
-                    oy = globals()["out" + y]
+                    ny = locals()["name" + y]
+                    iy = locals()["in" + y]
+                    oy = locals()["out" + y]
 
-                    nz = globals()["name" + z]
-                    iz = globals()["in" + z]
-                    oz = globals()["out" + z]
+                    nx = locals()["name" + x]
+                    ix = locals()["in" + x]
+                    ox = locals()["out" + x]
+
+                    nz = locals()["name" + z]
+                    iz = locals()["in" + z]
+                    oz = locals()["out" + z]
 
                     #a ist pred_in mit 450 werten
                     for i, a in enumerate(ix):
@@ -189,6 +205,21 @@ def main():
                                 o_list.append(d)
 
         evaluate_method_combination(args, n_list, i_list, o_list, "best")
+
+        print(name2)
+        print(name3)
+        print(name8)
+        print(name14)
+
+        print(in2)
+        print(in3)
+        print(in8)
+        print(in14)
+
+        print(out2)
+        print(out3)
+        print(out8)
+        print(out14)
 
 
 

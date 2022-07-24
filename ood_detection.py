@@ -139,8 +139,8 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
 
 
     if args.model_ID == 14:
-        detect_ood_adb(args, centroids, delta, all_pool_in, all_pool_out)
-        return
+        n, i, o = detect_ood_adb(args, centroids, delta, all_pool_in, all_pool_out)
+        return n,i,o
         #all_logits_train, all_logits_dev, all_logits_in , all_logits_out = detect_ood_adb2(centroids, delta, all_pool_in, all_pool_out, all_pool_dev, all_pool_train)
 
 
@@ -232,7 +232,7 @@ def detect_ood_adb(args, centroids, delta, pool_in, pool_out):
     adb_pred_in = get_adb_score(pool_in, centroids, delta)
     adb_pred_out = get_adb_score(pool_out, centroids, delta)
 
-    return "adb", adb_pred_in, adb_pred_out
+    return ["adb",], [adb_pred_in,], [adb_pred_out,]
    # evaluate_ADB(args, adb_pred_in, adb_pred_out)
 
 def detect_ood_adb2(centroids, delta, pool_in, pool_out, pool_dev, pool_train):
@@ -372,7 +372,7 @@ def detect_ood_DNNC(args, model, tokenizer, train, test_id, test_ood):
     pred_ood = np.array(pred_ood)
     pred_ood = np.where(pred_ood >= 0.5, 1, 0)
 
-    return "nli", pred_id, pred_ood
+    return ["nli",], [pred_id,], [pred_ood,]
     #evaluate_NLI(args, pred_id, pred_ood)
 
 

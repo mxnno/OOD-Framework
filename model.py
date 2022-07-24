@@ -65,6 +65,7 @@ def set_model(args, bert=None, path=None):
         
     else:
         if args.model_ID == 8:
+            print("model ID 8 in model funktioniert")
             config = RobertaConfig.from_pretrained('roberta-base', num_labels=num_labels)
         else:
             config = RobertaConfig.from_pretrained(path, num_labels=num_labels)
@@ -76,7 +77,7 @@ def set_model(args, bert=None, path=None):
         model = RobertaForSequenceClassification.from_pretrained(path, config=config)
         model.to(args.device)
 
-
+    print("loaded model from" + path)
     return model, config, tokenizer
 
 

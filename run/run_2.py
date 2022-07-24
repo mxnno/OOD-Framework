@@ -3,7 +3,7 @@ import wandb
 import warnings
 import time
 import copy
-import other
+
 
 
 from model import  set_model
@@ -77,7 +77,8 @@ def main():
 
         #Load Model
         print("Load model...")
-        model, config, tokenizer = set_model(args)
+        sPath = args.model_name_or_path
+        model, config, tokenizer = set_model(args, sPath)
 
         #Preprocess Data
         #dev_dataset = train + dev_id
@@ -103,15 +104,16 @@ def main():
         # - 5 mit k3
         # - 5 mit k2
         # - 5 mit kalle
-        model, config, tokenizer = set_model(args)
+        sPath = "/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/3/travel_zero_5_6_222"
+        model, config, tokenizer = set_model(args, path=sPath)
         temp_model = ModelWithTemperature(model)
         best_temp = temp_model.set_temperature(dev_id_dataset)
         name3, in2, out2 = detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
 
         #NLI
         args.model_ID = 8
-        args.model_name_or_path =""
-        model, config, tokenizer = set_model(args)
+        sPath ="/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/8/travel_zero_5_2_222"
+        model, config, tokenizer = set_model(args,path=sPath)
         dataset_dict  = load_clinc(args)
         train_dataset = dataset_dict['train']
         train_dataset.to_csv("train_dataset_8.csv")
@@ -130,8 +132,8 @@ def main():
 
         #ADB
         args.model_ID = 14
-        args.model_name_or_path =""
-        model, config, tokenizer = set_model(args)
+        sPath ="/content/drive/MyDrive/Masterarbeit/Trainierte_Modelle/14/travel_zero_5_30_222"
+        model, config, tokenizer = set_model(args, path=sPath)
         #centroids holen
         centroids = torch.load(args.model_name_or_path + "/centroids.pt")
         #delta holen
@@ -155,19 +157,18 @@ def main():
             for y in combis2:
                 cHelp.pop(0)
                 for z in cHelp:
-                    print(x + y + z)
 
-                    nx = getattr(other, "name" + x)
-                    ix = getattr(other, "in" + x)
-                    ox = getattr(other, "out" + x)
+                    nx = globals()["name" + x]
+                    ix = globals()["in" + x]
+                    ox = globals()["out" + x]
 
-                    ny = getattr(other, "name" + y)
-                    iy = getattr(other, "in" + y)
-                    oy = getattr(other, "out" + y)
+                    ny = globals()["name" + y]
+                    iy = globals()["in" + y]
+                    oy = globals()["out" + y]
 
-                    nz = getattr(other, "name" + z)
-                    iz = getattr(other, "in" + z)
-                    oz = getattr(other, "out" + z)
+                    nz = globals()["name" + z]
+                    iz = globals()["in" + z]
+                    oz = globals()["out" + z]
 
                     #a ist pred_in mit 450 werten
                     for i, a in enumerate(ix):
@@ -187,7 +188,7 @@ def main():
                                 d = np.where(d>=2, 1, 0)
                                 o_list.append(d)
 
-        evaluate_method_combination(args, n, i, o, "best")
+        evaluate_method_combination(args, n_list, i_list, o_list, "best")
 
 
 

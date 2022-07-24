@@ -15,6 +15,7 @@ from scipy.stats import entropy
 def set_model(args, bert=None, path=None):
 
     num_labels = get_num_labels(args)
+    print(path)
 
     if bert:
         print("BERT-MODEL!")
@@ -66,13 +67,13 @@ def set_model(args, bert=None, path=None):
         if args.model_ID == 8:
             config = RobertaConfig.from_pretrained('roberta-base', num_labels=num_labels)
         else:
-            config = RobertaConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels)
+            config = RobertaConfig.from_pretrained(path, num_labels=num_labels)
         config.gradient_checkpointing = True
         config.alpha = args.alpha
         config.loss = args.loss
         config.loss_std = args.loss_std
         tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-        model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
+        model = RobertaForSequenceClassification.from_pretrained(path, config=config)
         model.to(args.device)
 
 

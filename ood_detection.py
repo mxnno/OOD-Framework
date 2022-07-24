@@ -900,7 +900,7 @@ class Scores():
         #weighted mehrheit
         # sum(x*1 bzw. x*-1) --> > 0 = 1, < = 0
 
-        methods = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha", "doc"]
+        methods = ["logits", "varianz", "softmax", "softmax_temp", "cosine","energy", "entropy", "gda_maha", "gda_eucl", "maha"]
         
         score_in = np.empty_like(self.varianz_score_in)
         
@@ -1395,7 +1395,7 @@ class Scores():
                 hlist_out.append(score_out)
 
                 
-        randoms = random.sample(range(0, len(hlist_kombi), 5))
+        randoms = random.sample(range(0, len(hlist_kombi)), 5)
         for r in randoms:
             list_kombi.append(hlist_kombi[r])
             list_in.append(hlist_in[r])
@@ -1422,7 +1422,6 @@ class Scores():
             for y in methods2:
                 m3Help.pop(0)
                 for z in m3Help:
-                    print(x + y + z)
 
                     if x == "softmax_temp":
                         namex = "softmax_score_temp_"
@@ -1467,7 +1466,7 @@ class Scores():
                     hlist_in.append(score_in)
                     hlist_out.append(score_out)
 
-        randoms = random.sample(range(0, len(hlist_kombi), 5))
+        randoms = random.sample(range(0, len(hlist_kombi)), 5)
         for r in randoms:
             list_kombi.append(hlist_kombi[r])
             list_in.append(hlist_in[r])

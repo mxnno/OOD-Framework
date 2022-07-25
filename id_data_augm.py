@@ -19,7 +19,7 @@ def id_data_augm():
 
 
     n = 20
-    ood_augm = False
+    ood_augm = True
 
     
     #get args
@@ -52,7 +52,7 @@ def id_data_augm():
         # define the number of synthetic samples to generate
         new_texts = []
         new_labels = []
-        api_key = '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'
+        api_key = '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'
         headers = {'Authorization' : 'Bearer ' + api_key,
                     'Content-type':'application/json', 
                     'Accept':'application/json'}
@@ -221,7 +221,7 @@ def get_prompt_ood(text1, label1, text2, label2, label_names):
     description = "Generate new OOD-questions for a bot, that have a completely different domain then the ID-question. Each item in the following list contains a chatbot question and its Sub-Domain. Sub-Domain is one of 'travel, 'exchange_rate' or 'car_rental' or 'vaccines' or 'international_visa' or 'translate' or 'carry_on' or 'book_flight' or 'timezone' or 'flight_status' or 'lost_luggage' or 'book_hotel' or 'plug_type' or 'travel_alert' or 'travel_notification' or 'travel_suggestion'"
     prompt = (f"{description}\n"
             f"ID-Question: {text1} (Domain: {label_names[label1]})\n"
-            f"OOD-Question: {'How long does a football match last?'} (Domain: {'football'})\n"
+            f"OOD-Question: {'What is love?'} (Domain: {'football'})\n"
             f"ID-Question: {text2} (Domain: {label_names[label1]})\n"
             f"OOD-Question:")
     return prompt

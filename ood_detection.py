@@ -167,7 +167,7 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     scores_ocsvm = deepcopy(scores)
     scores_ocsvm.apply_ocsvm(args, "scores")
     #-> scores_in bzw. scors_out UND scores_in_ocsvm bzw. scores_out_ocsvm in eval abfragen!
-    #evaluate_metriken_ohne_Treshold(args, scores_ocsvm)
+    evaluate_metriken_ohne_Treshold(args, scores_ocsvm)
 
 
 
@@ -177,26 +177,25 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     print("...best...")
     scores_best = deepcopy(scores)
     thresholds.calculate_tresholds(args, scores_best, 'best')
-    scores_best_copy = deepcopy(scores_best)
+    #scores_best_copy = deepcopy(scores_best)
     scores_best.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
-    n, i, o = scores_best.calculate_method_combination(args, scores_best_copy, thresholds, sType="alle_methoden")
-
-    return n, i, o
-    evaluate_method_combination(args, n, i, o, "best")
-    #evaluate_mit_Treshold(args, scores_best, 'best')
-    print("...best_dev...")
-    scores_best_dev = deepcopy(scores)
-    thresholds.calculate_tresholds(args, scores_best_dev, 'best_dev')
-    scores_best_dev.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
-    #evaluate_mit_Treshold(args, scores_best_dev, 'best_dev')
-    # print("...avg...")
-    # scores_avg = deepcopy(scores)
-    # thresholds.calculate_tresholds(args, scores_avg, 'avg')
-    # scores_avg_copy = deepcopy(scores_avg)
-    # scores_avg.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
-    # n, i, o = scores_avg.calculate_method_combination(args, scores_avg_copy, thresholds, sType="alle_methoden")
-    # evaluate_method_combination(args, n, i, o, "avg")
-    #evaluate_mit_Treshold(args, scores_avg, 'avg')
+    #n, i, o = scores_best.calculate_method_combination(args, scores_best_copy, thresholds, sType="alle_methoden")
+    #return n, i, o
+    #evaluate_method_combination(args, n, i, o, "best")
+    evaluate_mit_Treshold(args, scores_best, 'best')
+    # print("...best_dev...")
+    # scores_best_dev = deepcopy(scores)
+    # thresholds.calculate_tresholds(args, scores_best_dev, 'best_dev')
+    # scores_best_dev.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
+    # evaluate_mit_Treshold(args, scores_best_dev, 'best_dev')
+    print("...avg...")
+    scores_avg = deepcopy(scores)
+    thresholds.calculate_tresholds(args, scores_avg, 'avg')
+    #scores_avg_copy = deepcopy(scores_avg)
+    scores_avg.apply_tresholds(args, thresholds, all_pool_in, all_pool_out, centroids, delta)
+    #n, i, o = scores_avg.calculate_method_combination(args, scores_avg_copy, thresholds, sType="alle_methoden")
+    evaluate_method_combination(args, n, i, o, "avg")
+    evaluate_mit_Treshold(args, scores_avg, 'avg')
     
 # 2.2 ohne Treshold zu 0/1
     # - OCSVM Predict (logits, softmax ...)
@@ -207,7 +206,7 @@ def detect_ood(args, model, train_dataset, train_dev_dataset, dev_dataset, test_
     
     scores_ohne_Treshold = deepcopy(scores)
     scores_ohne_Treshold.apply_ocsvm(args, 'predict')
-    #evaluate_scores_ohne_Treshold(args, scores_ohne_Treshold)
+    evaluate_scores_ohne_Treshold(args, scores_ohne_Treshold)
 
 
    

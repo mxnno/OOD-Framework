@@ -187,7 +187,7 @@ def evaluate_method_combination(args, combis, scores_in, scores_out, Ttype):
 
     header = ['Method', "in_acc + out_recall", "in_acc", "in_recall", "in_f1", "out_acc", "out_recall", "out_f1", "acc", "recall", "f1", "roc_auc", "fpr_95"]
     #csvPath = "/content/drive/MyDrive/Masterarbeit/Kombination/Methoden/alle/" + id + "/" + str(args.id_data) + "_" + str(args.few_shot) + "_" + str(args.seed)
-    csvPath = "/content/drive/MyDrive/Masterarbeit/Kombination/Architekturen/" + str(args.id_data) + "_" + str(args.few_shot) + "_" + str(args.seed)
+    csvPath = "/content/drive/MyDrive/Masterarbeit/Kombination/" + str(args.id_data) + "_" + str(args.few_shot) + "_" + str(args.seed)
 
     if not os.path.isdir(csvPath):
         os.mkdir(csvPath)

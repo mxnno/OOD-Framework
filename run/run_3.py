@@ -5,6 +5,7 @@ import warnings
 from model import  set_model
 from finetune import finetune_std
 from ood_detection import detect_ood
+from ood_detection_ood import detect_ood as detect_ood_with_ood
 from utils.args import get_args
 from data import preprocess_data
 from utils.utils import set_seed, save_model
@@ -103,7 +104,10 @@ def main():
 
         #OOD-Detection
         print("Start OOD-Detection...")
-        detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
+        if args.ood_data != "zero":
+            detect_ood_with_ood(args, model, train_dataset, traindev_dataset, dev_ood_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
+        else:
+            detect_ood(args, model, train_dataset, traindev_dataset, dev_id_dataset, test_id_dataset, test_ood_dataset, best_temp=best_temp)
 
 if __name__ == "__main__":
     main()

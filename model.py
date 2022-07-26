@@ -233,6 +233,8 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
 
                 #labels umformem:
                 #geg: [14, 1, 4, 2, 2, 0 ...] -> [8,15] on hot encoded
+                print("#########")
+                print(labels.size())
                 mask_labels = torch.zeros(labels.size()[0], 15).to('cuda:0')
                 for i, idx in enumerate(labels):
                     mask_labels[i][idx] = 1

@@ -53,6 +53,7 @@ def id_data_augm():
         new_texts = []
         new_labels = []
         api_key = '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'
+        #mail: yelax88626@altpano.com, pw 1q2w3e4r
         headers = {'Authorization' : 'Bearer ' + api_key,
                     'Content-type':'application/json', 
                     'Accept':'application/json'}
